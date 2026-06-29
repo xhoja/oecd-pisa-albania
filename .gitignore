@@ -1,0 +1,41 @@
+# Data — never commit raw PISA files (gigabytes)
+data/raw/
+*.sav
+*.SAV
+*.sas7bdat
+*.dta
+
+# Processed data — regenerable via `python -m src.data.pipeline` (too large for GitHub)
+data/processed/
+data/interim/
+
+# Outputs — reproducible from pipeline
+outputs/models/
+outputs/shap/
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.ipynb_checkpoints/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/

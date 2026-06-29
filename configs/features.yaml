@@ -1,0 +1,137 @@
+# Feature groups — used by feature engineering and model pipelines
+
+plausible_value_prefixes:
+  math: ["PV1MATH", "PV2MATH", "PV3MATH", "PV4MATH", "PV5MATH",
+         "PV6MATH", "PV7MATH", "PV8MATH", "PV9MATH", "PV10MATH"]
+  reading: ["PV1READ", "PV2READ", "PV3READ", "PV4READ", "PV5READ",
+            "PV6READ", "PV7READ", "PV8READ", "PV9READ", "PV10READ"]
+  science: ["PV1SCIE", "PV2SCIE", "PV3SCIE", "PV4SCIE", "PV5SCIE",
+            "PV6SCIE", "PV7SCIE", "PV8SCIE", "PV9SCIE", "PV10SCIE"]
+
+# Raw feature names per cycle (before harmonization)
+raw_features:
+  gender:
+    "2009": "ST04Q01"
+    "2012": "ST04Q01"
+    "2015": "ST004D01T"
+    "2018": "ST004D01T"
+    "2022": "ST004D01T"
+  grade_repetition:
+    "2009": "ST07Q01"
+    "2012": "ST07Q01"
+    "2015": "ST007Q01TA"
+    "2018": "ST007Q01TA"
+    "2022": "ST007Q01TA"
+  belonging:
+    "2009": "ATSCHL"
+    "2012": "BELONG"
+    "2015": "BELONG"
+    "2018": "BELONG"
+    "2022": "BELONG"
+
+# Harmonized feature names (post-harmonization)
+harmonized:
+  socioeconomic:
+    - ESCS        # Economic, Social, Cultural Status
+    - HOMEPOS     # Home possessions
+    - HISCED      # Highest parental education
+    - HISEI       # Highest parental occupational status
+    - HEDRES      # Home educational resources
+    - WEALTH      # Wealth index (older cycles)
+    - CULTPOSS    # Cultural possessions (older cycles)
+  demographic:
+    - GENDER      # Harmonized gender (0=F, 1=M)
+    - REPEAT      # Harmonized grade repetition (0=never, 1=once+)
+    - GRADE       # Grade deviation from modal (computed)
+    - IMMIG       # Immigration status (0=native, 1=2nd, 2=1st)
+    - AGE         # Student age
+  psychological:
+    - ANXMAT      # Math anxiety
+    - BELONG      # School belonging
+    - MOTIVAT     # Math motivation (older cycles)
+    - INTMAT      # Intrinsic motivation math (older cycles)
+    - SCMAT       # Math self-concept
+    - PERSEV      # Perseverance
+    - GFOFAIL     # Fear of failure (2018+)
+    - MASTGOAL    # Mastery goal orientation (2018+)
+  learning_environment:
+    - TEACHSUP    # Teacher support in math
+    - DISCLIMA    # Disciplinary climate
+    - STUBEHA     # Student behavior (2018+)
+    - TEABEHA     # Teacher behavior (2018+)
+  ict:
+    - ICTHOME     # ICT at home (2018+)
+    - ICTSCH      # ICT at school (2018+)
+    - USESCH      # ICT use at school (2015+)
+    - ENTUSE      # ICT outside school (2015+)
+    - COMPICT     # ICT competence (2018+)
+  academic:
+    - GRADE       # Grade deviation (computed)
+
+# Features available across cycles (True = available)
+availability:
+  ESCS:     {"2009": true,  "2012": false, "2015": false, "2018": true,  "2022": true}
+  HOMEPOS:  {"2009": true,  "2012": true,  "2015": false, "2018": true,  "2022": true}
+  BELONG:   {"2009": true,  "2012": true,  "2015": false, "2018": true,  "2022": true}
+  TEACHSUP: {"2009": false, "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  ICTHOME:  {"2009": false, "2012": false, "2015": false, "2018": true,  "2022": true}
+  ICTSCH:   {"2009": false, "2012": false, "2015": false, "2018": true,  "2022": true}
+  GENDER:   {"2009": true,  "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  REPEAT:   {"2009": true,  "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  IMMIG:    {"2009": true,  "2012": true,  "2015": false, "2018": true,  "2022": true}
+  GRADE:    {"2009": true,  "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  ANXMAT:   {"2009": false, "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  HISCED:   {"2009": true,  "2012": true,  "2015": true,  "2018": true,  "2022": true}
+  HISEI:    {"2009": true,  "2012": true,  "2015": true,  "2018": true,  "2022": true}
+
+# Core feature set for the main model (highest cross-cycle availability)
+core_features:
+  - ESCS
+  - HOMEPOS
+  - GENDER
+  - REPEAT
+  - IMMIG
+  - BELONG
+  - TEACHSUP
+  - ICTHOME
+  - ICTSCH
+  - ANXMAT
+  - GRADE
+  - HISCED
+  - HISEI
+
+# Extended feature set (2018+2022 only — used for 2022 deep-dive)
+extended_features:
+  - ESCS
+  - HOMEPOS
+  - GENDER
+  - REPEAT
+  - IMMIG
+  - BELONG
+  - TEACHSUP
+  - ICTHOME
+  - ICTSCH
+  - ANXMAT
+  - GRADE
+  - HISCED
+  - HISEI
+  - HEDRES
+  - PERSEV
+  - GFOFAIL
+  - MASTGOAL
+  - DISCLIMA
+  - STUBEHA
+  - COMPICT
+  - ENTUSE
+
+# Feature engineering definitions
+engineered:
+  SES_COMPLETE: "mean of standardized [ESCS, HOMEPOS, HISCED_norm, HISEI_norm]"
+  MATERIAL_DEFICIT: "1 - HOMEPOS_pctrank_within_country"
+  DIGITAL_READINESS: "mean of [ICTHOME, ICTSCH, COMPICT] where available"
+  DIGITAL_GAP: "ICTHOME - ICTSCH"
+  SES_x_ANXIETY: "ESCS * ANXMAT"
+  BELONG_x_TEACHSUP: "BELONG * TEACHSUP"
+  GRADE_x_SES: "GRADE * ESCS"
+  GENDER_x_ANXMAT: "GENDER * ANXMAT"
+  ESCS_NORM: "z-score of ESCS within country"

@@ -1,0 +1,25 @@
+{
+  "covariate_shift_2018_2022": {
+    "shift_auc": 0.9798,
+    "significant": true,
+    "top_drifted": {
+      "TEACHSUP": -0.312,
+      "HOMEPOS": 0.271,
+      "BELONG": -0.154,
+      "REPEAT": 0.114,
+      "ESCS": 0.088,
+      "IMMIG": 0.048
+    }
+  },
+  "gender_chisq_2022": {
+    "chi2": 153.2441,
+    "p_value": 0.0,
+    "dof": 1,
+    "cramers_v": 0.0735
+  },
+  "escs_atrisk_vs_proficient_2022": {
+    "mannwhitney_p": 0.0,
+    "effect_r": 0.197,
+    "cohens_d": -0.471
+  }
+}

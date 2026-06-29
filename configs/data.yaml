@@ -1,0 +1,55 @@
+# Paths — relative to project root
+paths:
+  raw_2022: "../DataScienceProject/CY08MSP_STU_QQQ.SAV"
+  raw_2018: "../DataScienceProject/CY07_MSU_STU_QQQ.sav"
+  raw_2012_txt: "../DataScienceProject/INT_STU12_DEC03.txt"
+  raw_2009_txt: "../DataScienceProject/PISA2009_SPSS_student.txt"
+  raw_2009_syntax: "../DataScienceProject/PISA2009_SPSS_student.txt"
+  processed_dir: "data/processed"
+  interim_dir: "data/interim"
+  external_dir: "data/external"
+
+# Pre-processed Albania-only CSVs (from old project)
+legacy_csvs:
+  2009: "../DataScienceProject/albania_pisa2009.csv"
+  2012: "../DataScienceProject/albania_pisa2012.csv"
+  2015: "../DataScienceProject/albania_pisa2015.csv"
+  2018: "../DataScienceProject/albania_pisa2018.csv"
+  2022: "../DataScienceProject/albania_pisa2022.csv"
+
+# Cycles with full-country SPSS files available
+cycles_full_spss: [2018, 2022]
+# Cycles with Albania-only CSVs only
+cycles_albania_only: [2009, 2012, 2015]
+
+# Country codes (PISA CNT values)
+countries:
+  focus: "ALB"
+  comparison:
+    balkans: ["MKD", "MNE", "SRB", "BGR"]
+    top_performers: ["EST", "FIN"]
+    gdp_matched: ["MEX", "COL"]
+    # OECD average computed from all OECD members
+  all_oecd: true  # compute weighted OECD average
+
+# PISA math low-proficiency threshold (below Level 2)
+thresholds:
+  math: 420.0
+  reading: 407.0
+  science: 410.0
+
+# Plausible value counts per cycle
+pv_counts:
+  2009: 5
+  2012: 5
+  2015: 10
+  2018: 10
+  2022: 10
+
+# Weight column
+weight_col: "W_FSTUWT"
+brr_prefix: "W_FSTURWT"
+brr_count: 80
+
+# PISA missing value codes → NaN
+missing_codes: [9995, 9996, 9997, 9998, 9999, 99, 9, 99.0, 999.0]
