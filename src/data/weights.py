@@ -124,15 +124,13 @@ def normalize_weights_within_country(df: pd.DataFrame) -> pd.DataFrame:
         df[f"{WEIGHT_COL}_NORM"] = df[WEIGHT_COL] / df[WEIGHT_COL].sum() * len(df)
         return df
 
-    def _normalize_group(g: pd.DataFrame) -> pd.DataFrame:
-        total_w = g[WEIGHT_COL].sum()
-        if total_w > 0:
-            g[f"{WEIGHT_COL}_NORM"] = g[WEIGHT_COL] / total_w * len(g)
-        else:
-            g[f"{WEIGHT_COL}_NORM"] = 1.0
-        return g
-
-    df = df.groupby(country_col, group_keys=False).apply(_normalize_group)
+    # vectorized per-country normalization (no deprecated groupby.apply):
+    # w_norm = w / sum_country(w) * n_country
+    grp = df.groupby(country_col)[WEIGHT_COL]
+    total_w = grp.transform("sum")
+    n_country = grp.transform("size")
+    norm = df[WEIGHT_COL] / total_w * n_country
+    df[f"{WEIGHT_COL}_NORM"] = norm.where(total_w > 0, 1.0)
     return df
 
 

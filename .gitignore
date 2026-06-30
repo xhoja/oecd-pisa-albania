@@ -39,3 +39,4 @@ build/
 # IDE
 .vscode/
 .idea/
+catboost_info/

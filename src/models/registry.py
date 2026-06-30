@@ -82,8 +82,9 @@ def build_gradient_boosting(**kwargs: Any) -> GradientBoostingClassifier:
 
 def build_xgboost(**kwargs: Any) -> Any:
     from xgboost import XGBClassifier
+    # use_label_encoder was removed in xgboost>=2.0; passing it only spams a
+    # "Parameters not used" warning on every fit.
     return XGBClassifier(
-        use_label_encoder=False,
         eval_metric="logloss",
         random_state=42,
         n_jobs=-1,

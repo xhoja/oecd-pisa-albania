@@ -79,18 +79,23 @@ def expected_calibration_error(
     y_true: np.ndarray,
     y_prob: np.ndarray,
     n_bins: int = 10,
+    sample_weight: np.ndarray | None = None,
 ) -> float:
-    """Expected Calibration Error (ECE)."""
+    """Expected Calibration Error (ECE), weighted if sample_weight given."""
+    w = np.ones_like(y_prob, dtype=float) if sample_weight is None else np.asarray(sample_weight, dtype=float)
     bin_edges = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
-    n = len(y_true)
+    total_w = w.sum()
+    if total_w == 0:
+        return float("nan")
     for low, high in zip(bin_edges[:-1], bin_edges[1:]):
         mask = (y_prob >= low) & (y_prob < high)
-        if mask.sum() == 0:
+        wm = w[mask].sum()
+        if wm == 0:
             continue
-        bin_acc = y_true[mask].mean()
-        bin_conf = y_prob[mask].mean()
-        ece += (mask.sum() / n) * abs(bin_acc - bin_conf)
+        bin_acc = np.average(y_true[mask], weights=w[mask])
+        bin_conf = np.average(y_prob[mask], weights=w[mask])
+        ece += (wm / total_w) * abs(bin_acc - bin_conf)
     return float(ece)
 
 
@@ -100,6 +105,7 @@ def compute_metrics(
     y_prob: np.ndarray,
     n_bootstrap: int = 2000,
     random_state: int = 42,
+    sample_weight: np.ndarray | None = None,
 ) -> ClassificationMetrics:
     """
     Compute full metric suite with bootstrap confidence intervals.
@@ -110,33 +116,39 @@ def compute_metrics(
         y_prob: predicted probabilities for positive class
         n_bootstrap: number of bootstrap resamples for CIs
         random_state: for reproducibility
+        sample_weight: PISA survey weights (W_FSTUWT). When given, every metric is
+            the weighted (population) estimate, and the bootstrap is a weighted
+            resample so the CIs are population-referenced too.
     """
     rng = np.random.default_rng(random_state)
     n = len(y_true)
+    w = None if sample_weight is None else np.asarray(sample_weight, dtype=float)
 
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, sample_weight=w)
 
     metrics = ClassificationMetrics(
-        accuracy=accuracy_score(y_true, y_pred),
-        balanced_accuracy=balanced_accuracy_score(y_true, y_pred),
-        roc_auc=roc_auc_score(y_true, y_prob),
-        pr_auc=average_precision_score(y_true, y_prob),
-        f1_macro=f1_score(y_true, y_pred, average="macro"),
-        f1_positive=f1_score(y_true, y_pred, pos_label=1),
-        f1_negative=f1_score(y_true, y_pred, pos_label=0),
-        precision_positive=precision_score(y_true, y_pred, pos_label=1, zero_division=0),
-        recall_positive=recall_score(y_true, y_pred, pos_label=1, zero_division=0),
-        mcc=matthews_corrcoef(y_true, y_pred),
-        cohen_kappa=cohen_kappa_score(y_true, y_pred),
-        brier_score=brier_score_loss(y_true, y_prob),
-        ece=expected_calibration_error(y_true, y_prob),
+        accuracy=accuracy_score(y_true, y_pred, sample_weight=w),
+        balanced_accuracy=balanced_accuracy_score(y_true, y_pred, sample_weight=w),
+        roc_auc=roc_auc_score(y_true, y_prob, sample_weight=w),
+        pr_auc=average_precision_score(y_true, y_prob, sample_weight=w),
+        f1_macro=f1_score(y_true, y_pred, average="macro", sample_weight=w),
+        f1_positive=f1_score(y_true, y_pred, pos_label=1, sample_weight=w),
+        f1_negative=f1_score(y_true, y_pred, pos_label=0, sample_weight=w),
+        precision_positive=precision_score(y_true, y_pred, pos_label=1, zero_division=0, sample_weight=w),
+        recall_positive=recall_score(y_true, y_pred, pos_label=1, zero_division=0, sample_weight=w),
+        mcc=matthews_corrcoef(y_true, y_pred, sample_weight=w),
+        cohen_kappa=cohen_kappa_score(y_true, y_pred, sample_weight=w),
+        brier_score=brier_score_loss(y_true, y_prob, sample_weight=w),
+        ece=expected_calibration_error(y_true, y_prob, sample_weight=w),
         confusion_matrix=cm,
     )
 
-    # Bootstrap CIs
+    # Bootstrap CIs. With weights we draw indices proportional to the survey
+    # weight (a weighted bootstrap), so resamples are population-representative.
+    p = None if w is None else w / w.sum()
     boot_roc_auc, boot_pr_auc, boot_f1_macro, boot_mcc = [], [], [], []
     for _ in range(n_bootstrap):
-        idx = rng.integers(0, n, size=n)
+        idx = rng.choice(n, size=n, replace=True, p=p)
         yt_b = y_true[idx]
         yp_b = y_pred[idx]
         yprob_b = y_prob[idx]
@@ -159,6 +171,42 @@ def compute_metrics(
     metrics.mcc_ci = ci(boot_mcc)
 
     return metrics
+
+
+def tune_threshold(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    sample_weight: np.ndarray | None = None,
+    metric: str = "f1_macro",
+) -> float:
+    """
+    Pick the decision threshold that maximizes a (weighted) metric.
+
+    Fixed 0.5 is wrong when classes are imbalanced and `class_weight='balanced'`
+    recenters the scores. Call this on TRAIN/validation predictions only, never
+    on the test fold, then apply the returned threshold to test.
+    """
+    w = None if sample_weight is None else np.asarray(sample_weight, dtype=float)
+    grid = np.unique(np.clip(np.round(y_prob, 3), 0.01, 0.99))
+    if len(grid) > 200:
+        grid = np.linspace(0.01, 0.99, 200)
+
+    def score(thr: float) -> float:
+        pred = (y_prob >= thr).astype(int)
+        if metric == "f1_macro":
+            return f1_score(y_true, pred, average="macro", sample_weight=w)
+        if metric == "balanced_accuracy":
+            return balanced_accuracy_score(y_true, pred, sample_weight=w)
+        if metric == "mcc":
+            return matthews_corrcoef(y_true, pred, sample_weight=w)
+        raise ValueError(f"Unknown metric: {metric}")
+
+    best_thr, best_val = 0.5, -np.inf
+    for thr in grid:
+        v = score(thr)
+        if v > best_val:
+            best_val, best_thr = v, float(thr)
+    return best_thr
 
 
 def get_roc_data(

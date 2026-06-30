@@ -140,7 +140,7 @@ their own process where needed. Always set `KMP_DUPLICATE_LIB_OK=TRUE`.
 
 ## Roadmap
 
-### ✅ Done
+###  Done
 - **Phase 1 — Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
   harmonization, weights/PV handling, full pipeline. 5 cycles × 9 countries processed.
 - **Phase 2 — EDA & statistics:** 8 publication figures, 3 executed notebooks,
@@ -150,7 +150,7 @@ their own process where needed. Always set `KMP_DUPLICATE_LIB_OK=TRUE`.
 - **Phase 4 — Modeling:** 8-model comparison with repeated stratified CV; out-of-sample
   2022 experiment; SHAP global + importance.
 
-### ⏭ Next
+### Next
 - **Phase 5 — HPO:** Optuna nested CV on the top 3 models (CatBoost / GBM / LightGBM);
   add KNN, Naive Bayes, MLP, SVM to the comparison.
 - **Phase 6 — Explainability:** SHAP local case studies (TP/TN/FP/FN), dependence &
@@ -161,14 +161,12 @@ their own process where needed. Always set `KMP_DUPLICATE_LIB_OK=TRUE`.
   SES-gradient comparison; Albania-vs-peers narrative.
 - **Phase 9 — Advanced:** stacking ensemble, probability calibration, conformal
   prediction (uncertainty), counterfactual explanations, policy simulation.
-- **Phase 10 — Deliverables:** LaTeX paper (target **EDM 2026**), slides, poster,
+- **Phase 10 — Deliverables:** LaTeX paper\
+, slides, poster,
   interactive risk-score dashboard.
 
 ---
 
-## Target Venue
-
-**EDM 2026** (Educational Data Mining) — primary. Alternatives: AIED 2026, ECML-PKDD 2026.
 
 ---
 

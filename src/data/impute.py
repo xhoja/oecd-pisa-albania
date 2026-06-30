@@ -39,13 +39,22 @@ logger = structlog.get_logger(__name__)
 
 def little_mcar_test(df: pd.DataFrame) -> dict[str, float]:
     """
-    Approximate Little's MCAR test.
-    H0: data is MCAR. p < 0.05 → MAR or MNAR (imputation model needed).
-    Returns dict with statistic and p_value.
+    APPROXIMATE Little's MCAR test — a pattern-wise chi-square, not the exact ML
+    formulation. H0: data is MCAR. p < 0.05 → MAR or MNAR (imputation model
+    needed). Use as a screening heuristic only; do not report as the exact test.
+
+    Requires enough complete cases to estimate the grand mean/covariance. With
+    many partially-missing PISA columns the complete-case set can be empty — we
+    return NaN with a flag rather than a misleading number.
     """
     complete = df.dropna()
     n_complete = len(complete)
     n_total = len(df)
+
+    if n_complete < df.shape[1] + 2:
+        logger.warning("Little's MCAR: too few complete cases — test not computable",
+                       n_complete=n_complete, n_cols=df.shape[1])
+        return {"statistic": np.nan, "df": 0, "p_value": np.nan, "computable": False, "approximate": True}
 
     # Pattern matrix: which rows have same missing pattern
     missing_pattern = df.isnull().astype(int)
@@ -81,8 +90,9 @@ def little_mcar_test(df: pd.DataFrame) -> dict[str, float]:
             continue
 
     p_value = 1 - stats.chi2.cdf(test_stat, df=max(df_dof - len(df.columns), 1))
-    result = {"statistic": round(test_stat, 4), "df": df_dof, "p_value": round(p_value, 6)}
-    logger.info("Little's MCAR test", **result)
+    result = {"statistic": round(test_stat, 4), "df": df_dof, "p_value": round(p_value, 6),
+              "computable": True, "approximate": True}
+    logger.info("Little's MCAR test (approximate)", **result)
     return result
 
 

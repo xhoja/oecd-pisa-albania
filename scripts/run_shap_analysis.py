@@ -28,6 +28,7 @@ from src.explainability.shap_analysis import (
     global_feature_importance,
     save_shap_values,
 )
+from src.features.transformers import EngineeredFeatureBuilder
 from src.models.prepare import build_model_data, impute_median
 from src.models.registry import get_model
 from src.utils.logging import configure_logging
@@ -44,10 +45,13 @@ def main() -> None:
     feats = ["ESCS", "HOMEPOS", "GENDER", "REPEAT", "IMMIG", "BELONG", "TEACHSUP",
              "ICTHOME", "ICTSCH", "ANXMAT", "GRADE", "HISCED", "HISEI"]
     data = build_model_data(df, feats, domain="math")
-    (X,) = impute_median(data.X)
+    # Build engineered features (SES_COMPLETE, interactions, ...) for the final
+    # explanatory model. Single model on all data, so fit-on-all is fine here.
+    X_eng = EngineeredFeatureBuilder().fit_transform(data.X)
+    (X,) = impute_median(X_eng)
     y = data.y.values
 
-    model = get_model("lightgbm")
+    model = get_model("catboost")  # top performer; lightgbm install is broken on this host
     model.fit(X, y, sample_weight=data.weights.values)
     print("Model trained. Computing SHAP...")
 

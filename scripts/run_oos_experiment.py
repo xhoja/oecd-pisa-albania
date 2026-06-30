@@ -46,12 +46,16 @@ def main() -> None:
     print(f"\nFeatures used ({len(res['features'])}): {res['features']}")
     print(f"n_train={res['n_train']} n_test={res['n_test']}\n")
 
+    ok = {m: d for m, d in res["models"].items() if "roc_auc" in d}
+    failed = [m for m, d in res["models"].items() if "error" in d]
     print(f"{'model':<22}{'test_AUC':>10}{'PR_AUC':>9}{'F1':>8}{'MCC':>8}")
-    for m, d in sorted(res["models"].items(), key=lambda x: -x[1]["roc_auc"]):
+    for m, d in sorted(ok.items(), key=lambda x: -x[1]["roc_auc"]):
         print(f"{m:<22}{d['roc_auc']:>10}{d['pr_auc']:>9}{d['f1_macro']:>8}{d['mcc']:>8}")
+    if failed:
+        print(f"\n[!] models that crashed at the C level (check local libomp install): {failed}")
 
     save_results(res, ROOT / "outputs/results/oos_2022_experiment.json")
-    fig = plot_oos_comparison(res, metric="roc_auc")
+    fig = plot_oos_comparison({"models": ok}, metric="roc_auc")
     save_figure(fig, str(ROOT / "outputs/figures/models/oos_2022_comparison"))
     print("\nSAVED OK")
 

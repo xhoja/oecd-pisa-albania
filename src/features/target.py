@@ -21,7 +21,9 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-THRESHOLDS = {"math": 420.0, "reading": 407.0, "science": 410.0}
+# Exact OECD PISA Level 2 lower bounds (below = at risk). Do NOT round —
+# rounding shifts the at-risk rate by a non-trivial fraction of a point.
+THRESHOLDS = {"math": 420.07, "reading": 407.47, "science": 409.54}
 
 PV_PREFIXES = {"math": "MATH", "reading": "READ", "science": "SCIE"}
 

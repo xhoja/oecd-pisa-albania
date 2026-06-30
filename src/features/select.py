@@ -53,11 +53,13 @@ def remove_correlated(
     Remove one of each pair of features with |correlation| > threshold.
     Keeps the first feature in the pair (ordering matters).
     """
-    sub = df[features].dropna()
-    if sub.empty:
+    present = [f for f in features if f in df.columns]
+    if not present:
         return features
-
-    corr = sub.corr().abs()
+    # Pairwise-complete correlation: pandas .corr() drops NaN per pair, not
+    # listwise. Listwise dropna across many partially-missing PISA columns can
+    # collapse to a handful of rows and produce spurious correlations.
+    corr = df[present].corr().abs()
     upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
     to_drop = set()
     for col in upper.columns:

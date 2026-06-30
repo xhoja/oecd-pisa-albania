@@ -21,7 +21,8 @@ import pandas as pd
 
 import structlog
 
-from src.features.engineer import engineer_all
+from src.data.impute import add_missingness_indicators
+from src.data.weights import normalize_weights_within_country
 from src.features.select import select_features
 from src.features.target import add_point_target
 
@@ -44,33 +45,36 @@ def build_model_data(
     candidate_features: list[str],
     domain: str = "math",
     threshold: float | None = None,
-    add_engineered: bool = True,
+    add_indicators: bool = True,
+    use_normalized_weights: bool | None = None,
     drop_missing_target: bool = True,
 ) -> ModelData:
     """
     Construct (X, y, weights) for modeling from a processed dataframe.
 
+    Engineered features (SES_COMPLETE, interactions, ...) are intentionally NOT
+    added here: they are built inside the CV pipeline by
+    ``src.features.transformers.EngineeredFeatureBuilder`` so their
+    standardization/rank statistics are fit on the train fold only (no leakage).
+    Pass the raw component columns (ESCS, HOMEPOS, ANXMAT, ICTHOME, ...) in
+    ``candidate_features`` and the builder derives the rest per fold.
+
     Args:
         df: processed dataframe (one or more cycles)
-        candidate_features: features to consider (subset that exists is used)
+        candidate_features: raw features to consider (subset that exists is used)
         domain: 'math' | 'reading' | 'science'
         threshold: low-proficiency threshold (defaults to PISA L2)
-        add_engineered: include engineered features if present
+        add_indicators: add binary _MISS_<feat> columns for partially-missing
+            features so tree models can use missingness as signal
+        use_normalized_weights: divide W_FSTUWT so it sums to n within each
+            country (stops a large country dominating the loss in cross-country
+            models). Default: auto-on when >1 country is present.
         drop_missing_target: drop rows where target cannot be computed
     """
     df = add_point_target(df, domain=domain, threshold=threshold)
     target_col = {"math": "AT_RISK_MATH", "reading": "AT_RISK_READ", "science": "AT_RISK_SCIE"}[domain]
 
-    engineered = [
-        "SES_COMPLETE", "MATERIAL_DEFICIT", "DIGITAL_READINESS", "DIGITAL_GAP",
-        "SES_x_ANXIETY", "BELONG_x_TEACHSUP", "GRADE_x_SES", "GENDER_x_ANXMAT",
-        "HOME_EDU_SCORE",
-    ]
-    feats = list(candidate_features)
-    if add_engineered:
-        feats += [f for f in engineered if f in df.columns]
-
-    feats = [f for f in feats if f in df.columns]
+    feats = [f for f in candidate_features if f in df.columns]
 
     work = df.copy()
     if drop_missing_target:
@@ -80,14 +84,34 @@ def build_model_data(
     feats = [f for f in feats if work[f].notna().any()]
     feats = select_features(work, feats, max_missingness=0.95, max_correlation=0.97)
 
+    if add_indicators:
+        before = set(work.columns)
+        work = add_missingness_indicators(work, feats, threshold=0.95)
+        feats += [c for c in work.columns if c.startswith("_MISS_") and c not in before]
+
     X = work[feats].copy()
     y = work[target_col].astype(int)
-    weights = work[WEIGHT_COL] if WEIGHT_COL in work.columns else pd.Series(np.ones(len(work)), index=work.index)
+
+    # Weight selection. Normalize within country for cross-country slices.
+    country_col = "COUNTRY" if "COUNTRY" in work.columns else ("CNT" if "CNT" in work.columns else None)
+    n_countries = work[country_col].nunique() if country_col else 1
+    if use_normalized_weights is None:
+        use_normalized_weights = n_countries > 1
+    if WEIGHT_COL in work.columns:
+        if use_normalized_weights:
+            work = normalize_weights_within_country(work)
+            weights = work[f"{WEIGHT_COL}_NORM"]
+        else:
+            weights = work[WEIGHT_COL]
+    else:
+        weights = pd.Series(np.ones(len(work)), index=work.index)
 
     meta = {
         "domain": domain,
         "n_samples": len(X),
         "n_features": len(feats),
+        "n_countries": int(n_countries),
+        "weights_normalized": bool(use_normalized_weights and WEIGHT_COL in work.columns),
         "at_risk_rate": round(float(y.mean()), 4),
         "target_col": target_col,
     }
