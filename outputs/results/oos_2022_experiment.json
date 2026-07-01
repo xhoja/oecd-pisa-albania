@@ -26,25 +26,25 @@
   "n_test": 6129,
   "models": {
     "logistic_regression": {
-      "accuracy": 0.6896,
-      "balanced_accuracy": 0.5029,
-      "roc_auc": 0.6193,
-      "pr_auc": 0.8386,
-      "f1_macro": 0.4924,
-      "f1_positive": 0.8088,
-      "f1_negative": 0.176,
-      "precision_positive": 0.7547,
-      "recall_positive": 0.8713,
-      "mcc": 0.0073,
-      "cohen_kappa": 0.0068,
-      "brier_score": 0.1933,
-      "ece": 0.0719,
-      "roc_auc_95ci": "(0.6049, 0.6351)",
-      "f1_macro_95ci": "(0.4804, 0.5045)",
-      "mcc_95ci": "(-0.0162, 0.0319)",
-      "tuned_threshold": 0.493,
-      "f1_macro_tuned": 0.4911525657149099,
-      "mcc_tuned": 0.005835267592971752
+      "accuracy": 0.6877,
+      "balanced_accuracy": 0.502,
+      "roc_auc": 0.622,
+      "pr_auc": 0.8397,
+      "f1_macro": 0.4919,
+      "f1_positive": 0.8073,
+      "f1_negative": 0.1764,
+      "precision_positive": 0.7543,
+      "recall_positive": 0.8683,
+      "mcc": 0.0051,
+      "cohen_kappa": 0.0048,
+      "brier_score": 0.1949,
+      "ece": 0.0784,
+      "roc_auc_95ci": "(0.6075, 0.6371)",
+      "f1_macro_95ci": "(0.4803, 0.5036)",
+      "mcc_95ci": "(-0.0184, 0.0288)",
+      "tuned_threshold": 0.478,
+      "f1_macro_tuned": 0.48251808996286133,
+      "mcc_tuned": -0.006189775545690521
     },
     "random_forest": {
       "accuracy": 0.6616,
@@ -154,5 +154,142 @@
       "f1_macro_tuned": 0.5794562165758651,
       "mcc_tuned": 0.20472848645142278
     }
-  }
+  },
+  "delong_pairwise": [
+    {
+      "model_a": "random_forest",
+      "model_b": "gradient_boosting",
+      "auc_a": 0.6754,
+      "auc_b": 0.6731,
+      "z": 0.468,
+      "p_value": 0.6398,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "random_forest",
+      "model_b": "catboost",
+      "auc_a": 0.6754,
+      "auc_b": 0.6654,
+      "z": 1.954,
+      "p_value": 0.0507,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "random_forest",
+      "model_b": "extra_trees",
+      "auc_a": 0.6754,
+      "auc_b": 0.6639,
+      "z": 2.841,
+      "p_value": 0.0045,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "random_forest",
+      "model_b": "xgboost",
+      "auc_a": 0.6754,
+      "auc_b": 0.6399,
+      "z": 5.49,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "random_forest",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6754,
+      "auc_b": 0.6221,
+      "z": 6.946,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "gradient_boosting",
+      "model_b": "catboost",
+      "auc_a": 0.6731,
+      "auc_b": 0.6654,
+      "z": 1.588,
+      "p_value": 0.1123,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "gradient_boosting",
+      "model_b": "extra_trees",
+      "auc_a": 0.6731,
+      "auc_b": 0.6639,
+      "z": 1.59,
+      "p_value": 0.1118,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "gradient_boosting",
+      "model_b": "xgboost",
+      "auc_a": 0.6731,
+      "auc_b": 0.6399,
+      "z": 5.561,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "gradient_boosting",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6731,
+      "auc_b": 0.6221,
+      "z": 6.924,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "catboost",
+      "model_b": "extra_trees",
+      "auc_a": 0.6654,
+      "auc_b": 0.6639,
+      "z": 0.281,
+      "p_value": 0.7785,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "catboost",
+      "model_b": "xgboost",
+      "auc_a": 0.6654,
+      "auc_b": 0.6399,
+      "z": 4.093,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "catboost",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6654,
+      "auc_b": 0.6221,
+      "z": 5.31,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "extra_trees",
+      "model_b": "xgboost",
+      "auc_a": 0.6639,
+      "auc_b": 0.6399,
+      "z": 3.369,
+      "p_value": 0.0008,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "extra_trees",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6639,
+      "auc_b": 0.6221,
+      "z": 5.079,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "xgboost",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6399,
+      "auc_b": 0.6221,
+      "z": 2.1,
+      "p_value": 0.0357,
+      "significant_0.05": true
+    }
+  ]
 }

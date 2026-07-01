@@ -43,74 +43,49 @@ def build_logistic_regression(**kwargs: Any) -> Pipeline:
 
 
 def build_decision_tree(**kwargs: Any) -> DecisionTreeClassifier:
-    return DecisionTreeClassifier(
-        class_weight="balanced",
-        random_state=42,
-        **kwargs,
-    )
+    params = {"class_weight": "balanced", "random_state": 42, **kwargs}
+    return DecisionTreeClassifier(**params)
 
 
 def build_random_forest(**kwargs: Any) -> RandomForestClassifier:
-    return RandomForestClassifier(
-        n_estimators=200,
-        class_weight="balanced",
-        random_state=42,
-        n_jobs=-1,
-        **kwargs,
-    )
+    # merge pattern (defaults, then kwargs) so tuned params can override the
+    # defaults instead of raising "multiple values for keyword argument".
+    params = {"n_estimators": 200, "class_weight": "balanced",
+              "random_state": 42, "n_jobs": -1, **kwargs}
+    return RandomForestClassifier(**params)
 
 
 def build_extra_trees(**kwargs: Any) -> ExtraTreesClassifier:
-    return ExtraTreesClassifier(
-        n_estimators=200,
-        class_weight="balanced",
-        random_state=42,
-        n_jobs=-1,
-        **kwargs,
-    )
+    params = {"n_estimators": 200, "class_weight": "balanced",
+              "random_state": 42, "n_jobs": -1, **kwargs}
+    return ExtraTreesClassifier(**params)
 
 
 def build_gradient_boosting(**kwargs: Any) -> GradientBoostingClassifier:
-    return GradientBoostingClassifier(
-        n_estimators=200,
-        learning_rate=0.05,
-        max_depth=4,
-        random_state=42,
-        **kwargs,
-    )
+    params = {"n_estimators": 200, "learning_rate": 0.05, "max_depth": 4,
+              "random_state": 42, **kwargs}
+    return GradientBoostingClassifier(**params)
 
 
 def build_xgboost(**kwargs: Any) -> Any:
     from xgboost import XGBClassifier
     # use_label_encoder was removed in xgboost>=2.0; passing it only spams a
     # "Parameters not used" warning on every fit.
-    return XGBClassifier(
-        eval_metric="logloss",
-        random_state=42,
-        n_jobs=-1,
-        **kwargs,
-    )
+    params = {"eval_metric": "logloss", "random_state": 42, "n_jobs": -1, **kwargs}
+    return XGBClassifier(**params)
 
 
 def build_lightgbm(**kwargs: Any) -> Any:
     from lightgbm import LGBMClassifier
-    return LGBMClassifier(
-        class_weight="balanced",
-        random_state=42,
-        n_jobs=-1,
-        verbose=-1,
-        **kwargs,
-    )
+    params = {"class_weight": "balanced", "random_state": 42, "n_jobs": -1,
+              "verbose": -1, **kwargs}
+    return LGBMClassifier(**params)
 
 
 def build_catboost(**kwargs: Any) -> Any:
     from catboost import CatBoostClassifier
-    return CatBoostClassifier(
-        auto_class_weights="Balanced",
-        random_seed=42,
-        verbose=0,
-        **kwargs,
-    )
+    params = {"auto_class_weights": "Balanced", "random_seed": 42, "verbose": 0, **kwargs}
+    return CatBoostClassifier(**params)
 
 
 def build_svm(**kwargs: Any) -> Pipeline:

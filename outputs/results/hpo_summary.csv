@@ -1,0 +1,4 @@
+model,tuned_auc,default_auc,hpo_gain,p_value,significant
+catboost,0.7351,0.7333,0.0018,0.8117,False
+gradient_boosting,0.7314,0.7272,0.0043,0.4538,False
+logistic_regression,0.7256,0.7261,-0.0005,0.4342,False

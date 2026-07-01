@@ -28,6 +28,9 @@ def main() -> None:
     elif task == "cv":
         from src.models.experiment import _cv_worker
         result = _cv_worker(*args)
+    elif task == "hpo_fold":
+        from src.models.hpo import _hpo_outer_fold_worker
+        result = _hpo_outer_fold_worker(*args)
     else:
         raise ValueError(f"Unknown isolated task: {task}")
 

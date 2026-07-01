@@ -41,7 +41,7 @@ AT_RISK_COLORS = {
 
 
 def apply_publication_style() -> None:
-    """Apply conference-quality matplotlib rcParams."""
+    """Apply publication-quality matplotlib rcParams."""
     mpl.rcParams.update({
         # Figure
         "figure.dpi": 150,

@@ -54,6 +54,15 @@ def main() -> None:
     if failed:
         print(f"\n[!] models that crashed at the C level (check local libomp install): {failed}")
 
+    # DeLong pairwise AUC test on the shared 2022 test set.
+    dl = res.get("delong_pairwise", [])
+    if dl:
+        print("\nDeLong pairwise AUC test (shared 2022 test set):")
+        print(f"{'A':<20}{'B':<20}{'auc_a':>8}{'auc_b':>8}{'z':>8}{'p':>9}  sig")
+        for r in dl:
+            print(f"{r['model_a']:<20}{r['model_b']:<20}{r['auc_a']:>8}{r['auc_b']:>8}"
+                  f"{r['z']:>8}{r['p_value']:>9}  {r['significant_0.05']}")
+
     save_results(res, ROOT / "outputs/results/oos_2022_experiment.json")
     fig = plot_oos_comparison({"models": ok}, metric="roc_auc")
     save_figure(fig, str(ROOT / "outputs/figures/models/oos_2022_comparison"))

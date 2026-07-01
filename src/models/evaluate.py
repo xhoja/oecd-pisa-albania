@@ -75,6 +75,27 @@ class ClassificationMetrics:
         }
 
 
+def fit_with_sample_weight(pipe, X, y, w) -> bool:
+    """
+    Fit ``pipe`` passing PISA sample weights to the FINAL estimator, whichever
+    parameter path it needs. The registry wraps some models (LR/SVM/KNN/MLP) in
+    an inner ``RobustScaler`` Pipeline, so the weight kwarg is
+    ``model__clf__sample_weight``; bare estimators (trees/boosters/NB) take
+    ``model__sample_weight``. The naïve single-key ``model__sample_weight`` call
+    raised for the wrapped models and silently fell back to an UNWEIGHTED fit —
+    this tries both real paths first and only drops to unweighted if neither
+    exists. Returns True iff a weighted fit succeeded.
+    """
+    for key in ("model__clf__sample_weight", "model__sample_weight"):
+        try:
+            pipe.fit(X, y, **{key: w})
+            return True
+        except (TypeError, ValueError):
+            continue
+    pipe.fit(X, y)
+    return False
+
+
 def expected_calibration_error(
     y_true: np.ndarray,
     y_prob: np.ndarray,
@@ -207,6 +228,140 @@ def tune_threshold(
         if v > best_val:
             best_val, best_thr = v, float(thr)
     return best_thr
+
+
+# ---------------------------------------------------------------------------
+# Nadeau-Bengio corrected-resampled inference for (repeated) cross-validation
+# ---------------------------------------------------------------------------
+# The naive SE of a mean over CV folds, sqrt(S^2 / J), is optimistic: the folds
+# share training data, so the fold scores are positively correlated and the
+# variance is under-estimated. Nadeau & Bengio (2003) correct this by replacing
+# the 1/J factor with (1/J + n_test/n_train). For k-fold CV, n_test/n_train =
+# 1/(k-1); for r repeats there are J = k*r scores but the ratio is unchanged.
+
+def nadeau_bengio_interval(
+    scores: list[float] | np.ndarray,
+    test_train_ratio: float,
+    alpha: float = 0.05,
+) -> tuple[float, float, float, float]:
+    """(mean, lo, hi, se) with the Nadeau-Bengio corrected variance and a
+    t-interval on J-1 df. ``test_train_ratio`` = n_test/n_train (1/(k-1) for
+    k-fold). Falls back to (mean, nan, nan, nan) with < 2 scores."""
+    from scipy import stats as _st
+
+    arr = np.asarray(scores, dtype=float)
+    J = len(arr)
+    mean = float(arr.mean()) if J else float("nan")
+    if J < 2:
+        return mean, float("nan"), float("nan"), float("nan")
+    S2 = float(arr.var(ddof=1))
+    se = float(np.sqrt((1.0 / J + test_train_ratio) * S2))
+    t = float(_st.t.ppf(1 - alpha / 2, df=J - 1))
+    return mean, mean - t * se, mean + t * se, se
+
+
+def corrected_resampled_ttest(
+    diffs: list[float] | np.ndarray,
+    test_train_ratio: float,
+) -> tuple[float, float, float]:
+    """
+    Nadeau-Bengio corrected paired t-test on per-fold score DIFFERENCES
+    (model A - model B, paired by fold). Returns (mean_diff, t, p_two_sided).
+
+    Use this — not a plain paired t-test and not DeLong — to ask "is model A's
+    CV AUC significantly above model B's?", because it accounts for the reused
+    training data across folds. DeLong is for a single shared test set (see
+    ``delong_roc_test``); the corrected resampled t-test is for CV.
+    """
+    from scipy import stats as _st
+
+    arr = np.asarray(diffs, dtype=float)
+    J = len(arr)
+    mean = float(arr.mean()) if J else float("nan")
+    if J < 2:
+        return mean, float("nan"), float("nan")
+    S2 = float(arr.var(ddof=1))
+    se = float(np.sqrt((1.0 / J + test_train_ratio) * S2))
+    if se == 0.0:
+        return mean, 0.0, 1.0
+    t = mean / se
+    p = float(2 * _st.t.sf(abs(t), df=J - 1))
+    return mean, float(t), p
+
+
+# ---------------------------------------------------------------------------
+# DeLong test for two correlated ROC curves on one shared test set
+# ---------------------------------------------------------------------------
+# Fast DeLong (Sun & Xu 2014) — used to compare two models' AUCs on the SAME
+# test samples (e.g. the held-out 2022 out-of-sample cohort). Unweighted: it
+# tests the models against each other on identical rows, which is the relevant
+# comparison; it does not fold in the survey design.
+
+def _midrank(x: np.ndarray) -> np.ndarray:
+    J = len(x)
+    Z = np.argsort(x)
+    W = x[Z]
+    T = np.zeros(J, dtype=float)
+    i = 0
+    while i < J:
+        j = i
+        while j < J and W[j] == W[i]:
+            j += 1
+        T[i:j] = 0.5 * (i + j - 1) + 1  # 1-based average rank of ties
+        i = j
+    out = np.empty(J, dtype=float)
+    out[Z] = T
+    return out
+
+
+def _fast_delong(preds_pos_first: np.ndarray, m: int) -> tuple[np.ndarray, np.ndarray]:
+    """preds_pos_first: (k, N) scores with the m positives in the first columns.
+    Returns (aucs[k], covariance[k,k])."""
+    k = preds_pos_first.shape[0]
+    n = preds_pos_first.shape[1] - m
+    tx = np.empty([k, m]); ty = np.empty([k, n]); tz = np.empty([k, m + n])
+    for r in range(k):
+        tx[r] = _midrank(preds_pos_first[r, :m])
+        ty[r] = _midrank(preds_pos_first[r, m:])
+        tz[r] = _midrank(preds_pos_first[r, :])
+    aucs = tz[:, :m].sum(axis=1) / m / n - (m + 1.0) / 2.0 / n
+    v01 = (tz[:, :m] - tx) / n
+    v10 = 1.0 - (tz[:, m:] - ty) / m
+    sx = np.cov(v01)
+    sy = np.cov(v10)
+    cov = sx / m + sy / n
+    return aucs, np.atleast_2d(cov)
+
+
+def delong_roc_test(
+    y_true: np.ndarray,
+    prob1: np.ndarray,
+    prob2: np.ndarray,
+) -> tuple[float, float, float, float]:
+    """
+    Compare AUC(prob1) vs AUC(prob2) on the same labels via DeLong.
+    Returns (auc1, auc2, z, p_two_sided). p is NaN if a class is absent.
+    """
+    from scipy import stats as _st
+
+    y = np.asarray(y_true).astype(int)
+    p1 = np.asarray(prob1, dtype=float)
+    p2 = np.asarray(prob2, dtype=float)
+    m = int((y == 1).sum())
+    n = int((y == 0).sum())
+    if m == 0 or n == 0:
+        return float("nan"), float("nan"), float("nan"), float("nan")
+    order = np.argsort(-y)  # positives (label 1) first
+    preds = np.vstack([p1, p2])[:, order]
+    aucs, cov = _fast_delong(preds, m)
+    var = cov[0, 0] + cov[1, 1] - 2 * cov[0, 1]
+    if var <= 0:
+        z = 0.0
+        p = 1.0
+    else:
+        z = (aucs[0] - aucs[1]) / np.sqrt(var)
+        p = float(2 * _st.norm.sf(abs(z)))
+    return float(aucs[0]), float(aucs[1]), float(z), p
 
 
 def get_roc_data(

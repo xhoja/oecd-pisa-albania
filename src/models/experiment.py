@@ -21,7 +21,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy import stats as _scipy_stats
 from sklearn import set_config
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RepeatedStratifiedKFold
@@ -33,7 +32,13 @@ import structlog
 from src.data.impute import rubins_combine
 from src.features.target import THRESHOLDS, _pv_columns
 from src.features.transformers import EngineeredFeatureBuilder
-from src.models.evaluate import compute_metrics
+from src.models.evaluate import (
+    compute_metrics,
+    corrected_resampled_ttest,
+    delong_roc_test,
+    fit_with_sample_weight,
+    nadeau_bengio_interval,
+)
 from src.models.prepare import ModelData, build_model_data
 from src.models.registry import get_model
 from src.utils.reproducibility import set_seeds
@@ -57,17 +62,17 @@ def _wrap(model: Any, engineer: bool = True) -> Pipeline:
     return Pipeline(steps)
 
 
-def _fold_ci(vals: list[float], alpha: float = 0.05) -> tuple[float, float, float]:
-    """(mean, lo, hi) — t-interval across CV folds. Honest about k folds, unlike
-    a 2.5/97.5 percentile of ~20 points."""
-    arr = np.asarray(vals, dtype=float)
-    k = len(arr)
-    mean = float(arr.mean())
-    if k < 2:
-        return mean, np.nan, np.nan
-    se = arr.std(ddof=1) / np.sqrt(k)
-    t = _scipy_stats.t.ppf(1 - alpha / 2, df=k - 1)
-    return mean, float(mean - t * se), float(mean + t * se)
+def _fold_ci(vals: list[float], test_train_ratio: float,
+             alpha: float = 0.05) -> tuple[float, float, float]:
+    """
+    (mean, lo, hi) across CV folds using the **Nadeau-Bengio** corrected
+    variance. A plain t-interval on the fold scores is anti-conservative because
+    the folds share training data (correlated scores); the correction replaces
+    1/J with (1/J + n_test/n_train), widening the interval to an honest width.
+    ``test_train_ratio`` = 1/(k-1) for k-fold CV.
+    """
+    mean, lo, hi, _se = nadeau_bengio_interval(vals, test_train_ratio, alpha)
+    return mean, lo, hi
 
 
 def _run_isolated(task: str, *args):
@@ -117,10 +122,7 @@ def _oos_worker(name, Xtr, ytr, wtr, Xte, yte, wte, random_state):
     set_seeds(random_state)
     with threadpool_limits(limits=1):
         pipe = _wrap(get_model(name))
-        try:
-            pipe.fit(Xtr, ytr, model__sample_weight=wtr)
-        except (TypeError, ValueError):
-            pipe.fit(Xtr, ytr)
+        fit_with_sample_weight(pipe, Xtr, ytr, wtr)
         prob_tr = pipe.predict_proba(Xtr)[:, 1]
         prob = pipe.predict_proba(Xte)[:, 1]
         thr = tune_threshold(ytr, prob_tr, sample_weight=wtr, metric="f1_macro")
@@ -132,6 +134,9 @@ def _oos_worker(name, Xtr, ytr, wtr, Xte, yte, wte, random_state):
     d["tuned_threshold"] = round(thr, 3)
     d["f1_macro_tuned"] = m_tuned.f1_macro
     d["mcc_tuned"] = m_tuned.mcc
+    # carry the raw test-set probabilities back so the parent can run the DeLong
+    # pairwise AUC test on identical samples (stripped before results are saved).
+    d["_prob"] = prob.tolist()
     return d
 
 
@@ -147,10 +152,7 @@ def _cv_worker(name, X, y, w, outer_folds, outer_repeats, random_state, use_samp
         for tr, te in cv.split(X, y):
             pipe = _wrap(get_model(name))
             if use_sample_weight:
-                try:
-                    pipe.fit(X.iloc[tr], y.iloc[tr], model__sample_weight=w.iloc[tr].values)
-                except (TypeError, ValueError):
-                    pipe.fit(X.iloc[tr], y.iloc[tr])
+                fit_with_sample_weight(pipe, X.iloc[tr], y.iloc[tr], w.iloc[tr].values)
             else:
                 pipe.fit(X.iloc[tr], y.iloc[tr])
             prob = pipe.predict_proba(X.iloc[te])[:, 1]
@@ -165,12 +167,13 @@ def _cv_worker(name, X, y, w, outer_folds, outer_repeats, random_state, use_samp
 
     if not fold_auc:
         return None
-    auc_mean, auc_lo, auc_hi = _fold_ci(fold_auc)
+    ratio = 1.0 / (outer_folds - 1) if outer_folds > 1 else 1.0  # n_test/n_train
+    auc_mean, auc_lo, auc_hi = _fold_ci(fold_auc, ratio)
     return {
         "model": name,
         "roc_auc_mean": round(auc_mean, 4),
         "roc_auc_std": round(float(np.std(fold_auc, ddof=1)), 4),
-        "roc_auc_95ci_low": round(auc_lo, 4),    # t-interval across folds
+        "roc_auc_95ci_low": round(auc_lo, 4),    # Nadeau-Bengio corrected
         "roc_auc_95ci_high": round(auc_hi, 4),
         "pr_auc_mean": round(np.mean(fold_pr), 4),
         "f1_macro_mean": round(np.mean(fold_f1), 4),
@@ -178,6 +181,10 @@ def _cv_worker(name, X, y, w, outer_folds, outer_repeats, random_state, use_samp
         "mcc_mean": round(np.mean(fold_mcc), 4),
         "n_folds": len(fold_auc),
         "weighted_metrics": bool(use_sample_weight),
+        "ci_method": "nadeau_bengio",
+        # per-fold AUCs (ordered by fold) so models can be paired downstream for
+        # the corrected resampled t-test; stripped before CSV serialization.
+        "fold_auc": [round(float(x), 6) for x in fold_auc],
     }
 
 
@@ -229,12 +236,56 @@ def compare_models_cv(
 
         # Incremental save so a later slow/failing model can't wipe results
         if save_path is not None:
-            pd.DataFrame(rows).sort_values("roc_auc_mean", ascending=False).reset_index(
-                drop=True
-            ).to_csv(save_path, index=False)
+            _rows_to_csv_df(rows).to_csv(save_path, index=False)
 
-    result = pd.DataFrame(rows).sort_values("roc_auc_mean", ascending=False).reset_index(drop=True)
+    fold_scores = {r["model"]: r["fold_auc"] for r in rows if "fold_auc" in r}
+    result = _rows_to_csv_df(rows)
+    # Keep the per-fold scores for downstream paired significance testing.
+    result.attrs["fold_scores"] = fold_scores
+    result.attrs["outer_folds"] = outer_folds
     return result
+
+
+def _rows_to_csv_df(rows: list[dict]) -> pd.DataFrame:
+    """Sorted results frame with the bulky per-fold list dropped (CSV-safe)."""
+    df = pd.DataFrame([{k: v for k, v in r.items() if k != "fold_auc"} for r in rows])
+    if "roc_auc_mean" in df.columns:
+        df = df.sort_values("roc_auc_mean", ascending=False)
+    return df.reset_index(drop=True)
+
+
+def paired_nb_auc_test(
+    fold_scores: dict[str, list[float]],
+    outer_folds: int,
+) -> pd.DataFrame:
+    """
+    Pairwise Nadeau-Bengio corrected resampled t-test on the per-fold AUCs from
+    ``compare_models_cv`` (read ``result.attrs['fold_scores']``). Every model
+    shares the same CV splits (same ``random_state``), so fold i is comparable
+    across models and the scores can be paired.
+
+    Returns a tidy frame (model_a ranked >= model_b by mean AUC) with the mean
+    AUC gap, the corrected t-statistic and its two-sided p-value. A large gap
+    with p > 0.05 means the "winner" is not statistically distinguishable.
+    """
+    ratio = 1.0 / (outer_folds - 1) if outer_folds > 1 else 1.0
+    means = {m: float(np.mean(s)) for m, s in fold_scores.items()}
+    order = sorted(means, key=means.get, reverse=True)
+    out = []
+    for i, a in enumerate(order):
+        for b in order[i + 1:]:
+            sa, sb = np.asarray(fold_scores[a]), np.asarray(fold_scores[b])
+            k = min(len(sa), len(sb))
+            mean_diff, t, p = corrected_resampled_ttest(sa[:k] - sb[:k], ratio)
+            out.append({
+                "model_a": a, "model_b": b,
+                "auc_a": round(means[a], 4), "auc_b": round(means[b], 4),
+                "mean_diff": round(mean_diff, 4),
+                "t": round(t, 3) if t == t else np.nan,
+                "p_value": round(p, 4) if p == p else np.nan,
+                "significant_0.05": bool(p < 0.05) if p == p else False,
+            })
+    return pd.DataFrame(out)
 
 
 def out_of_sample(
@@ -268,6 +319,7 @@ def out_of_sample(
     wtr, wte = train.weights.values, test.weights.values
 
     results: dict[str, Any] = {"features": common, "n_train": len(Xtr), "n_test": len(Xte), "models": {}}
+    probs: dict[str, np.ndarray] = {}
     for name in model_names:
         # Each model runs in a FRESH interpreter (see _run_isolated) so boosters
         # get a clean OpenMP runtime. If one still crashes at the C level (a
@@ -280,11 +332,36 @@ def out_of_sample(
             print(f"  [oos] {name}: FAILED — {str(e).splitlines()[0]}", flush=True)
             logger.warning("OOS model failed", model=name, error=str(e).splitlines()[0])
             continue
+        if "_prob" in d:
+            probs[name] = np.asarray(d.pop("_prob"), dtype=float)
         results["models"][name] = d
         print(f"  [oos] {name}: test_AUC={d['roc_auc']:.4f} (weighted)", flush=True)
         logger.info("OOS evaluated", model=name, test_auc=d["roc_auc"])
 
+    # DeLong pairwise AUC comparison on the SHARED 2022 test set. This is the
+    # right test here (identical samples, one held-out set); the CV comparison
+    # instead uses the corrected resampled t-test (paired_nb_auc_test).
+    results["delong_pairwise"] = _delong_pairwise(yte, probs)
     return results
+
+
+def _delong_pairwise(y_true: np.ndarray, probs: dict[str, np.ndarray]) -> list[dict]:
+    """Pairwise DeLong test between every successful model, ranked by AUC."""
+    from sklearn.metrics import roc_auc_score
+
+    names = sorted(probs, key=lambda k: -roc_auc_score(y_true, probs[k]))
+    out: list[dict] = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            auc_a, auc_b, z, p = delong_roc_test(y_true, probs[a], probs[b])
+            out.append({
+                "model_a": a, "model_b": b,
+                "auc_a": round(auc_a, 4), "auc_b": round(auc_b, 4),
+                "z": round(z, 3) if z == z else np.nan,
+                "p_value": round(p, 4) if p == p else np.nan,
+                "significant_0.05": bool(p < 0.05) if p == p else False,
+            })
+    return out
 
 
 def per_pv_cv_evaluate(
@@ -340,10 +417,7 @@ def per_pv_cv_evaluate(
             fold: dict[str, list[float]] = {k: [] for k in metric_keys}
             for tr, te in cv.split(X, y):
                 pipe = _wrap(get_model(model_name))
-                try:
-                    pipe.fit(X.iloc[tr], y.iloc[tr], model__sample_weight=w.iloc[tr].values)
-                except (TypeError, ValueError):
-                    pipe.fit(X.iloc[tr], y.iloc[tr])
+                fit_with_sample_weight(pipe, X.iloc[tr], y.iloc[tr], w.iloc[tr].values)
                 prob = pipe.predict_proba(X.iloc[te])[:, 1]
                 pred = (prob >= 0.5).astype(int)
                 yte = y.iloc[te].values

@@ -105,6 +105,33 @@ def nb_01_eda_albania() -> list:
         ),
         md("**Reading:** Albania improved steadily 2009→2018 (low-proficiency fell ~28 pp), then "
            "reversed catastrophically in 2022 (+33 pp). This single-cycle reversal is the focus of the paper."),
+        md("## 1b. Design-based standard errors (BRR + plausible values)\n\n"
+           "The CIs above use a naïve normal approximation that ignores both the PISA sampling design "
+           "and the plausible-value uncertainty. The **correct** PISA standard error combines two "
+           "sources (OECD Data Analysis Manual): sampling variance via **Balanced Repeated Replication** "
+           "(80 Fay replicate weights, computed per PV) plus imputation variance **across the 10 "
+           "plausible values** (Rubin's rules). `pv_statistic_brr` returns both, the total SE, and the "
+           "**FMI** (fraction of the variance attributable to the PV draw).\n\n"
+           "> Replicate weights ship only on the SAV cycles (2015/2018/2022); the FWF cycles "
+           "(2009/2012) fall back to an imputation-only SE, flagged by `BRR=False`."),
+        code(
+            "from src.data.weights import pv_statistic_brr\n"
+            "rows = []\n"
+            "for c in sorted(df.CYCLE.unique()):\n"
+            "    r = pv_statistic_brr(df[df.CYCLE==c], statistic='at_risk', domain='math')\n"
+            "    rows.append({'cycle':int(c),\n"
+            "                 'at_risk':round(r['estimate'],4),\n"
+            "                 'SE':round(r['se'],4),\n"
+            "                 'ci95_low':round(r['ci95_low'],4),\n"
+            "                 'ci95_high':round(r['ci95_high'],4),\n"
+            "                 'FMI':round(r['fmi'],3),\n"
+            "                 'BRR':r['brr_available']})\n"
+            "pd.DataFrame(rows)"
+        ),
+        md("**Reading:** design-based SEs are small (large PISA samples) but the FMI shows the plausible "
+           "values contribute a non-trivial share of the total uncertainty — collapsing them to a single "
+           "mean (a common shortcut) would understate the SE. The 2009/2012 rows carry the weaker "
+           "imputation-only SE, an honest caveat for any cross-cycle significance claim."),
         md("## 2. Score distributions by cycle"),
         code(
             "from src.visualization.eda import plot_score_distributions\n"
@@ -153,6 +180,20 @@ def nb_01_eda_albania() -> list:
         ),
         md("**Takeaway:** Teacher support (TEACHSUP) shows the largest negative drift into 2022, while "
            "home possessions (HOMEPOS) shifts positively — the crisis is not a simple SES story."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **V-shaped crisis confirmed.** Weighted low-proficiency (math < 420) fell steadily "
+            "2009→2018 (**69.3% → 41.9%**), then reversed sharply to **75.3% in 2022** — the worst of "
+            "all five cycles and the study's central puzzle.\n"
+            "- **Not a pure SES story.** From 2018→2022 `TEACHSUP` shows the largest *negative* drift "
+            "while `HOMEPOS` drifts *positively*; a simple 'poorer students' narrative does not fit.\n"
+            "- **SES gradient real but partial.** Weighted Cohen's *d* for ESCS (at-risk vs proficient) "
+            "≈ **−0.47** (medium); gender × at-risk is significant (χ² *p* < 0.001) but small "
+            "(Cramér's V ≈ 0.07).\n"
+            "- **Data-availability caveat.** Albania genuinely lacks ESCS in 2012 & 2015 (an OECD gap, "
+            "not a bug) — longitudinal SES comparisons must skip those cycles.\n"
+            "- **Next:** notebook 03 formalises the 2018→2022 change as *covariate shift*."
+        ),
     ]
 
 
@@ -182,6 +223,27 @@ def nb_02_comparative() -> list:
         ),
         md("**Reading:** Albania has the highest low-proficiency rate (~75%) — above its Balkan neighbours "
            "and GDP-matched peers, and ~5× Estonia's rate. This motivates studying *which factors* differ."),
+        md("## 1b. Ranking with design-based standard errors (BRR + PVs)\n\n"
+           "The bar chart ranks point estimates; to judge whether two countries *differ significantly* we "
+           "need proper PISA standard errors. `pv_statistic_brr` combines BRR sampling variance (80 Fay "
+           "replicate weights, per PV) with the between-plausible-value (Rubin) variance. All nine 2022 "
+           "cohorts have replicate weights, so every SE here is fully design-based."),
+        code(
+            "from src.data.weights import pv_statistic_brr\n"
+            "d22 = df[df.CYCLE==2022]\n"
+            "rows = []\n"
+            "for cnt in sorted(d22.COUNTRY.unique()):\n"
+            "    r = pv_statistic_brr(d22[d22.COUNTRY==cnt], statistic='at_risk', domain='math')\n"
+            "    rows.append({'country':cnt,\n"
+            "                 'at_risk':round(r['estimate'],4),\n"
+            "                 'SE':round(r['se'],4),\n"
+            "                 'ci95_low':round(r['ci95_low'],4),\n"
+            "                 'ci95_high':round(r['ci95_high'],4),\n"
+            "                 'FMI':round(r['fmi'],3)})\n"
+            "pd.DataFrame(rows).sort_values('at_risk', ascending=False).reset_index(drop=True)"
+        ),
+        md("**Reading:** Albania's CI sits clearly above the Balkan peers' — the gap is not sampling "
+           "noise. Estonia's non-overlapping low CI confirms the extremes are statistically distinct."),
         md("## 2. SES gradient by country (2022)\n\n"
            "Slope of math score on ESCS. A steeper slope = stronger socioeconomic determinism. "
            "Estonia's flatter slope shows it partly breaks the SES–achievement link."),
@@ -213,6 +275,19 @@ def nb_02_comparative() -> list:
         ),
         md("**Takeaway:** Albania's 2022 spike is unusually sharp relative to peers, several of which also "
            "regressed post-COVID but less severely."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Albania is the negative outlier.** 2022 low-proficiency ≈ **75%** — highest in the "
+            "panel, above Balkan peers (N. Macedonia 67%, Montenegro 60%) and GDP-matched economies "
+            "(Colombia 73%, Mexico 67%), and ~5× Estonia (**14%**).\n"
+            "- **Steeper SES gradient.** Albania's math-on-ESCS slope is among the steepest; Estonia's "
+            "is flat — high performance with weak socioeconomic determinism, the opposite policy "
+            "profile.\n"
+            "- **Shared but uneven regression.** Several peers dipped in 2022, none as sharply as "
+            "Albania — its spike is structurally distinct, not a common regional shock.\n"
+            "- **Next:** is Albania's shift merely lower scores, or a change in *who* is at risk? "
+            "→ notebook 03."
+        ),
     ]
 
 
@@ -275,6 +350,19 @@ def nb_03_covariate_shift() -> list:
            "*structural* change in students' learning environment — not just lower scores. This is the "
            "mechanism we test against the predictive models in notebooks 05–07 (where tree models trained "
            "on 2009–2018 collapse out-of-sample on 2022)."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Structural shift, not just lower scores.** A domain classifier separates 2018 from 2022 "
+            "students on background features alone with AUC **well above 0.5** — the *composition* of "
+            "risk changed, corroborated independently by the MMD statistic.\n"
+            "- **Learning-environment drivers.** `TEACHSUP` and `HOMEPOS` dominate the per-feature drift; "
+            "the 2022 cohort differs most in reported teacher support and material resources — not in "
+            "immigration or grade.\n"
+            "- **Why it matters.** Covariate shift predicts that a model trained on the improving "
+            "2009–2018 era should transfer *worse* to 2022 — tested directly in notebook 04.\n"
+            "- **Caveat.** Detection AUC depends on imputation/subsampling; we report a **weighted** "
+            "subsample with a 95% CI and median-imputed missing indicators to avoid inflating it."
+        ),
     ]
 
 
@@ -381,9 +469,25 @@ def nb_04_modeling() -> list:
         md("**Reading:** the Rubin-combined AUC is close to the point-target CV AUC (the PV draw adds "
            "modest uncertainty, captured by FMI). This confirms the model ranking is not an artefact of "
            "collapsing the plausible values."),
-        md("**Takeaway:** out-of-sample AUC falls to ~0.64–0.67 for every model. The covariate shift "
+        md("**Takeaway:** out-of-sample AUC falls to ~0.62–0.67 for every model. The covariate shift "
            "(notebook 03, detection AUC 0.98) is real and degrades transfer, but no model fully "
            "collapses — the 2022 risk structure shifted yet remains partly predictable from history."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Best in-sample model:** CatBoost (weighted CV AUC **0.731**), narrowly over Gradient "
+            "Boosting (0.727) and — notably — Logistic Regression (0.726), a strong interpretable "
+            "baseline. Decision Tree trails (0.568). LightGBM is **excluded**: it segfaults at the C "
+            "level on this host (a `libomp` install issue, not our code).\n"
+            "- **PISA-correct headline.** Rubin's-rules per-PV evaluation gives an AUC close to the "
+            "point-target CV number with a modest FMI — the ranking is not an artefact of collapsing "
+            "the plausible values.\n"
+            "- **Out-of-sample degrades but does not collapse.** Train 2009–2018 → test 2022 drops AUC "
+            "to ~**0.62–0.67** (GBM/RF best at 0.674). The covariate shift is real and hurts transfer, "
+            "yet 2022 risk stays partly predictable from history — a nuance vs. a 'total breakdown' "
+            "story.\n"
+            "- **Rigor:** metrics are **weighted** throughout (population estimates) with bootstrap/fold "
+            "CIs; the decision threshold is tuned on train only."
+        ),
     ]
 
 
@@ -433,8 +537,9 @@ def nb_05_explainability() -> list:
             "ax.set_xlabel('Mean |SHAP value|'); ax.set_title('Global Feature Importance — Albania 2022 (CatBoost)')\n"
             "plt.show()"
         ),
-        md("**Reading:** `HOMEPOS` (home possessions) and `ANXMAT` (math anxiety) dominate, followed by "
-           "parental education/occupation (`HISCED`, `HISEI`) and digital readiness. Immigration status "
+        md("**Reading:** `ANXMAT` (math anxiety) and `MATERIAL_DEFICIT` (home-resource deprivation) "
+           "dominate, followed by parental education/occupation and home possessions "
+           "(`HISCED`, `HOMEPOS`, `HISEI`) and school belonging (`BELONG`). Immigration status "
            "and grade deviation contribute almost nothing."),
         md("## 2. SHAP beeswarm — direction of effects"),
         code(
@@ -448,6 +553,21 @@ def nb_05_explainability() -> list:
         ),
         md("**Interpretation:** higher math anxiety pushes predictions toward at-risk; the colouring shows "
            "whether socioeconomic status buffers or amplifies that effect — a policy-relevant interaction."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **What drives predicted risk (mean |SHAP|):** `ANXMAT` (math anxiety) > "
+            "`MATERIAL_DEFICIT` > `HISCED` / `HOMEPOS` / `HISEI` (parental education, home & material "
+            "resources) > `BELONG` > `ESCS`. Math anxiety and material deprivation dominate.\n"
+            "- **Negligible:** immigration status and grade deviation add almost nothing — Albania's "
+            "risk is a resources-and-affect story, not a migration one.\n"
+            "- **Interaction:** the ANXMAT × ESCS dependence indicates whether socioeconomic status "
+            "buffers anxiety's effect — directly policy-relevant.\n"
+            "- **Policy read:** interventions targeting math anxiety and material support for "
+            "low-resource students hit the highest-leverage factors. SHAP explains the *model* — "
+            "associational, not causal.\n"
+            "- **Caveat:** explanations are for the single all-data CatBoost fit; per-fold stability and "
+            "per-country SHAP comparison come in Phase 6+."
+        ),
     ]
 
 

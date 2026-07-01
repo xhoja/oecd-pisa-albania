@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
-from src.models.experiment import compare_models_cv, save_results
+from src.models.experiment import compare_models_cv, paired_nb_auc_test, save_results
 from src.models.prepare import build_model_data
 from src.utils.logging import configure_logging
 
@@ -36,6 +36,13 @@ def main() -> None:
     res = compare_models_cv(data, models, outer_folds=5, outer_repeats=4, save_path=csv_path)
     print("\n" + res.to_string(index=False))
     save_results(res, ROOT / "outputs/results/albania_2022_model_comparison.csv")
+
+    # Pairwise Nadeau-Bengio corrected resampled t-test: is the podium real?
+    pw = paired_nb_auc_test(res.attrs["fold_scores"], res.attrs["outer_folds"])
+    pw_path = ROOT / "outputs/results/albania_2022_pairwise_nb.csv"
+    pw.to_csv(pw_path, index=False)
+    print("\nPairwise corrected resampled t-test (AUC):")
+    print(pw.to_string(index=False))
     print("\nSAVED OK")
 
 

@@ -1,0 +1,217 @@
+{
+  "logistic_regression": {
+    "model": "logistic_regression",
+    "n_outer_folds": 5,
+    "tuned_auc_mean": 0.7256,
+    "tuned_auc_95ci": [
+      0.6768,
+      0.7744
+    ],
+    "default_auc_mean": 0.7261,
+    "default_auc_95ci": [
+      0.6762,
+      0.776
+    ],
+    "hpo_gain": -0.0005,
+    "hpo_gain_p_value": 0.4342,
+    "hpo_significant_0.05": false,
+    "tuned_per_fold": [
+      0.7161,
+      0.6989,
+      0.7532,
+      0.7059,
+      0.7537
+    ],
+    "default_per_fold": [
+      0.7162,
+      0.6989,
+      0.7535,
+      0.706,
+      0.7558
+    ],
+    "best_params_per_fold": [
+      {
+        "penalty": "l1",
+        "C": 21.42302175774107
+      },
+      {
+        "penalty": "l2",
+        "C": 1.5200868004209125
+      },
+      {
+        "penalty": "l2",
+        "C": 0.11101024197373575
+      },
+      {
+        "penalty": "l2",
+        "C": 75.86065340989622
+      },
+      {
+        "penalty": "elasticnet",
+        "C": 0.04152686389834928,
+        "l1_ratio": 0.18325951785063063
+      }
+    ],
+    "final_best_params": {
+      "l1_ratio": 0.18325951785063063,
+      "penalty": "l2",
+      "C": 1.5200868004209125
+    }
+  },
+  "gradient_boosting": {
+    "model": "gradient_boosting",
+    "n_outer_folds": 5,
+    "tuned_auc_mean": 0.7314,
+    "tuned_auc_95ci": [
+      0.6928,
+      0.7701
+    ],
+    "default_auc_mean": 0.7272,
+    "default_auc_95ci": [
+      0.702,
+      0.7523
+    ],
+    "hpo_gain": 0.0043,
+    "hpo_gain_p_value": 0.4538,
+    "hpo_significant_0.05": false,
+    "tuned_per_fold": [
+      0.7231,
+      0.7141,
+      0.7492,
+      0.7131,
+      0.7578
+    ],
+    "default_per_fold": [
+      0.7215,
+      0.7132,
+      0.7396,
+      0.7182,
+      0.7435
+    ],
+    "best_params_per_fold": [
+      {
+        "n_estimators": 449,
+        "learning_rate": 0.012335629110965737,
+        "max_depth": 3,
+        "subsample": 0.8183201301614249,
+        "min_samples_leaf": 12
+      },
+      {
+        "n_estimators": 188,
+        "learning_rate": 0.03964774775413866,
+        "max_depth": 4,
+        "subsample": 0.5383313499982236,
+        "min_samples_leaf": 43
+      },
+      {
+        "n_estimators": 291,
+        "learning_rate": 0.021866379509648225,
+        "max_depth": 3,
+        "subsample": 0.9481327474352917,
+        "min_samples_leaf": 47
+      },
+      {
+        "n_estimators": 435,
+        "learning_rate": 0.014661102547600243,
+        "max_depth": 3,
+        "subsample": 0.7353090152272935,
+        "min_samples_leaf": 38
+      },
+      {
+        "n_estimators": 445,
+        "learning_rate": 0.013585225344818246,
+        "max_depth": 3,
+        "subsample": 0.8362874818426415,
+        "min_samples_leaf": 50
+      }
+    ],
+    "final_best_params": {
+      "n_estimators": 435,
+      "subsample": 0.8183201301614249,
+      "learning_rate": 0.014661102547600243,
+      "max_depth": 3,
+      "min_samples_leaf": 43
+    }
+  },
+  "catboost": {
+    "model": "catboost",
+    "n_outer_folds": 5,
+    "tuned_auc_mean": 0.7351,
+    "tuned_auc_95ci": [
+      0.6957,
+      0.7744
+    ],
+    "default_auc_mean": 0.7333,
+    "default_auc_95ci": [
+      0.7005,
+      0.766
+    ],
+    "hpo_gain": 0.0018,
+    "hpo_gain_p_value": 0.8117,
+    "hpo_significant_0.05": false,
+    "tuned_per_fold": [
+      0.7253,
+      0.7178,
+      0.7558,
+      0.7165,
+      0.7599
+    ],
+    "default_per_fold": [
+      0.7238,
+      0.7213,
+      0.7359,
+      0.7225,
+      0.7629
+    ],
+    "best_params_per_fold": [
+      {
+        "iterations": 850,
+        "learning_rate": 0.011927270244911253,
+        "depth": 5,
+        "l2_leaf_reg": 2.650640588680904,
+        "border_count": 99,
+        "bagging_temperature": 0.5247564316322378
+      },
+      {
+        "iterations": 104,
+        "learning_rate": 0.04622386286903047,
+        "depth": 7,
+        "l2_leaf_reg": 6.727363098143703,
+        "border_count": 250,
+        "bagging_temperature": 0.9086627578310877
+      },
+      {
+        "iterations": 927,
+        "learning_rate": 0.010546478617823415,
+        "depth": 5,
+        "l2_leaf_reg": 8.42591203528219,
+        "border_count": 127,
+        "bagging_temperature": 0.5156497159323155
+      },
+      {
+        "iterations": 685,
+        "learning_rate": 0.0072959572155678965,
+        "depth": 5,
+        "l2_leaf_reg": 3.8147513207508768,
+        "border_count": 237,
+        "bagging_temperature": 0.8742368260916362
+      },
+      {
+        "iterations": 404,
+        "learning_rate": 0.009470979703053,
+        "depth": 9,
+        "l2_leaf_reg": 1.5607375498846077,
+        "border_count": 45,
+        "bagging_temperature": 0.6269973143750973
+      }
+    ],
+    "final_best_params": {
+      "border_count": 127,
+      "l2_leaf_reg": 3.8147513207508768,
+      "learning_rate": 0.010546478617823415,
+      "depth": 5,
+      "bagging_temperature": 0.6269973143750973,
+      "iterations": 685
+    }
+  }
+}
