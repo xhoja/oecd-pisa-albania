@@ -98,15 +98,19 @@ def main() -> None:
         print("\n" + rep.summary())
         payload["attributes"][attr] = {
             "groups": rep.groups,
-            "demographic_parity": rep.demographic_parity,
-            "equal_opportunity_tpr": rep.equal_opportunity,
-            "fpr_by_group": rep.fpr_by_group,
-            "calibration_mean_prob": rep.calibration_by_group,
+            "demographic_parity": _clean(rep.demographic_parity),
+            "equal_opportunity_tpr": _clean(rep.equal_opportunity),
+            "fpr_by_group": _clean(rep.fpr_by_group),
+            "calibration_mean_prob": _clean(rep.calibration_by_group),
             "parity_gap": _nan(rep.parity_gap),
             "opportunity_gap": _nan(rep.opportunity_gap),
             "fpr_gap": _nan(rep.fpr_gap),
         }
-    (res_dir / "fairness_audit_2022.json").write_text(json.dumps(payload, indent=2))
+    # allow_nan=False guards against silently writing non-standard NaN tokens if a
+    # sparse group ever slips a NaN through the cleaners above.
+    (res_dir / "fairness_audit_2022.json").write_text(
+        json.dumps(payload, indent=2, allow_nan=False)
+    )
 
     # Threshold sweep on gender: does the operating point trade off parity vs TPR gap?
     sweep = threshold_sweep(audit, "y_true", "y_prob", "GENDER", weight_col="W_FSTUWT")
@@ -127,6 +131,11 @@ def main() -> None:
 
 def _nan(x: float):
     return None if x is None or (isinstance(x, float) and np.isnan(x)) else round(float(x), 4)
+
+
+def _clean(d: dict) -> dict:
+    """Round group metrics and turn NaN (single-class groups) into JSON null."""
+    return {k: _nan(v) for k, v in d.items()}
 
 
 if __name__ == "__main__":
