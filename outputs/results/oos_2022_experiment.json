@@ -131,7 +131,25 @@
       "mcc_tuned": 0.16659210249976192
     },
     "lightgbm": {
-      "error": "isolated task 'oos' crashed (rc=-11)"
+      "accuracy": 0.6487,
+      "balanced_accuracy": 0.6166,
+      "roc_auc": 0.673,
+      "pr_auc": 0.8518,
+      "f1_macro": 0.5909,
+      "f1_positive": 0.7447,
+      "f1_negative": 0.4371,
+      "precision_positive": 0.823,
+      "recall_positive": 0.68,
+      "mcc": 0.2073,
+      "cohen_kappa": 0.1978,
+      "brier_score": 0.2133,
+      "ece": 0.1796,
+      "roc_auc_95ci": "(0.6563, 0.6885)",
+      "f1_macro_95ci": "(0.5775, 0.6037)",
+      "mcc_95ci": "(0.1806, 0.2323)",
+      "tuned_threshold": 0.512,
+      "f1_macro_tuned": 0.5885405690508267,
+      "mcc_tuned": 0.20986774202484412
     },
     "catboost": {
       "accuracy": 0.6061,
@@ -156,6 +174,15 @@
     }
   },
   "delong_pairwise": [
+    {
+      "model_a": "random_forest",
+      "model_b": "lightgbm",
+      "auc_a": 0.6754,
+      "auc_b": 0.6733,
+      "z": 0.438,
+      "p_value": 0.6616,
+      "significant_0.05": false
+    },
     {
       "model_a": "random_forest",
       "model_b": "gradient_boosting",
@@ -202,6 +229,51 @@
       "significant_0.05": true
     },
     {
+      "model_a": "lightgbm",
+      "model_b": "gradient_boosting",
+      "auc_a": 0.6733,
+      "auc_b": 0.6731,
+      "z": 0.052,
+      "p_value": 0.9587,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "lightgbm",
+      "model_b": "catboost",
+      "auc_a": 0.6733,
+      "auc_b": 0.6654,
+      "z": 1.71,
+      "p_value": 0.0873,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "lightgbm",
+      "model_b": "extra_trees",
+      "auc_a": 0.6733,
+      "auc_b": 0.6639,
+      "z": 1.685,
+      "p_value": 0.0921,
+      "significant_0.05": false
+    },
+    {
+      "model_a": "lightgbm",
+      "model_b": "xgboost",
+      "auc_a": 0.6733,
+      "auc_b": 0.6399,
+      "z": 5.437,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
+      "model_a": "lightgbm",
+      "model_b": "logistic_regression",
+      "auc_a": 0.6733,
+      "auc_b": 0.6221,
+      "z": 7.243,
+      "p_value": 0.0,
+      "significant_0.05": true
+    },
+    {
       "model_a": "gradient_boosting",
       "model_b": "catboost",
       "auc_a": 0.6731,
@@ -243,7 +315,7 @@
       "auc_a": 0.6654,
       "auc_b": 0.6639,
       "z": 0.281,
-      "p_value": 0.7785,
+      "p_value": 0.7784,
       "significant_0.05": false
     },
     {

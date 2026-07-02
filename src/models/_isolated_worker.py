@@ -16,6 +16,22 @@ from __future__ import annotations
 import pickle
 import sys
 
+# macOS OpenMP fix (rc=-11 abort): lightgbm's wheel links the Homebrew LLVM
+# libomp, while sklearn ships its own bundled libomp. If sklearn's runtime loads
+# FIRST and lightgbm's loads second (which happens because build_lightgbm imports
+# it lazily, after experiment.py has already pulled in sklearn), the two OpenMP
+# runtimes collide and the process segfaults at the C-level Dataset construction
+# (__init_from_np2d) the moment lightgbm fits. It is NOT a data or libomp-install
+# problem — proven by A/B: sklearn-then-lightgbm crashes, lightgbm-then-sklearn
+# fits cleanly. This is a fresh interpreter per model (see experiment._run_isolated),
+# so importing the booster here — before experiment/sklearn — puts the booster's
+# libomp in first. Best-effort: a missing booster just means that model isn't run.
+for _booster in ("lightgbm", "xgboost", "catboost"):
+    try:
+        __import__(_booster)
+    except Exception:
+        pass
+
 
 def main() -> None:
     in_path, out_path = sys.argv[1], sys.argv[2]

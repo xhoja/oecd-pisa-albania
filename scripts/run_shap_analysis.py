@@ -10,6 +10,11 @@ import os
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
+# macOS OpenMP fix: import lightgbm BEFORE sklearn so its Homebrew libomp loads
+# first. If sklearn's bundled libomp loads first, lightgbm's fit aborts the
+# process (rc=-11, dual OpenMP runtime). See src/models/_isolated_worker.py.
+import lightgbm  # noqa: F401  (import for side effect: load libomp early)
+
 import sys
 import warnings
 from pathlib import Path
@@ -51,7 +56,7 @@ def main() -> None:
     (X,) = impute_median(X_eng)
     y = data.y.values
 
-    model = get_model("catboost")  # top performer; lightgbm install is broken on this host
+    model = get_model("lightgbm")
     model.fit(X, y, sample_weight=data.weights.values)
     print("Model trained. Computing SHAP...")
 

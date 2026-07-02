@@ -369,6 +369,10 @@ def nb_03_covariate_shift() -> list:
 # Header for modeling notebooks: KMP env MUST be set before any OpenMP import.
 MODEL_HEADER = """import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")  # macOS duplicate OpenMP guard
+try:
+    import lightgbm  # noqa: F401 - load its Homebrew libomp BEFORE sklearn's (import-order fix, avoids rc=-11)
+except Exception:
+    pass
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path.cwd().parent))
@@ -475,9 +479,10 @@ def nb_04_modeling() -> list:
         md(
             "## Conclusions & Interpretation\n\n"
             "- **Best in-sample model:** CatBoost (weighted CV AUC **0.731**), narrowly over Gradient "
-            "Boosting (0.727) and — notably — Logistic Regression (0.726), a strong interpretable "
-            "baseline. Decision Tree trails (0.568). LightGBM is **excluded**: it segfaults at the C "
-            "level on this host (a `libomp` install issue, not our code).\n"
+            "Boosting (0.727) and — notably — Logistic Regression (0.727), a strong interpretable "
+            "baseline. LightGBM (0.715) sits mid-pack; Decision Tree trails (0.568). (LightGBM's "
+            "earlier `rc=-11` crash was an OpenMP import-order bug, now fixed, so it is back in the "
+            "comparison.)\n"
             "- **PISA-correct headline.** Rubin's-rules per-PV evaluation gives an AUC close to the "
             "point-target CV number with a modest FMI — the ranking is not an artefact of collapsing "
             "the plausible values.\n"
@@ -499,9 +504,10 @@ def nb_05_explainability() -> list:
     return [
         md(
             "# 05 — Explainability: SHAP (Albania 2022)\n\n"
-            "Global and local explanations for the CatBoost model (the top performer in notebook 04) "
-            "on the Albania 2022 cohort. CatBoost is fit fresh in this kernel (a single booster is "
-            "OpenMP-safe), so SHAP runs live."
+            "Global and local explanations for the LightGBM model on the Albania 2022 cohort. "
+            "LightGBM is fit fresh in this kernel — its Homebrew libomp is imported before "
+            "scikit-learn (import-order fix), so the single-booster fit is OpenMP-safe and SHAP "
+            "runs live."
         ),
         code(MODEL_HEADER),
         code(
@@ -518,7 +524,7 @@ def nb_05_explainability() -> list:
             "# final explanatory model (single fit on all data, so fit-on-all is fine)\n"
             "X_eng = EngineeredFeatureBuilder().fit_transform(data.X)\n"
             "(X,) = impute_median(X_eng); y = data.y.values\n"
-            "model = get_model('catboost'); model.fit(X, y, sample_weight=data.weights.values)\n"
+            "model = get_model('lightgbm'); model.fit(X, y, sample_weight=data.weights.values)\n"
             "print('trained on', X.shape)"
         ),
         md("## 1. Global feature importance (mean |SHAP|)"),
@@ -534,13 +540,13 @@ def nb_05_explainability() -> list:
             "imp_s = imp.sort_values('mean_abs_shap')\n"
             "fig, ax = plt.subplots(figsize=(8,5))\n"
             "ax.barh(imp_s['feature'], imp_s['mean_abs_shap'], color='#0072B2')\n"
-            "ax.set_xlabel('Mean |SHAP value|'); ax.set_title('Global Feature Importance — Albania 2022 (CatBoost)')\n"
+            "ax.set_xlabel('Mean |SHAP value|'); ax.set_title('Global Feature Importance — Albania 2022 (LightGBM)')\n"
             "plt.show()"
         ),
-        md("**Reading:** `ANXMAT` (math anxiety) and `MATERIAL_DEFICIT` (home-resource deprivation) "
-           "dominate, followed by parental education/occupation and home possessions "
-           "(`HISCED`, `HOMEPOS`, `HISEI`) and school belonging (`BELONG`). Immigration status "
-           "and grade deviation contribute almost nothing."),
+        md("**Reading:** `ANXMAT` (math anxiety) dominates, followed by parental education and "
+           "home resources (`HISCED`, `HOMEPOS`, `HISEI`, `MATERIAL_DEFICIT`) and school "
+           "belonging (`BELONG`). Immigration status and grade deviation contribute almost "
+           "nothing."),
         md("## 2. SHAP beeswarm — direction of effects"),
         code(
             "X_s = X.sample(min(2000, len(X)), random_state=42).reset_index(drop=True)\n"

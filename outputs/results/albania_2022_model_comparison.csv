@@ -2,6 +2,7 @@ model,roc_auc_mean,roc_auc_std,roc_auc_95ci_low,roc_auc_95ci_high,pr_auc_mean,f1
 catboost,0.7314,0.0156,0.7136,0.7492,0.8796,0.6471,0.6649,0.3045,20,True,nadeau_bengio
 logistic_regression,0.7274,0.0208,0.7036,0.7512,0.8816,0.6213,0.6596,0.2808,20,True,nadeau_bengio
 gradient_boosting,0.7268,0.0137,0.7111,0.7425,0.878,0.6091,0.5988,0.2832,20,True,nadeau_bengio
+lightgbm,0.7146,0.0132,0.6995,0.7298,0.8722,0.6377,0.6501,0.2815,20,True,nadeau_bengio
 random_forest,0.7097,0.0152,0.6923,0.7271,0.8679,0.5992,0.5913,0.2611,20,True,nadeau_bengio
 extra_trees,0.707,0.0166,0.688,0.726,0.8659,0.6077,0.5979,0.2595,20,True,nadeau_bengio
 xgboost,0.6982,0.0148,0.6813,0.7152,0.8634,0.6166,0.6059,0.2615,20,True,nadeau_bengio
