@@ -144,6 +144,91 @@ def country_shap_comparison(
     )
 
 
+def select_representative_cases(
+    model: Any,
+    X: pd.DataFrame,
+    y: np.ndarray | pd.Series,
+    threshold: float = 0.5,
+) -> dict[str, dict[str, Any]]:
+    """Pick one representative instance for each confusion-matrix quadrant.
+
+    For each of TP / TN / FP / FN we choose the *most confident* example — the
+    one whose predicted probability is furthest in the direction of the positive
+    class for the positive-prediction quadrants (TP, FP) and furthest toward the
+    negative class for the negative-prediction quadrants (TN, FN). These are the
+    instances whose local SHAP explanation is most informative: a confidently
+    correct case (TP/TN) and a confidently *wrong* case (FP/FN).
+
+    Returns a dict keyed by quadrant, each value holding the positional ``index``
+    into X, the predicted ``prob``, ``y_true`` and ``y_pred``. Quadrants with no
+    matching instance are omitted.
+    """
+    prob = model.predict_proba(X)[:, 1]
+    pred = (prob >= threshold).astype(int)
+    y = np.asarray(y).astype(int)
+
+    def pick(mask: np.ndarray, toward_positive: bool) -> int | None:
+        idx = np.where(mask)[0]
+        if len(idx) == 0:
+            return None
+        return int(idx[np.argmax(prob[idx])] if toward_positive else idx[np.argmin(prob[idx])])
+
+    quadrants = {
+        "TP": (pick((y == 1) & (pred == 1), True), "true positive"),
+        "TN": (pick((y == 0) & (pred == 0), False), "true negative"),
+        "FP": (pick((y == 0) & (pred == 1), True), "false positive"),
+        "FN": (pick((y == 1) & (pred == 0), False), "false negative"),
+    }
+    out: dict[str, dict[str, Any]] = {}
+    for key, (i, label) in quadrants.items():
+        if i is None:
+            continue
+        out[key] = {
+            "index": i,
+            "label": label,
+            "prob": float(prob[i]),
+            "y_true": int(y[i]),
+            "y_pred": int(pred[i]),
+        }
+    return out
+
+
+def compute_local_shap(
+    model: Any,
+    X_rows: pd.DataFrame,
+    X_background: pd.DataFrame | None = None,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """SHAP values + base value(s) for a handful of specific instances.
+
+    Returns ``(values, base_values, feature_names)`` where ``values`` is
+    ``(n_rows, n_features)`` and ``base_values`` is ``(n_rows,)``, both for the
+    positive class — the pieces a SHAP waterfall needs. Works for the same model
+    families as :func:`get_explainer`.
+    """
+    if X_background is None:
+        X_background = X_rows
+    explainer = get_explainer(model, X_background)
+
+    if hasattr(model, "named_steps") and "scaler" in model.named_steps:
+        Xt = model.named_steps["scaler"].transform(X_rows)
+        X_for_shap = pd.DataFrame(Xt, columns=X_rows.columns)
+    else:
+        X_for_shap = X_rows
+
+    raw = explainer(X_for_shap)
+    vals = raw.values
+    base = raw.base_values
+    if isinstance(vals, list):  # old shap API: list per class
+        vals, base = vals[1], base[1]
+    elif vals.ndim == 3:  # (n_rows, n_features, n_classes)
+        vals = vals[:, :, 1]
+        base = base[:, 1] if np.ndim(base) > 1 else base
+    base = np.atleast_1d(np.asarray(base, dtype=float))
+    if base.shape[0] == 1 and vals.shape[0] > 1:
+        base = np.repeat(base, vals.shape[0])
+    return np.asarray(vals), base, list(X_rows.columns)
+
+
 def save_shap_values(
     shap_values: np.ndarray,
     feature_names: list[str],
