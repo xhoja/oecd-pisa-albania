@@ -34,6 +34,7 @@ analysis of Albania's dramatic 2022 regression.
 | **CatBoost** | **0.731** (0.714–0.749) | 0.880 | 0.647 | 0.305 |
 | Logistic Regression | 0.727 (0.704–0.751) | 0.882 | 0.621 | 0.281 |
 | Gradient Boosting | 0.727 (0.711–0.743) | 0.878 | 0.609 | 0.283 |
+| LightGBM | 0.715 (0.700–0.730) | 0.872 | 0.638 | 0.282 |
 | Random Forest | 0.710 (0.692–0.727) | 0.868 | 0.599 | 0.261 |
 | Extra Trees | 0.707 (0.688–0.726) | 0.866 | 0.608 | 0.260 |
 | XGBoost | 0.698 (0.681–0.715) | 0.863 | 0.617 | 0.262 |
@@ -52,9 +53,12 @@ The 95% intervals use the **Nadeau-Bengio corrected-resampled variance**, not a 
 and the naïve interval is too narrow. The correction replaces the `1/k` term with
 `1/k + n_test/n_train`, giving an honest (wider) interval.
 
-> LightGBM is excluded: it segfaults (`rc=-11`) at the C level on this host — a `libomp`
-> install issue, not a code bug. Model fits are isolated in subprocesses so a C-level
-> crasher is skipped gracefully rather than taking down the run.
+> LightGBM used to segfault (`rc=-11`) at the C level on this host. The cause was OpenMP
+> **import order**, not a `libomp` install: LightGBM links Homebrew's libomp, and if
+> scikit-learn's bundled libomp loaded first the two runtimes collided and aborted the fit.
+> The isolated-subprocess workers now import the boosters before scikit-learn, so LightGBM
+> runs cleanly and is included above. Fits are still isolated in subprocesses, so any
+> genuine C-level crasher is skipped gracefully rather than taking down the run.
 
 ### Are the differences real? (pairwise significance)
 
@@ -68,12 +72,13 @@ A ranking table alone invites over-reading a 0.005 AUC gap. We test it directly.
   this task — an interpretability win, not a cost.
 - **Out-of-sample** — pairwise **DeLong test** on the shared 2022 test set
   (`oos_2022_experiment.json → delong_pairwise`): the OOS leaders Random Forest, Gradient
-  Boosting and CatBoost are mutually indistinguishable (RF vs GBM *p* = 0.64, RF vs CatBoost
-  *p* = 0.05), while all three beat XGBoost and LR significantly.
+  Boosting and LightGBM are mutually indistinguishable (RF vs GBM *p* = 0.64, RF vs LightGBM
+  *p* = 0.66, RF vs CatBoost *p* = 0.05), while they all beat XGBoost and LR significantly.
 
 ### Out-of-sample (train 2009–2018 → test 2022, weighted)
 
-GBM & RF lead at **0.674** AUC; CatBoost 0.665, Extra Trees 0.663, XGBoost 0.639, LR 0.622.
+GBM & RF lead at **0.674** AUC, with LightGBM level at 0.673; CatBoost 0.665, Extra Trees
+0.663, XGBoost 0.639, LR 0.622.
 The shift is **detectable** (AUC 0.98) yet models still transfer moderately — a key nuance
 (covariate shift *without* total collapse). Threshold tuned on train only; ECE reported.
 
@@ -93,11 +98,35 @@ resampled t-test (`outputs/results/hpo_summary.csv`):
 defaults are already at the task's accuracy ceiling. This reinforces the headline: on these
 features the limit is the data, not model capacity or tuning.
 
-### SHAP global importance (Albania 2022, CatBoost)
+### SHAP global importance (Albania 2022, LightGBM)
 
-`ANXMAT` > `MATERIAL_DEFICIT` > `HISCED` > `HOMEPOS` > `HISEI` > `BELONG` > `ESCS` …
-Math anxiety and material home resources dominate; immigration status is negligible.
-(SHAP switched from LightGBM to CatBoost because LightGBM crashes on this host.)
+`ANXMAT` > `HISCED` > `HOMEPOS` > `HISEI` > `MATERIAL_DEFICIT` > `BELONG` > `ESCS` …
+Math anxiety and educational/material home resources dominate; immigration status is negligible.
+
+**Local explanations (Phase 6).** `scripts/run_explainability_cases.py` adds the local view:
+SHAP waterfalls for one confidently-correct TP (P = 0.995) and TN (P = 0.026) and one
+confidently-*wrong* FP (P = 0.83) and FN (P = 0.04) — the cases worth inspecting — plus PDP +
+centered-ICE curves for the top drivers (`ANXMAT`, `HISCED`, `HOMEPOS`, `HISEI`). Figures:
+`outputs/figures/shap/D3_shap_local_cases`, `D4_pdp_ice`.
+
+### Fairness audit (Albania 2022, survey-weighted, out-of-fold @ 0.5)
+
+Out-of-fold LightGBM predictions audited across protected groups; every rate is
+survey-weighted (`outputs/results/fairness_audit_2022.json`):
+
+| Attribute | Parity gap | Equal-opp (TPR) gap | FPR gap |
+|---|---|---|---|
+| SES quintile | **0.50** | 0.38 | **0.63** |
+| GENDER | 0.18 | 0.17 | 0.14 |
+| Immigrant status | 0.13 | 0.07 | 0.38 |
+
+**SES is where the model is least fair.** Bottom-quintile students are flagged at 90% vs. 41%
+for the top quintile, and their **false-positive rate (0.86) is 0.63 higher** than the top
+quintile's — the model over-flags the poorest students. That partly reflects a real risk
+gradient, but the FPR gap is an equalized-odds concern to carry into any deployment. Gender
+and immigrant gaps are smaller but non-trivial. The threshold sweep
+(`fairness_threshold_sweep_gender.csv`, figure `E1`) shows how these gaps move with the
+operating point.
 
 ### Cross-country (PISA 2022, weighted low-proficiency rate)
 
@@ -164,7 +193,7 @@ OECD_PISA_Project/
 ├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
 │                         #   04_modeling, 05_explainability  (all executed)
 ├── scripts/              # run_model_comparison, run_oos_experiment, run_hpo, run_shap_analysis
-├── tests/                # 56 pytest unit tests (weights, impute, target,
+├── tests/                # 74 pytest unit tests (weights, impute, target,
 │                         #   transformers, validate, evaluate) — no real data needed
 ├── outputs/              # figures/{eda,models,shap} + results/ (csv, json)
 └── data/                 # raw/ (git-ignored) + processed/ (parquet)
@@ -179,7 +208,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required — 56 tests on synthetic fixtures)
+# 2. Run the test suite (no data required — 74 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -209,15 +238,18 @@ assert_valid(df)   # raises on ERROR-level contract breaches; WARN is allowed
 ```
 
 ### Environment note (macOS OpenMP)
-XGBoost (LLVM `libomp`) and scikit-learn (`libgomp`) can abort the process if both load
-in one run. The code wraps CV fitting in `threadpool_limits(1)`, isolates each model in a
-fresh subprocess (`src/models/_isolated_worker.py`), and skips any C-level crasher
-gracefully. Always set `KMP_DUPLICATE_LIB_OK=TRUE`.
+The boosters (LLVM `libomp`) and scikit-learn (`libgomp`) can abort the process if their
+OpenMP runtimes collide in one run. The code wraps CV fitting in `threadpool_limits(1)`,
+isolates each model in a fresh subprocess (`src/models/_isolated_worker.py`), and skips any
+C-level crasher gracefully. Always set `KMP_DUPLICATE_LIB_OK=TRUE`.
 
-**LightGBM is currently broken on this host** — it segfaults (`rc=-11`) even in a pristine
-single-thread interpreter, a `libomp` install issue rather than a code bug. It is skipped
-in comparisons and OOS, and SHAP uses CatBoost instead. Reinstalling `libomp` should
-restore it.
+**LightGBM's `rc=-11` segfault was an OpenMP import-order bug, not a `libomp` install
+problem.** LightGBM's wheel links Homebrew's libomp; if scikit-learn's bundled libomp loaded
+first (which happened because the booster was imported lazily, after `experiment.py` had
+already pulled in scikit-learn), the two runtimes collided and the fit aborted at the C-level
+`Dataset` construction. The isolated workers now import the boosters *before* scikit-learn, so
+LightGBM's libomp goes in first and it runs cleanly — it is back in the comparison, OOS, and
+SHAP.
 
 ---
 
@@ -252,7 +284,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **63 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
+- **74 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, and the HPO
@@ -277,7 +309,7 @@ choice below is implemented and unit-tested.
   Nadeau-Bengio CIs and pairwise significance testing (corrected resampled t-test in CV,
   DeLong out-of-sample); weighted OOS 2022 experiment with Rubin's-rules per-PV evaluation
   and train-only threshold tuning; SHAP global + importance. Notebooks 04–05.
-- **Rigor hardening (Phases 1–4):** 63-test suite, dependency-free data contracts, BRR+Rubin
+- **Rigor hardening (Phases 1–4):** 74-test suite, dependency-free data contracts, BRR+Rubin
   design-based standard errors wired into the EDA notebooks, Nadeau-Bengio CIs and
   DeLong/corrected-resampled significance tests. Verified: the top three CV models are a
   statistical tie (Logistic Regression matches the best boosters). Fixed a weighting bug
@@ -289,12 +321,16 @@ choice below is implemented and unit-tested.
   tuning** — defaults are already at the accuracy ceiling.
 
 ### Next
-- **Phase 5b (deferred):** add MLP & SVM to the comparison; restore LightGBM once `libomp`
-  is fixed (fix `_suggest_params` for the sklearn ≥1.8 `penalty` deprecation first).
-- **Phase 6 — Explainability:** SHAP local case studies (TP/TN/FP/FN), dependence &
-  interaction plots, PDP/ICE, per-country SHAP comparison.
-- **Phase 7 — Fairness:** demographic parity / equal opportunity / equalized odds across
-  gender, SES quintile, immigration; threshold sweep; calibration by group.
+- **Phase 5b (deferred):** add MLP & SVM to the comparison (fix `_suggest_params` for the
+  sklearn ≥1.8 `penalty` deprecation first). *(LightGBM restored — see OpenMP note.)*
+- **Phase 6 — Explainability (local + PDP/ICE): Done.** SHAP local case studies for one
+  representative TP/TN/FP/FN each (`scripts/run_explainability_cases.py` → waterfalls +
+  `shap_local_cases_2022.csv`) and PDP + centered-ICE for the top drivers. Per-country SHAP
+  comparison (`country_shap_comparison`) folds into Phase 8.
+- **Phase 7 — Fairness audit (survey-weighted): Done.** Demographic parity, equal
+  opportunity (TPR), FPR and calibration across gender, SES quintile and immigrant status,
+  plus a threshold sweep — all **weighted** (`scripts/run_fairness_audit.py` →
+  `fairness_audit_2022.json`, `fairness_threshold_sweep_gender.csv`, `E1` figure).
 - **Phase 8 — Comparative modeling:** train per country group; SHAP rank matrix;
   SES-gradient comparison; Albania-vs-peers narrative.
 - **Phase 9 — Advanced:** stacking ensemble, probability calibration, conformal

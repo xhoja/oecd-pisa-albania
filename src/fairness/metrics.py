@@ -13,7 +13,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix
 
 import structlog
 logger = structlog.get_logger(__name__)
@@ -51,15 +50,25 @@ def _group_confusion(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     mask: np.ndarray,
+    weights: np.ndarray,
 ) -> tuple[float, float, float, float]:
-    """Return (TN, FP, FN, TP) for a group mask."""
+    """Return **weighted** (TN, FP, FN, TP) for a group mask.
+
+    Cells are sums of survey weights, not raw counts, so every rate below
+    (TPR/FPR) is a population estimate rather than a sample proportion — the same
+    weighted mandate the rest of the pipeline follows. Falls back to NaN when the
+    group has no both-class support (a rate would be undefined).
+    """
     yt = y_true[mask]
     yp = y_pred[mask]
+    w = weights[mask]
     if len(yt) == 0 or len(np.unique(yt)) < 2:
         return np.nan, np.nan, np.nan, np.nan
-    cm = confusion_matrix(yt, yp, labels=[0, 1])
-    tn, fp, fn, tp = cm.ravel()
-    return float(tn), float(fp), float(fn), float(tp)
+    tn = float(w[(yt == 0) & (yp == 0)].sum())
+    fp = float(w[(yt == 0) & (yp == 1)].sum())
+    fn = float(w[(yt == 1) & (yp == 0)].sum())
+    tp = float(w[(yt == 1) & (yp == 1)].sum())
+    return tn, fp, fn, tp
 
 
 def compute_fairness(
@@ -68,11 +77,14 @@ def compute_fairness(
     y_pred_col: str,
     y_prob_col: str,
     attribute: str,
+    weight_col: str | None = None,
 ) -> FairnessReport:
     """
     Compute fairness metrics for one protected attribute.
 
     Requires df to have columns: y_true_col, y_pred_col, y_prob_col, attribute.
+    When ``weight_col`` is given, every metric (selection rate, TPR, FPR,
+    calibration mean) is **survey-weighted**; otherwise unit weights are used.
     """
     if attribute not in df.columns:
         logger.warning("Protected attribute not in dataframe", attribute=attribute)
@@ -84,11 +96,16 @@ def compute_fairness(
     y_true = df[y_true_col].values
     y_pred = df[y_pred_col].values
     y_prob = df[y_prob_col].values
+    weights = df[weight_col].values if weight_col is not None else np.ones(len(df))
 
     dp: dict[str, float] = {}       # demographic parity: P(ŷ=1|A=a)
     eo: dict[str, float] = {}       # equal opportunity: TPR per group
     fpr: dict[str, float] = {}      # FPR per group
     cal: dict[str, float] = {}      # mean predicted prob per group (calibration check)
+
+    def _wmean(vals: np.ndarray, w: np.ndarray) -> float:
+        tot = w.sum()
+        return float(np.dot(vals, w) / tot) if tot > 0 else np.nan
 
     for g, gs in zip(groups, groups_str):
         mask = (df[attribute] == g).values & ~np.isnan(y_true) & ~np.isnan(y_pred)
@@ -99,10 +116,11 @@ def compute_fairness(
             cal[gs] = np.nan
             continue
 
-        dp[gs] = float(y_pred[mask].mean())
-        cal[gs] = float(y_prob[mask].mean())
+        wm = weights[mask]
+        dp[gs] = _wmean(y_pred[mask], wm)
+        cal[gs] = _wmean(y_prob[mask], wm)
 
-        tn, fp, fn, tp = _group_confusion(y_true, y_pred, mask)
+        tn, fp, fn, tp = _group_confusion(y_true, y_pred, mask, weights)
         if not any(np.isnan([tn, fp, fn, tp])):
             eo[gs] = tp / (tp + fn) if (tp + fn) > 0 else np.nan  # TPR
             fpr[gs] = fp / (fp + tn) if (fp + tn) > 0 else np.nan
@@ -133,6 +151,7 @@ def fairness_audit(
     y_pred_col: str,
     y_prob_col: str,
     attributes: list[str] | None = None,
+    weight_col: str | None = None,
 ) -> dict[str, FairnessReport]:
     """Run fairness audit across all specified protected attributes."""
     if attributes is None:
@@ -140,7 +159,7 @@ def fairness_audit(
 
     results: dict[str, FairnessReport] = {}
     for attr in attributes:
-        report = compute_fairness(df, y_true_col, y_pred_col, y_prob_col, attr)
+        report = compute_fairness(df, y_true_col, y_pred_col, y_prob_col, attr, weight_col)
         results[attr] = report
         logger.info(
             "Fairness computed",
@@ -157,10 +176,12 @@ def threshold_sweep(
     y_prob_col: str,
     attribute: str,
     thresholds: list[float] | None = None,
+    weight_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Sweep decision threshold and compute demographic parity + opportunity gap.
-    Returns DataFrame: threshold × (parity_gap, opportunity_gap).
+    Returns DataFrame: threshold × (parity_gap, opportunity_gap). Weighted when
+    ``weight_col`` is supplied.
     """
     if thresholds is None:
         thresholds = [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]
@@ -169,7 +190,7 @@ def threshold_sweep(
     for thresh in thresholds:
         df = df.copy()
         df["y_pred_thresh"] = (df[y_prob_col] >= thresh).astype(int)
-        report = compute_fairness(df, y_true_col, "y_pred_thresh", y_prob_col, attribute)
+        report = compute_fairness(df, y_true_col, "y_pred_thresh", y_prob_col, attribute, weight_col)
         rows.append({
             "threshold": thresh,
             "parity_gap": report.parity_gap,
