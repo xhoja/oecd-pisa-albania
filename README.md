@@ -414,11 +414,12 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **84 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
+- **88 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
-  the leave-one-out **school aggregates**, and the **forecast** WLS/Monte-Carlo scenarios.
+  the leave-one-out **school aggregates**, the **forecast** WLS/Monte-Carlo scenarios, and the
+  **stacking** ensemble builder (weight-safe bases, plain-LR meta).
 - **Data contracts** (`src/data/validate.py`) turn silent pipeline regressions into explicit
   `ERROR`/`WARN` violations: weight presence & positivity, plausible-value counts, target
   range, valid cycles, replicate-weight availability, all-missing features. Wire
@@ -428,10 +429,10 @@ choice below is implemented and unit-tested.
 
 ## Roadmap
 
-###  Done
+### Done (Phases 1–9)
 - **Phase 1 — Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
   harmonization, weights/PV handling, full pipeline. 5 cycles × 9 countries processed.
-- **Phase 2 — EDA & statistics:** 8 publication figures, 3 executed notebooks,
+- **Phase 2 — EDA & statistics:** 8 publication figures, executed notebooks (01–03),
   covariate-shift analysis (AUC 0.98), weighted stats, effect sizes.
 - **Phase 3 — Feature engineering:** SES composites, digital indices, interaction terms,
   country-normalized features, selection (VIF / correlation / missingness).
@@ -439,71 +440,69 @@ choice below is implemented and unit-tested.
   Nadeau-Bengio CIs and pairwise significance testing (corrected resampled t-test in CV,
   DeLong out-of-sample); weighted OOS 2022 experiment with Rubin's-rules per-PV evaluation
   and train-only threshold tuning; SHAP global + importance. Notebooks 04–05.
-- **Rigor hardening (Phases 1–4):** 74-test suite, dependency-free data contracts, BRR+Rubin
+- **Rigor hardening (Phases 1–4):** test suite, dependency-free data contracts, BRR+Rubin
   design-based standard errors wired into the EDA notebooks, Nadeau-Bengio CIs and
-  DeLong/corrected-resampled significance tests. Verified: the top three CV models are a
-  statistical tie (Logistic Regression matches the best boosters). Fixed a weighting bug
-  (scaler-wrapped models were fit unweighted).
+  DeLong/corrected-resampled significance tests. Fixed a weighting bug (scaler-wrapped models
+  were fit unweighted).
 - **Phase 5 — HPO:** Optuna in proper nested CV (inner tuning, outer evaluation),
   leakage-safe and weighted, OpenMP-isolated per fold, for CatBoost / GBM / LR
-  (`src/models/hpo.py`, `scripts/run_hpo.py`). Each tuned model is tested against its
-  registry default with the corrected resampled t-test. Result: **no significant gain from
-  tuning** — defaults are already at the accuracy ceiling.
-
-- **Model-improvement pass (pre-Phase-8):** tested two levers against the student-only
-  ceiling. **School context** (survey-weighted leave-one-out school-mean features) lifts every
-  model ~+0.05 AUC (CatBoost 0.73→**0.78**), fold-safe and significant — breaking the ceiling
-  HPO could not, and flipping the podium so boosters beat LR. **Threshold tuning + isotonic
-  calibration** lift MCC/F1 and cut ECE ~5–7×. `build_model_data(..., add_school_context=True)`;
-  scripts `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`.
-
-- **Downstream refresh on the school-context model: Done.** SHAP (nb05 global, nb06 local +
-  PDP/ICE) and the fairness audit (nb07) re-run on the school-augmented model. SHAP is now
-  led by school-level features (`SCH_MEAN_HOMEPOS` #1); fairness shows school context *shrinks*
-  the gender gap but leaves the SES gap intact (school-mean SES entrenches it) and enlarges the
-  immigrant FPR gap. Scripts + notebooks regenerated.
-- **Forecast — next cycle (2026): Done.** PISA is now on a 4-year cadence (2022 → 2026).
-  Scenario Monte-Carlo (`src/forecast/`, notebook 09) propagating design-based SEs: plausible
-  2026 low-proficiency range ~21–74%, defensible zone partial-reversion (~47%) to persistence
-  (~74%). Honest about the five-cycle / structural-break limits.
-
-### Next
-- **Fold-safe school transformer (nice-to-have):** production uses full-cohort school means
-  (empirically leakage-free — the fold-safe ablation gave an identical delta). A per-fold
-  pipeline transformer would make it airtight for the final write-up.
-- **PV-stacking: Done (marginal).** Stacking all 10 PVs as training rows lifts LightGBM/GBM
-  AUC ~+0.01 (significant) but not CatBoost/LR — kept as an ablation, not headline.
-- **Phase 9 — Stacking ensemble: Done (negligible, worse where it counts).** A
-  StackingClassifier of the four bare tree/booster base learners (CatBoost + LightGBM + GBM +
-  RF) with a class-balanced Logistic-Regression meta-learner on their out-of-fold
-  probabilities, scored in the school-context regime through the identical weighted /
-  leakage-safe / OpenMP-isolated CV path (`scripts/run_stacking_experiment.py`, registry
-  `"stacking"`). Stacking AUC **0.786** vs single CatBoost **0.783** — a paired Nadeau-Bengio
-  gain of **+0.003 (p=0.030)**: statistically significant but practically nil, and it *regresses*
-  the decision-point metrics (MCC 0.386 vs 0.393, F1 0.683 vs 0.693) at ~19× the compute. The
-  ~0.78 ceiling holds; **single CatBoost remains the deployable headline**, stacking is kept as
-  an ablation confirming diminishing returns (`stacking_ensemble_2022.csv`,
-  `stacking_pairwise_nb_2022.csv`).
-- **Phase 5b (deferred):** add MLP & SVM to the comparison (fix `_suggest_params` for the
-  sklearn ≥1.8 `penalty` deprecation first). *(LightGBM restored — see OpenMP note.)*
-- **Phase 6 — Explainability (local + PDP/ICE): Done.** SHAP local case studies for one
+  (`src/models/hpo.py`, `scripts/run_hpo.py`). Each tuned model tested against its registry
+  default with the corrected resampled t-test. Result: **no significant gain from tuning** —
+  defaults are already at the accuracy ceiling.
+- **Model-improvement pass:** two levers against the student-only ceiling. **School context**
+  (survey-weighted leave-one-out school-mean features) lifts every model ~+0.05 AUC
+  (CatBoost 0.73→**0.78**), fold-safe and significant — breaking the ceiling HPO could not, and
+  flipping the podium so boosters beat LR. **Threshold tuning + isotonic calibration** lift
+  MCC/F1 and cut ECE ~5–7×. `build_model_data(..., add_school_context=True)`; scripts
+  `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb05/06) and
+  the fairness audit (nb07) were then re-run on the school-augmented model.
+- **Phase 6 — Explainability (local + PDP/ICE):** SHAP local case studies for one
   representative TP/TN/FP/FN each (`scripts/run_explainability_cases.py` → waterfalls +
   `shap_local_cases_2022.csv`) and PDP + centered-ICE for the top drivers, narrated in
-  notebook 06. Per-country SHAP comparison (`country_shap_comparison`) folds into Phase 8.
-- **Phase 7 — Fairness audit (survey-weighted): Done.** Demographic parity, equal
-  opportunity (TPR), FPR and calibration across gender, SES quintile and immigrant status,
-  plus a threshold sweep — all **weighted** (`scripts/run_fairness_audit.py` →
-  `fairness_audit_2022.json`, `fairness_threshold_sweep_gender.csv`, `E1` figure), narrated
-  in notebook 07.
-- **Phase 8 — Comparative modeling: Done.** Per-country school-context LightGBM (nine
-  countries), weighted CV AUC, SHAP feature × country rank matrix, and SES-gradient comparison
+  notebook 06.
+- **Phase 7 — Fairness audit (survey-weighted):** demographic parity, equal opportunity (TPR),
+  FPR and calibration across gender, SES quintile and immigrant status, plus a threshold sweep —
+  all **weighted** (`scripts/run_fairness_audit.py` → `fairness_audit_2022.json`,
+  `fairness_threshold_sweep_gender.csv`, `E1` figure), narrated in notebook 07. School context
+  *shrinks* the gender gap but leaves the SES gap intact and enlarges the immigrant FPR gap.
+- **Phase 8 — Comparative modeling:** per-country school-context LightGBM (nine countries),
+  weighted CV AUC, SHAP feature × country rank matrix, and SES-gradient comparison
   (`scripts/run_comparative_modeling.py`, notebook 08). Headline: Albania is high-prevalence /
   low-separability / flat-gradient (broad-based crisis); drivers (math anxiety, school
   composition) are shared with peers, not unique.
-- **Phase 9 — Advanced:** stacking ensemble, probability calibration, conformal
-  prediction (uncertainty), counterfactual explanations, policy simulation.
-- **Phase 10 — Deliverables:** written report, slides, poster,
-  interactive risk-score dashboard.
+- **Forecast — next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 09)
+  propagating design-based SEs: plausible 2026 low-proficiency range ~21–74%, defensible zone
+  partial-reversion (~47%) to persistence (~74%). Honest about the five-cycle / structural-break
+  limits.
+- **Phase 9 — Stacking ensemble (negligible, worse where it counts):** a StackingClassifier of
+  the four bare tree/booster base learners (CatBoost + LightGBM + GBM + RF) with a
+  class-balanced Logistic-Regression meta-learner on their out-of-fold probabilities, scored in
+  the school-context regime through the identical weighted / leakage-safe / OpenMP-isolated CV
+  path (`scripts/run_stacking_experiment.py`, registry `"stacking"`, notebook 10). Stacking AUC
+  **0.786** vs single CatBoost **0.783** — a paired Nadeau-Bengio gain of **+0.003 (p=0.030)**:
+  significant but practically nil, and it *regresses* the decision-point metrics (MCC 0.386 vs
+  0.393, F1 0.683 vs 0.693) at ~19× the compute. The ~0.78 ceiling holds; **single CatBoost
+  remains the deployable headline**. Kept as an ablation, alongside the earlier **PV-stacking**
+  result (all 10 PVs as training rows; ~+0.01 AUC for LightGBM/GBM only) — both confirm
+  diminishing returns (`stacking_ensemble_2022.csv`, `stacking_pairwise_nb_2022.csv`).
+- **Documentation & rigor pass:** per-notebook *Methods & formulas* reference cells
+  (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
+  (`visualization/style`: SEQUENTIAL / SEQUENTIAL_RANK / DIVERGING; dark = more-important),
+  and an internal performance / conference-readiness review.
+
+### Remaining
+- **Phase 10 — Deliverables:** written report, slides, poster, interactive risk-score dashboard.
+  This is the true remaining blocker for a conference submission; the analysis is largely done.
+- **Advanced levers (optional, not pursued):** conformal prediction (uncertainty),
+  counterfactual explanations, policy simulation. Probability calibration is already covered by
+  the threshold-tuning + isotonic pass.
+- **Highest-leverage extensions before submission** (see the readiness review): link the PISA
+  **school questionnaire** (richer school features) and fit a **multilevel/hierarchical** model
+  to test whether the 0.78 ceiling is data or feature-set, and reframe evaluation around
+  **decision value / calibration** rather than AUC for a 75%-prevalence screener.
+- **Nice-to-haves:** a fold-safe per-fold school-means transformer (production uses full-cohort
+  means — empirically leakage-free); **Phase 5b** — add MLP & SVM to the comparison (fix
+  `_suggest_params` for the sklearn ≥1.8 `penalty` deprecation first).
 
 ---
 
