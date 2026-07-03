@@ -19,6 +19,8 @@ from src.data.weights import weighted_mean, weighted_proportion, weighted_std
 from src.visualization.style import (
     AT_RISK_COLORS,
     COUNTRY_COLORS,
+    DIVERGING_CMAP,
+    SEQUENTIAL_CMAP,
     apply_publication_style,
     color_list,
     save_figure,
@@ -141,7 +143,7 @@ def plot_missingness_heatmap(
             matrix.loc[f, int(c)] = s[f].isna().mean() * 100
 
     fig, ax = plt.subplots(figsize=(8, max(4, len(avail) * 0.4)))
-    sns.heatmap(matrix.astype(float), annot=True, fmt=".0f", cmap="rocket_r",
+    sns.heatmap(matrix.astype(float), annot=True, fmt=".0f", cmap=SEQUENTIAL_CMAP,
                 vmin=0, vmax=100, cbar_kws={"label": "% missing"}, ax=ax,
                 linewidths=0.5, linecolor="white")
     ax.set_title("Feature Missingness by Cycle (%)")
@@ -174,7 +176,7 @@ def plot_ses_quintile_heatmap(
                 matrix.loc[q, int(c)] = weighted_proportion(s[target_col], _w(s)) * 100
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    sns.heatmap(matrix.astype(float), annot=True, fmt=".0f", cmap="rocket_r",
+    sns.heatmap(matrix.astype(float), annot=True, fmt=".0f", cmap=SEQUENTIAL_CMAP,
                 cbar_kws={"label": "At-risk rate (%)"}, ax=ax,
                 linewidths=0.5, linecolor="white")
     ax.set_title("Low-Proficiency Rate by SES Quintile and Cycle (%)")
@@ -199,7 +201,7 @@ def plot_correlation_matrix(
 
     fig, ax = plt.subplots(figsize=(max(7, len(avail) * 0.6), max(6, len(avail) * 0.55)))
     mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
-    sns.heatmap(corr, mask=mask, annot=True, fmt=".2f", cmap="coolwarm",
+    sns.heatmap(corr, mask=mask, annot=True, fmt=".2f", cmap=DIVERGING_CMAP,
                 center=0, vmin=-1, vmax=1, square=True, linewidths=0.5,
                 cbar_kws={"label": "Pearson r", "shrink": 0.7}, ax=ax,
                 annot_kws={"size": 7})

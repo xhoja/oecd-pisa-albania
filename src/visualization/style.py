@@ -39,6 +39,19 @@ AT_RISK_COLORS = {
     "proficient": "#0072B2",
 }
 
+# --- Colormap schema (one fixed set, so heatmaps don't drift map-to-map) -----
+# Rule of thumb across every figure: **dark = more / more-important.**
+#   SEQUENTIAL      magnitude, low→high (e.g. % missing, at-risk rate, counts):
+#                   single-hue, perceptually uniform, colorblind-safe; dark = high.
+#   SEQUENTIAL_RANK an ordinal rank where 1 = most important (e.g. SHAP rank):
+#                   the reverse ramp so rank 1 renders dark (= most salient).
+#   DIVERGING       a signed quantity centered on 0 (e.g. Pearson r): two hues
+#                   with a light neutral midpoint; never for unsigned magnitude.
+# Avoid rainbow / red-yellow-green maps (RdYlGn): not colorblind-safe.
+SEQUENTIAL_CMAP = "rocket_r"   # low = light, high = dark
+SEQUENTIAL_RANK_CMAP = "rocket"  # low value (rank 1) = dark, high = light
+DIVERGING_CMAP = "coolwarm"    # negative = cool, 0 ≈ neutral, positive = warm
+
 
 def apply_publication_style() -> None:
     """Apply publication-quality matplotlib rcParams."""
