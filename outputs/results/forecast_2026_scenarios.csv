@@ -1,0 +1,5 @@
+scenario,target_year,median,pi90_low,pi90_high
+persistence,2026,0.739,0.6569,0.8229
+recovery,2026,0.2111,0.1833,0.2386
+partial,2026,0.475,0.4319,0.5193
+naive_linear,2026,0.7299,0.7207,0.7392

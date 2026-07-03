@@ -246,7 +246,9 @@ def nb_02_comparative() -> list:
            "noise. Estonia's non-overlapping low CI confirms the extremes are statistically distinct."),
         md("## 2. SES gradient by country (2022)\n\n"
            "Slope of math score on ESCS. A steeper slope = stronger socioeconomic determinism. "
-           "Estonia's flatter slope shows it partly breaks the SES–achievement link."),
+           "**Albania has the *flattest* slope (~16 pts/SD) of all nine countries** — but this is a "
+           "floor effect, not equity: nearly everyone scores low regardless of SES. Estonia and "
+           "Finland have *steeper* gradients (~38–40) yet far higher overall levels."),
         code(
             "from src.visualization.eda import plot_ses_gradient_by_country\n"
             "fig = plot_ses_gradient_by_country(df, cycle=2022); plt.show()"
@@ -280,9 +282,10 @@ def nb_02_comparative() -> list:
             "- **Albania is the negative outlier.** 2022 low-proficiency ≈ **75%** — highest in the "
             "panel, above Balkan peers (N. Macedonia 67%, Montenegro 60%) and GDP-matched economies "
             "(Colombia 73%, Mexico 67%), and ~5× Estonia (**14%**).\n"
-            "- **Steeper SES gradient.** Albania's math-on-ESCS slope is among the steepest; Estonia's "
-            "is flat — high performance with weak socioeconomic determinism, the opposite policy "
-            "profile.\n"
+            "- **Flattest SES gradient — a floor effect, not equity.** Albania's math-on-ESCS slope "
+            "(~16 pts/SD) is the *flattest* of the nine countries; even advantaged students score low "
+            "(mean ~369). Estonia/Finland have *steeper* gradients (~38–40) but much higher levels — "
+            "SES predicts more there simply because there is more score range to predict.\n"
             "- **Shared but uneven regression.** Several peers dipped in 2022, none as sharply as "
             "Albania — its spike is structurally distinct, not a common regional shock.\n"
             "- **Next:** is Albania's shift merely lower scores, or a change in *who* is at risk? "
@@ -504,10 +507,12 @@ def nb_05_explainability() -> list:
     return [
         md(
             "# 05 — Explainability: SHAP (Albania 2022)\n\n"
-            "Global and local explanations for the LightGBM model on the Albania 2022 cohort. "
-            "LightGBM is fit fresh in this kernel — its Homebrew libomp is imported before "
-            "scikit-learn (import-order fix), so the single-booster fit is OpenMP-safe and SHAP "
-            "runs live."
+            "Global and local explanations for the LightGBM model on the Albania 2022 cohort, "
+            "trained on the **school-context** feature set (student features + survey-weighted "
+            "school-mean ESCS/HOMEPOS/ANXMAT/TEACHSUP + cohort size — the additions that lifted "
+            "AUC ~+0.05). LightGBM is fit fresh in this kernel — its Homebrew libomp is imported "
+            "before scikit-learn (import-order fix), so the single-booster fit is OpenMP-safe and "
+            "SHAP runs live."
         ),
         code(MODEL_HEADER),
         code(
@@ -519,7 +524,7 @@ def nb_05_explainability() -> list:
             "df = pd.read_parquet('../data/processed/alb_2022.parquet')\n"
             "feats = ['ESCS','HOMEPOS','GENDER','REPEAT','IMMIG','BELONG','TEACHSUP',\n"
             "         'ICTHOME','ICTSCH','ANXMAT','GRADE','HISCED','HISEI']\n"
-            "data = build_model_data(df, feats, domain='math')\n"
+            "data = build_model_data(df, feats, domain='math', add_school_context=True)\n"
             "# engineered features (SES_COMPLETE, interactions, ...) built here for the\n"
             "# final explanatory model (single fit on all data, so fit-on-all is fine)\n"
             "X_eng = EngineeredFeatureBuilder().fit_transform(data.X)\n"
@@ -543,10 +548,13 @@ def nb_05_explainability() -> list:
             "ax.set_xlabel('Mean |SHAP value|'); ax.set_title('Global Feature Importance — Albania 2022 (LightGBM)')\n"
             "plt.show()"
         ),
-        md("**Reading:** `ANXMAT` (math anxiety) dominates, followed by parental education and "
-           "home resources (`HISCED`, `HOMEPOS`, `HISEI`, `MATERIAL_DEFICIT`) and school "
-           "belonging (`BELONG`). Immigration status and grade deviation contribute almost "
-           "nothing."),
+        md("**Reading:** the top drivers are now dominated by **school-level context** — "
+           "`SCH_MEAN_HOMEPOS` (school mean home possessions) is #1, with `SCH_MEAN_TEACHSUP`, "
+           "`SCH_MEAN_ESCS` and `SCH_N` (cohort size) all in the top 7. The strongest *individual* "
+           "factor is `ANXMAT` (math anxiety, #2), then `HISCED`/`HOMEPOS`. The model reads a "
+           "student's risk more from the socioeconomic composition of their school than from their "
+           "own resources — the compositional effect made explicit. Immigration and grade "
+           "deviation still contribute almost nothing."),
         md("## 2. SHAP beeswarm — direction of effects"),
         code(
             "X_s = X.sample(min(2000, len(X)), random_state=42).reset_index(drop=True)\n"
@@ -561,18 +569,473 @@ def nb_05_explainability() -> list:
            "whether socioeconomic status buffers or amplifies that effect — a policy-relevant interaction."),
         md(
             "## Conclusions & Interpretation\n\n"
-            "- **What drives predicted risk (mean |SHAP|):** `ANXMAT` (math anxiety) > "
-            "`MATERIAL_DEFICIT` > `HISCED` / `HOMEPOS` / `HISEI` (parental education, home & material "
-            "resources) > `BELONG` > `ESCS`. Math anxiety and material deprivation dominate.\n"
+            "- **School composition dominates (mean |SHAP|):** `SCH_MEAN_HOMEPOS` > `ANXMAT` > "
+            "`SCH_MEAN_TEACHSUP` > `SCH_MEAN_ESCS` > `HISCED` > `HOMEPOS` > `SCH_N`. Four of the "
+            "top seven are school-level — the model reads risk more from the *school's* aggregate "
+            "resources and support than from the student's own.\n"
+            "- **Top individual factor:** `ANXMAT` (math anxiety) is the strongest student-level "
+            "driver, followed by parental education / home resources (`HISCED`, `HOMEPOS`).\n"
             "- **Negligible:** immigration status and grade deviation add almost nothing — Albania's "
-            "risk is a resources-and-affect story, not a migration one.\n"
-            "- **Interaction:** the ANXMAT × ESCS dependence indicates whether socioeconomic status "
-            "buffers anxiety's effect — directly policy-relevant.\n"
-            "- **Policy read:** interventions targeting math anxiety and material support for "
-            "low-resource students hit the highest-leverage factors. SHAP explains the *model* — "
-            "associational, not causal.\n"
-            "- **Caveat:** explanations are for the single all-data CatBoost fit; per-fold stability and "
-            "per-country SHAP comparison come in Phase 6+."
+            "risk is a school-context-and-affect story, not a migration one.\n"
+            "- **Policy read:** the highest-leverage levers are *structural* — the socioeconomic "
+            "segregation of schools and school-level teacher support — alongside individual math "
+            "anxiety. A pure individual-student intervention misses the dominant, compositional "
+            "signal. SHAP explains the *model* — associational, not causal.\n"
+            "- **Equity caveat:** because school-mean SES is now a top feature, the model partly "
+            "encodes *where* a student goes to school; this is exactly the mechanism the fairness "
+            "audit (notebook 07) probes for the SES gap.\n"
+            "- **Caveat:** explanations are for the single all-data LightGBM fit; per-fold "
+            "stability and per-country SHAP comparison come in Phase 8."
+        ),
+    ]
+
+
+# ===========================================================================
+# Notebook 06 — Local explainability: SHAP case studies + PDP/ICE
+# ===========================================================================
+
+def nb_06_explainability_cases() -> list:
+    return [
+        md(
+            "# 06 — Local Explainability: SHAP Case Studies + PDP/ICE (Albania 2022)\n\n"
+            "Notebook 05 gave the *global* picture (which features matter overall). This notebook is the "
+            "*local* half of the story, mirroring `scripts/run_explainability_cases.py`:\n\n"
+            "1. One representative **TP / TN / FP / FN** instance, each with a SHAP **waterfall** — why the "
+            "model was confidently right, and confidently wrong.\n"
+            "2. **PDP + centered-ICE** curves for the top drivers — the *shape* of each feature's effect and "
+            "the instance-level heterogeneity (interactions) the average hides.\n\n"
+            "The explanatory model is a single LightGBM fit on all Albania-2022 data (fit-on-all is fine for "
+            "explanation, not evaluation), on the **school-context** feature set (student + school-mean "
+            "features). LightGBM is imported before scikit-learn (import-order libomp fix), so the booster "
+            "fit and SHAP run live in-kernel."
+        ),
+        code(MODEL_HEADER),
+        code(
+            "from src.explainability.shap_analysis import (\n"
+            "    compute_local_shap, compute_shap_values, global_feature_importance,\n"
+            "    select_representative_cases)\n"
+            "from src.explainability.partial_dependence import centered_ice, compute_pdp\n"
+            "from src.features.transformers import EngineeredFeatureBuilder\n"
+            "from src.models.prepare import build_model_data, impute_median\n"
+            "from src.models.registry import get_model\n\n"
+            "df = pd.read_parquet('../data/processed/alb_2022.parquet')\n"
+            "feats = ['ESCS','HOMEPOS','GENDER','REPEAT','IMMIG','BELONG','TEACHSUP',\n"
+            "         'ICTHOME','ICTSCH','ANXMAT','GRADE','HISCED','HISEI']\n"
+            "data = build_model_data(df, feats, domain='math', add_school_context=True)\n"
+            "X_eng = EngineeredFeatureBuilder().fit_transform(data.X)\n"
+            "(X,) = impute_median(X_eng); y = data.y.values\n"
+            "model = get_model('lightgbm'); model.fit(X, y, sample_weight=data.weights.values)\n"
+            "print('trained on', X.shape, '| at-risk rate =', round(float(y.mean()),3))"
+        ),
+        md("## 1. Representative confusion-matrix cases\n\n"
+           "For each quadrant we pick the *most confident* instance — a confidently correct case (TP/TN) and "
+           "a confidently **wrong** case (FP/FN), whose local SHAP explanation is most informative."),
+        code(
+            "cases = select_representative_cases(model, X, y)\n"
+            "pd.DataFrame([{'quadrant':k, **{kk:vv for kk,vv in c.items() if kk!='index'}}\n"
+            "              for k,c in cases.items()])"
+        ),
+        md("## 2. Local SHAP waterfalls\n\n"
+           "Signed feature contributions (log-odds) from the model base value toward each instance's "
+           "prediction. **Red = pushes toward at-risk, blue = pushes toward proficient.**"),
+        code(
+            "def waterfall(ax, values, base, pred, names, row, top_n=10):\n"
+            "    order = np.argsort(np.abs(values))[::-1][:top_n]\n"
+            "    contrib = values[order]\n"
+            "    labels = [f'{names[i]} = {row[i]:.2f}' for i in order]\n"
+            "    colors = ['#D55E00' if c>0 else '#0072B2' for c in contrib]\n"
+            "    yy = np.arange(len(contrib))[::-1]\n"
+            "    ax.barh(yy, contrib, color=colors); ax.set_yticks(yy)\n"
+            "    ax.set_yticklabels(labels, fontsize=8); ax.axvline(0, color='k', lw=0.8)\n"
+            "    ax.set_xlabel('SHAP contribution (log-odds)')\n"
+            "    ax.set_title(f'base={base:.2f}  ->  P(at-risk)={pred:.2f}', fontsize=9)\n\n"
+            "from src.visualization.style import apply_publication_style\n"
+            "apply_publication_style()\n"
+            "idx = [c['index'] for c in cases.values()]\n"
+            "X_bg = X.sample(min(300, len(X)), random_state=42)\n"
+            "vals, base, names = compute_local_shap(model, X.iloc[idx], X_background=X_bg)\n"
+            "fig, axes = plt.subplots(2, 2, figsize=(13, 9))\n"
+            "for ax, (k, c), v, b in zip(axes.ravel(), cases.items(), vals, base):\n"
+            "    waterfall(ax, v, b, c['prob'], names, X.iloc[c['index']].values)\n"
+            "    ax.set_ylabel(f\"{k} - {c['label']}\", fontsize=9)\n"
+            "fig.suptitle('Local SHAP explanations - Albania 2022 (LightGBM)', fontsize=12)\n"
+            "fig.tight_layout(); plt.show()"
+        ),
+        md("**Reading:** the TP/TN waterfalls show the model stacking up **school-context** signals "
+           "(school-mean home possessions, teacher support, ESCS) alongside individual math anxiety. "
+           "The FP/FN cases expose where those signals mislead — e.g. a student in a low-resource "
+           "school who is nonetheless proficient (FP), or a resourced-school student the model misses "
+           "(FN) — the individual bucking their school context."),
+        md("## 3. Partial dependence + centered ICE\n\n"
+           "PDP = mean predicted at-risk probability as one feature varies (all else held). Centered ICE "
+           "keeps one grey line per instance (anchored to the grid start) so heterogeneity — the fingerprint "
+           "of interactions — is visible where the average curve hides it."),
+        code(
+            "shap_vals, shap_names = compute_shap_values(model, X, X_background=X_bg, max_samples=2000)\n"
+            "imp = global_feature_importance(shap_vals, shap_names)\n"
+            "raw_top = [f for f in imp['feature'] if f in feats][:4]\n"
+            "print('PDP/ICE for:', raw_top)\n"
+            "fig, axes = plt.subplots(2, 2, figsize=(12, 9))\n"
+            "rng = np.random.default_rng(42)\n"
+            "for ax, feat in zip(axes.ravel(), raw_top):\n"
+            "    pdp = compute_pdp(model, X, feat, grid_resolution=30, ice=True)\n"
+            "    cice = centered_ice(pdp)\n"
+            "    sub = rng.choice(cice.shape[0], size=min(200, cice.shape[0]), replace=False)\n"
+            "    for r in cice[sub]:\n"
+            "        ax.plot(pdp.grid, r, color='0.7', lw=0.4, alpha=0.5)\n"
+            "    ax.plot(pdp.grid, pdp.average - pdp.average[0], color='#D55E00', lw=2.2, label='PDP (mean)')\n"
+            "    ax.set_title(feat, fontsize=10); ax.set_xlabel(feat)\n"
+            "    ax.set_ylabel('delta P(at-risk) vs. grid start'); ax.legend(fontsize=8)\n"
+            "fig.suptitle('Partial dependence + centered ICE - Albania 2022 (LightGBM)', fontsize=12)\n"
+            "fig.tight_layout(); plt.show()"
+        ),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Local confirms global.** The confidently-correct (TP/TN) waterfalls are dominated by the "
+            "same drivers notebook 05 flagged globally — **school-context** features (school-mean "
+            "HOMEPOS/TEACHSUP/ESCS) plus individual math anxiety — so the compositional story isn't an "
+            "averaging artefact.\n"
+            "- **Where the model fails.** FP/FN cases show the failure mode: the model leans on school "
+            "context + anxiety, so a student who defies their school's profile (proficient in a "
+            "low-resource school, or at-risk in a resourced one) is misclassified. Risk is probabilistic, "
+            "not deterministic, at the individual level.\n"
+            "- **Effect shapes are monotone but heterogeneous.** PDP curves for the top drivers move risk "
+            "smoothly and roughly monotonically; the ICE spread shows the *magnitude* varies by instance — "
+            "evidence of interactions (e.g. anxiety's effect moderated by SES).\n"
+            "- **Policy read:** the highest-leverage levers (math anxiety, material support) act on most "
+            "students but not uniformly — targeting should be individualised, not blanket. Explanations are "
+            "**associational** (they explain the model), not causal.\n"
+            "- Figures mirror D3 (`D3_shap_local_cases`) and D4 (`D4_pdp_ice`); the case table matches "
+            "`shap_local_cases_2022.csv`."
+        ),
+    ]
+
+
+# ===========================================================================
+# Notebook 07 — Fairness audit
+# ===========================================================================
+
+def nb_07_fairness() -> list:
+    return [
+        md(
+            "# 07 — Fairness Audit: Albania 2022 (survey-weighted)\n\n"
+            "Would a risk-screening model built on this data treat subgroups equitably? Mirroring "
+            "`scripts/run_fairness_audit.py`, we generate **leakage-safe out-of-fold** predictions (engineered "
+            "features fit per fold), then audit demographic parity, equal opportunity (TPR), FPR and "
+            "calibration across three protected attributes — **GENDER**, **SES quintile** (from weighted "
+            "ESCS), and **immigrant status**.\n\n"
+            "Every metric is **survey-weighted** (`W_FSTUWT`): an unweighted audit would misstate "
+            "population-level gaps exactly like the descriptive shortcuts the project criticises. The model "
+            "uses the **school-context** feature set (the headline model); because school-mean SES is now a "
+            "top predictor, the SES-fairness question is especially pointed. LightGBM is imported before "
+            "scikit-learn (import-order libomp fix)."
+        ),
+        code(MODEL_HEADER),
+        code(
+            "from sklearn.model_selection import StratifiedKFold\n"
+            "from threadpoolctl import threadpool_limits\n"
+            "from src.data.weights import compute_ses_quintiles\n"
+            "from src.fairness.metrics import fairness_audit, threshold_sweep\n"
+            "from src.models.evaluate import fit_with_sample_weight\n"
+            "from src.models.experiment import _wrap\n"
+            "from src.models.prepare import build_model_data\n"
+            "from src.models.registry import get_model\n\n"
+            "FEATS = ['ESCS','HOMEPOS','GENDER','REPEAT','IMMIG','BELONG','TEACHSUP',\n"
+            "         'ICTHOME','ICTSCH','ANXMAT','GRADE','HISCED','HISEI']\n"
+            "df = pd.read_parquet('../data/processed/alb_2022.parquet')\n"
+            "data = build_model_data(df, FEATS, domain='math', add_school_context=True)\n"
+            "X, y, w = data.X, data.y, data.weights\n"
+            "print('cohort n =', len(y), '| at-risk rate =', round(float(y.mean()),3))"
+        ),
+        md("## 1. Leakage-safe out-of-fold predictions\n\n"
+           "Weighted 5-fold stratified CV; each fold's pipeline (engineered features + booster) is fit on "
+           "train only, so every prediction is genuinely out-of-sample. Thread-limited for OpenMP safety."),
+        code(
+            "def oof_predictions(X, y, w, n_splits=5, seed=42):\n"
+            "    prob = np.full(len(y), np.nan)\n"
+            "    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)\n"
+            "    with threadpool_limits(limits=1):\n"
+            "        for tr, te in skf.split(X, y):\n"
+            "            pipe = _wrap(get_model('lightgbm'))\n"
+            "            fit_with_sample_weight(pipe, X.iloc[tr], y.iloc[tr], w.iloc[tr].values)\n"
+            "            prob[te] = pipe.predict_proba(X.iloc[te])[:, 1]\n"
+            "    return prob\n\n"
+            "prob = oof_predictions(X, y, w)\n"
+            "print('OOF coverage:', int(np.isfinite(prob).sum()), '/', len(prob))"
+        ),
+        code(
+            "audit = pd.DataFrame({\n"
+            "    'y_true': y.values.astype(float),\n"
+            "    'y_prob': prob,\n"
+            "    'y_pred': (prob >= 0.5).astype(float),\n"
+            "    'W_FSTUWT': w.values,\n"
+            "    'GENDER': X['GENDER'].values,\n"
+            "    'IMMIG': X['IMMIG'].values,\n"
+            "    'ESCS': X['ESCS'].values})\n"
+            "# SES quintile from *weighted* ESCS breaks (population quintiles, not sample)\n"
+            "audit = compute_ses_quintiles(audit, ses_col='ESCS', weight_col='W_FSTUWT')\n"
+            "audit['SES_QUINTILE'] = audit['SES_QUINTILE'].astype('float')\n"
+            "audit = audit.dropna(subset=['y_prob'])\n"
+            "print('audit rows:', len(audit))"
+        ),
+        md("## 2. Fairness audit across protected attributes"),
+        code(
+            "reports = fairness_audit(audit, 'y_true', 'y_pred', 'y_prob',\n"
+            "                         ['GENDER','SES_QUINTILE','IMMIG'], weight_col='W_FSTUWT')\n"
+            "for attr, rep in reports.items():\n"
+            "    print(rep.summary()); print()"
+        ),
+        code(
+            "gap = pd.DataFrame({attr: {'parity_gap': rep.parity_gap,\n"
+            "                           'opportunity_gap': rep.opportunity_gap,\n"
+            "                           'fpr_gap': rep.fpr_gap}\n"
+            "                    for attr, rep in reports.items()}).T.round(4)\n"
+            "gap"
+        ),
+        md("**Reading:** **SES quintile is the least fair axis** — parity gap ~**0.48** and FPR gap "
+           "~**0.63**. The model flags almost every bottom-quintile student as at-risk (selection 0.91, "
+           "FPR 0.83) while rarely flagging the top (0.43). With school-mean SES now a top feature the "
+           "model has doubly learned the SES gradient and would *operationalise* it if deployed. "
+           "**Immigrant status** shows a large FPR gap too (~0.59, small/unstable groups). By contrast the "
+           "**gender gap shrank** vs. the student-only model (parity 0.18→0.11, FPR 0.14→0.05) — school "
+           "context absorbed some of the gender signal."),
+        md("## 3. Per-group detail — where the gap lives"),
+        code(
+            "ses = reports['SES_QUINTILE']\n"
+            "pd.DataFrame({'selection_rate': ses.demographic_parity,\n"
+            "              'TPR': ses.equal_opportunity,\n"
+            "              'FPR': ses.fpr_by_group,\n"
+            "              'mean_pred_prob': ses.calibration_by_group}).round(3)"
+        ),
+        md("## 4. Threshold sweep — can the operating point buy fairness?\n\n"
+           "Does moving the decision threshold trade parity against the TPR/FPR gaps? Shown for GENDER."),
+        code(
+            "from src.visualization.style import apply_publication_style\n"
+            "apply_publication_style()\n"
+            "sweep = threshold_sweep(audit, 'y_true', 'y_prob', 'GENDER', weight_col='W_FSTUWT')\n"
+            "fig, ax = plt.subplots(figsize=(7, 5))\n"
+            "ax.plot(sweep['threshold'], sweep['parity_gap'], '-o', label='Demographic-parity gap')\n"
+            "ax.plot(sweep['threshold'], sweep['opportunity_gap'], '-s', label='Equal-opportunity (TPR) gap')\n"
+            "ax.plot(sweep['threshold'], sweep['fpr_gap'], '-^', label='FPR gap')\n"
+            "ax.set_xlabel('Decision threshold'); ax.set_ylabel('Weighted group gap (max - min)')\n"
+            "ax.set_title('Fairness gaps vs. threshold - Albania 2022, GENDER (weighted)')\n"
+            "ax.legend(fontsize=8); plt.show()\n"
+            "sweep.round(4)"
+        ),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **SES is the fairness fault line.** Weighted parity gap ≈ **0.48** and FPR gap ≈ **0.63** "
+            "across SES quintiles — the bottom quintile is flagged at-risk ~91% of the time (selection "
+            "rate 0.91, FPR 0.83) vs. ~43% for the top. Adding school-mean SES as a top feature does **not** "
+            "fix this — school SES *is* SES, so the model doubly encodes the gradient and would act on it.\n"
+            "- **Gender gap shrank.** Vs. the student-only model the gender gaps dropped (parity 0.18→0.11, "
+            "FPR 0.14→0.05) — school context absorbed part of the gender signal. Girls (group 1) still get "
+            "a somewhat higher selection rate and FPR.\n"
+            "- **Immigrant status:** a large **FPR gap (~0.59)** — immigrant-background students are "
+            "over-flagged among the truly proficient — though the immigrant groups are small and the "
+            "FPR=1.0 cell is unstable; treat as a flag, not a precise estimate.\n"
+            "- **No free threshold.** The sweep shows moving the operating point shifts the gaps around "
+            "rather than eliminating them — fairness here is structural (in the risk signal), not a "
+            "threshold artefact. Genuine mitigation needs reweighting/constraints or group-aware "
+            "calibration, not just a knob.\n"
+            "- **Deployment caveat:** a naïvely deployed screener would concentrate false alarms on "
+            "low-SES and immigrant-background students, and the school-context features tie a student's "
+            "score to *where* they study. Any real use needs an explicit fairness constraint. "
+            "Matches `fairness_audit_2022.json` and figure E1."
+        ),
+    ]
+
+
+# ===========================================================================
+# Notebook 08 — Comparative modeling: Albania vs. peers (Phase 8)
+# ===========================================================================
+
+def nb_08_comparative() -> list:
+    return [
+        md(
+            "# 08 — Comparative Modeling: Albania vs. Peers (PISA 2022)\n\n"
+            "Are Albania's risk drivers universal or idiosyncratic, and is its socioeconomic gradient "
+            "unusual? We fit the **school-context LightGBM per country** (nine countries), score weighted "
+            "5-fold CV AUC, assemble a **SHAP importance rank matrix** (feature × country), and measure "
+            "each country's **SES gradient** (weighted slope of math score on ESCS). Heavy fitting lives in "
+            "`scripts/run_comparative_modeling.py`; this notebook loads its results and narrates."
+        ),
+        code(HEADER),
+        code(
+            "tbl = pd.read_csv('../outputs/results/comparative_country_2022.csv')\n"
+            "tbl"
+        ),
+        md("## 1. Predictability, prevalence, and the SES gradient\n\n"
+           "Three numbers per country: how often students are at-risk, how well the model separates them "
+           "(CV AUC), and how steeply score tracks SES."),
+        code(
+            "from src.visualization.style import apply_publication_style, COUNTRY_COLORS\n"
+            "apply_publication_style()\n"
+            "fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))\n"
+            "colors = [COUNTRY_COLORS.get(c, '#888') for c in tbl['country']]\n"
+            "for ax, col, title in zip(axes,\n"
+            "        ['at_risk_rate','cv_auc','ses_gradient'],\n"
+            "        ['At-risk rate (math < L2)','Model CV AUC (weighted)','SES gradient (pts / SD ESCS)']):\n"
+            "    order = tbl.sort_values(col)\n"
+            "    ax.barh(order['country'], order[col],\n"
+            "            color=[COUNTRY_COLORS.get(c,'#888') for c in order['country']])\n"
+            "    ax.set_title(title, fontsize=10)\n"
+            "    for i,(c,v) in enumerate(zip(order['country'], order[col])):\n"
+            "        ax.text(v, i, f' {v:.2f}' if col!='ses_gradient' else f' {v:.0f}', va='center', fontsize=7)\n"
+            "plt.tight_layout(); plt.show()"
+        ),
+        md("**Reading:** Albania has the **highest at-risk rate (0.75)** yet is among the **hardest to "
+           "predict (AUC 0.77)** — when three of four students are at-risk there is little contrast to "
+           "separate. Crucially, Albania's **SES gradient is the *flattest* (~17 pts/SD)** of all nine "
+           "countries. That is a *floor effect*, not equity: even advantaged Albanian students score low "
+           "(mean ~369), so SES barely predicts within-country. Estonia/Finland show *steeper* gradients "
+           "(~38–40) but far higher levels. The mid-prevalence Balkan peers (BGR/COL, AUC ~0.86) are the "
+           "most separable."),
+        md("## 2. SHAP importance rank matrix\n\n"
+           "For each country, features ranked 1 (top driver) … by mean |SHAP|. Green = important, "
+           "red = unimportant. Which drivers are universal, which country-specific?"),
+        code(
+            "rank = pd.read_csv('../outputs/results/comparative_shap_rank_matrix.csv', index_col=0)\n"
+            "rank = rank.head(12)\n"
+            "fig, ax = plt.subplots(figsize=(9, 6))\n"
+            "im = ax.imshow(rank.values, cmap='RdYlGn_r', aspect='auto', vmin=1, vmax=15)\n"
+            "ax.set_xticks(range(len(rank.columns))); ax.set_xticklabels(rank.columns)\n"
+            "ax.set_yticks(range(len(rank.index))); ax.set_yticklabels(rank.index, fontsize=8)\n"
+            "for i in range(len(rank.index)):\n"
+            "    for j in range(len(rank.columns)):\n"
+            "        ax.text(j, i, int(rank.values[i,j]), ha='center', va='center', fontsize=7)\n"
+            "ax.set_title('SHAP importance rank by country — 2022 (1 = top driver)')\n"
+            "fig.colorbar(im, ax=ax, label='rank'); plt.tight_layout(); plt.show()"
+        ),
+        md("**Reading:** **math anxiety (`ANXMAT`) is universal** — a top-3 driver in almost every "
+           "country, including top-performer Estonia. **School composition** (`SCH_MEAN_HOMEPOS`, "
+           "`SCH_MEAN_ESCS`) leads in most systems too. Albania's profile "
+           "(school-HOMEPOS → anxiety → school-TEACHSUP → school-ESCS) is therefore **not idiosyncratic** — "
+           "it shares the region's structure. Country-specific notes: grade repetition (`GRADE`) jumps to "
+           "#2 in Colombia; individual `ESCS` is #1 in Finland (stronger individual-SES determinism)."),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Albania = high prevalence, low separability, flat gradient.** Highest at-risk share "
+            "(75%), one of the lowest model AUCs (0.77), and the flattest SES gradient (~17 pts/SD). The "
+            "2022 crisis is **broad-based** — depressed across the whole SES distribution, not concentrated "
+            "in the poor.\n"
+            "- **Drivers are shared, not unique.** Math anxiety is a universal top factor and school "
+            "socioeconomic composition dominates almost everywhere; Albania's risk structure mirrors its "
+            "Balkan peers rather than standing apart. What sets Albania apart is the *level* and *breadth* "
+            "of low proficiency, not a different mechanism.\n"
+            "- **Policy read.** Because the gradient is flat and school composition dominates, "
+            "SES-targeted transfers alone would miss most of Albania's at-risk students; system-wide levers "
+            "(teacher support, math-anxiety reduction, raising the floor across all schools) are needed. "
+            "Estonia's steep-but-high profile shows the opposite regime — a useful contrast, not a template "
+            "to copy directly.\n"
+            "- **Caveat.** Per-country AUCs are not directly comparable as 'model quality' — they partly "
+            "reflect each country's at-risk prevalence (separability is hardest near 0/1 base rates). SHAP "
+            "explains each *model*, associational not causal. Fits are single all-data LightGBM per "
+            "country; figure `F1_shap_rank_matrix`."
+        ),
+    ]
+
+
+# ===========================================================================
+# Notebook 09 — Scenario forecast for the next PISA cycle (2026)
+# ===========================================================================
+
+def nb_09_forecast() -> list:
+    return [
+        md(
+            "# 09 — Forecast: Albania's Low-Proficiency Rate for the Next Cycle (2026)\n\n"
+            "After COVID delayed PISA 2021 to 2022, the assessment moved to a **4-year** cadence, so the "
+            "next cycle is **2026**. Can we anticipate Albania's weighted "
+            "low-proficiency (math < Level 2) rate? With only **five** cycles and a structural break in "
+            "2022 (the COVID spike), a single point extrapolation is indefensible — so we forecast with "
+            "**transparent scenarios** and propagate each cycle's *design-based* uncertainty (the BRR + "
+            "plausible-value SE from notebook 01) through a Monte-Carlo. Logic lives in "
+            "`src/forecast/scenarios.py` (unit-tested); this notebook narrates.\n\n"
+            "> **Honesty note.** This is a *scenario* exercise, not a claim to predict a structural break. "
+            "The value is the plausible range and the assumptions behind each edge, not a single number."
+        ),
+        code(HEADER),
+        code(
+            "from src.features.target import add_all_targets\n"
+            "from src.data.weights import pv_statistic_brr\n"
+            "from src.forecast.scenarios import monte_carlo_forecast, scenarios_to_frame\n\n"
+            "df = add_all_targets(pd.read_parquet('../data/processed/albania_longitudinal.parquet'))\n"
+            "rows = []\n"
+            "for c in sorted(df.CYCLE.unique()):\n"
+            "    r = pv_statistic_brr(df[df.CYCLE==c], statistic='at_risk', domain='math')\n"
+            "    rows.append({'cycle': int(c), 'at_risk': r['estimate'], 'se': r['se'], 'brr': r['brr_available']})\n"
+            "hist = pd.DataFrame(rows)\n"
+            "hist"
+        ),
+        md("## 1. Scenario forecast for 2026\n\n"
+           "Three narratives + one reference:\n"
+           "- **persistence** — the 2022 crisis level holds.\n"
+           "- **recovery** — the pre-COVID improving trend (2009–2018) resumes (2022 fully reverses).\n"
+           "- **partial** — a 50/50 blend (the shock half-reverses).\n"
+           "- **naive_linear** *(reference)* — a weighted line through all five cycles; the 2022 break "
+           "makes it meaningless, shown only to demonstrate why."),
+        code(
+            "fc = monte_carlo_forecast(hist['cycle'].values, hist['at_risk'].values,\n"
+            "                          hist['se'].values, target_year=2026, n_sims=20000)\n"
+            "summary = scenarios_to_frame(fc, 2026)\n"
+            "summary.to_csv('../outputs/results/forecast_2026_scenarios.csv', index=False)\n"
+            "summary"
+        ),
+        md("## 2. Trajectory + scenario fan"),
+        code(
+            "from src.visualization.style import apply_publication_style\n"
+            "apply_publication_style()\n"
+            "fig, ax = plt.subplots(figsize=(9, 5.5))\n"
+            "# historical line with 95% design-based error bars\n"
+            "ax.errorbar(hist['cycle'], hist['at_risk']*100, yerr=1.96*hist['se']*100,\n"
+            "            marker='o', lw=2, color='#333333', capsize=3, label='Observed (BRR 95% CI)')\n"
+            "colors = {'persistence':'#D55E00', 'partial':'#E69F00', 'recovery':'#0072B2'}\n"
+            "labels = {'persistence':'Persistence (crisis holds)',\n"
+            "          'partial':'Partial reversion', 'recovery':'Pre-COVID recovery'}\n"
+            "for i, name in enumerate(['persistence','partial','recovery']):\n"
+            "    s = fc[name]; xj = 2026 + (i-1)*0.18\n"
+            "    ax.errorbar([xj], [s.median*100],\n"
+            "                yerr=[[(s.median-s.lo)*100], [(s.hi-s.median)*100]],\n"
+            "                marker='s', ms=9, color=colors[name], capsize=4, lw=2, label=labels[name])\n"
+            "    # dashed connector from 2022 to the scenario median\n"
+            "    ax.plot([2022, xj], [hist['at_risk'].iloc[-1]*100, s.median*100],\n"
+            "            ls='--', lw=1, color=colors[name], alpha=0.7)\n"
+            "ax.axvspan(2023.5, 2027.0, color='0.92', zorder=0)\n"
+            "ax.set_xticks([2009,2012,2015,2018,2022,2026])\n"
+            "ax.set_xlabel('PISA cycle'); ax.set_ylabel('Low-proficiency rate, math < L2 (%)')\n"
+            "ax.set_title('Albania low-proficiency: observed (2009–2022) + 2026 scenarios')\n"
+            "ax.legend(fontsize=8, loc='center left'); plt.tight_layout(); plt.show()"
+        ),
+        md("## 3. Predictive densities"),
+        code(
+            "fig, ax = plt.subplots(figsize=(9, 4.5))\n"
+            "import numpy as np\n"
+            "for name in ['recovery','partial','persistence']:\n"
+            "    s = fc[name]\n"
+            "    ax.hist(s.samples*100, bins=80, density=True, alpha=0.5, color=colors[name], label=name)\n"
+            "ax.axvline(hist['at_risk'].iloc[-1]*100, color='k', ls=':', lw=1.5, label='2022 observed')\n"
+            "ax.set_xlabel('Forecast low-proficiency rate 2026 (%)'); ax.set_ylabel('density')\n"
+            "ax.set_title('Monte-Carlo predictive distributions by scenario'); ax.legend(fontsize=8)\n"
+            "plt.tight_layout(); plt.show()"
+        ),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **Plausible 2026 range is wide: ~21% (full recovery) to ~74% (persistence).** With five "
+            "cycles and a COVID break, that width is the honest message — not a single number.\n"
+            "- **Central expectation leans high.** The 2022 spike (74%) reflects durable disruptions "
+            "(learning loss, teacher-support drop seen in notebook 03's covariate shift) unlikely to fully "
+            "reverse by 2026, so the **partial-reversion (~47%) to persistence (~74%)** band is the more "
+            "defensible zone; the ~21% *recovery* scenario assumes the pre-COVID trend resumes untouched "
+            "and is best read as an optimistic floor.\n"
+            "- **The naive all-cycles line (~73%) is a trap** — it only looks confident (tight CI) because "
+            "it ignores the structural break; shown to be discarded, not used.\n"
+            "- **Caveats:** the persistence drift SD is a judgment parameter; the recovery interval is "
+            "narrow because it propagates only the four pre-COVID SEs, not model-form uncertainty — treat "
+            "its precision with suspicion. Forecast is of the **aggregate** rate (no 2026 microdata exists); "
+            "it is a planning aid, not a prediction of a break.\n"
+            "- **Policy read:** absent a strong, targeted recovery in school resources and teacher support "
+            "(the notebook 03 drivers), Albania should plan for a 2026 low-proficiency rate still well "
+            "above its 2018 low of 42%."
         ),
     ]
 
@@ -585,3 +1048,7 @@ if __name__ == "__main__":
     build_notebook(nb_03_covariate_shift(), NB_DIR / "03_covariate_shift.ipynb", force)
     build_notebook(nb_04_modeling(), NB_DIR / "04_modeling.ipynb", force)
     build_notebook(nb_05_explainability(), NB_DIR / "05_explainability.ipynb", force)
+    build_notebook(nb_06_explainability_cases(), NB_DIR / "06_explainability_cases.ipynb", force)
+    build_notebook(nb_07_fairness(), NB_DIR / "07_fairness.ipynb", force)
+    build_notebook(nb_08_comparative(), NB_DIR / "08_comparative.ipynb", force)
+    build_notebook(nb_09_forecast(), NB_DIR / "09_forecast_2026.ipynb", force)

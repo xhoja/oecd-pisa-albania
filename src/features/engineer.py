@@ -176,6 +176,60 @@ def add_home_educational_resources(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_school_aggregates(
+    df: pd.DataFrame,
+    cols: list[str] | None = None,
+    school_col: str = "CNTSCHID",
+    weight_col: str = "W_FSTUWT",
+) -> pd.DataFrame:
+    """
+    School-level contextual features — the *compositional* effect PISA research
+    finds is often the single strongest predictor of individual achievement.
+
+    For each ``col`` we add ``SCH_MEAN_<col>``: the **survey-weighted, leave-one-
+    out** mean of that indicator among a student's schoolmates. Leave-one-out
+    (excluding the student's own value) removes the trivial self-inclusion so the
+    feature is a genuine peer/context measure, not a smuggled copy of the row's
+    own value. ``SCH_N`` is the sampled cohort size in the school.
+
+    Notes
+    -----
+    - School is a *known contextual attribute*, not a leaked label; computing the
+      aggregate once over the cohort is standard in PISA work. Single-student
+      schools (or all-missing) fall back to NaN → the median imputer fills them.
+    - This is deliberately computed on the full slice for the "does school context
+      help?" screen; a fully fold-safe version would recompute per training fold.
+    """
+    if cols is None:
+        cols = ["ESCS", "HOMEPOS", "ANXMAT", "TEACHSUP"]
+    df = df.copy()
+    if school_col not in df.columns:
+        logger.warning("School column not found — skipping school aggregates", col=school_col)
+        return df
+
+    w = df[weight_col].astype(float) if weight_col in df.columns else pd.Series(1.0, index=df.index)
+    grp = df.groupby(school_col)
+
+    for col in cols:
+        if col not in df.columns:
+            continue
+        x = df[col]
+        nn = x.notna()
+        wx = (w * x).where(nn, 0.0)
+        wv = w.where(nn, 0.0)
+        wx_sum = wx.groupby(df[school_col]).transform("sum")
+        wv_sum = wv.groupby(df[school_col]).transform("sum")
+        # leave-one-out: subtract the student's own contribution when present
+        num = wx_sum - wx
+        den = wv_sum - wv
+        loo = (num / den).where(den > 0, np.nan)
+        df[f"SCH_MEAN_{col}"] = loo
+
+    df["SCH_N"] = grp[school_col].transform("size").astype(float)
+    logger.info("School aggregates added", cols=cols, n_schools=int(df[school_col].nunique()))
+    return df
+
+
 def add_cycle_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Temporal features for longitudinal models.

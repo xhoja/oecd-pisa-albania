@@ -49,7 +49,7 @@ def main() -> None:
     df = pd.read_parquet(ROOT / "data/processed/alb_2022.parquet")
     feats = ["ESCS", "HOMEPOS", "GENDER", "REPEAT", "IMMIG", "BELONG", "TEACHSUP",
              "ICTHOME", "ICTSCH", "ANXMAT", "GRADE", "HISCED", "HISEI"]
-    data = build_model_data(df, feats, domain="math")
+    data = build_model_data(df, feats, domain="math", add_school_context=True)
     # Build engineered features (SES_COMPLETE, interactions, ...) for the final
     # explanatory model. Single model on all data, so fit-on-all is fine here.
     X_eng = EngineeredFeatureBuilder().fit_transform(data.X)

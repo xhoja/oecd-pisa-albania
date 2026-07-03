@@ -454,6 +454,122 @@ def per_pv_cv_evaluate(
     return combined
 
 
+def threshold_calibration_cv(
+    data: ModelData,
+    model_names: list[str],
+    metric: str = "mcc",
+    outer_folds: int = 5,
+    outer_repeats: int = 2,
+    inner_folds: int = 3,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """
+    Quantify how much two *post-hoc* fixes lift the weak operating-point metrics,
+    leaving ROC-AUC (a ranking metric, threshold-invariant) untouched:
+
+      1. **Decision-threshold tuning** — the headline comparison scores F1/MCC at a
+         fixed 0.5, but ``class_weight='balanced'`` recenters the scores, so 0.5 is
+         the wrong operating point. We tune the threshold to maximise ``metric``.
+      2. **Isotonic calibration** — a weighted isotonic map on the probabilities,
+         improving Brier/ECE (and, via better-ordered probabilities, the tuned
+         threshold's stability).
+
+    Leakage-safe: both the threshold and the calibrator are fit on **out-of-fold
+    TRAIN** predictions (an inner ``inner_folds`` CV), never on the test fold, then
+    the model is refit on the full train fold and evaluated on the untouched test
+    fold. Every metric is survey-weighted. Returns one row per model with the 0.5
+    baseline, the tuned, and the calibrated+tuned variants side by side.
+    """
+    from collections import defaultdict
+
+    from sklearn.isotonic import IsotonicRegression
+    from sklearn.metrics import (
+        brier_score_loss,
+        f1_score,
+        matthews_corrcoef,
+        roc_auc_score,
+    )
+    from sklearn.model_selection import StratifiedKFold
+
+    from src.models.evaluate import expected_calibration_error, tune_threshold
+
+    X = data.X.reset_index(drop=True)
+    y = data.y.reset_index(drop=True)
+    w = data.weights.reset_index(drop=True)
+    cv = RepeatedStratifiedKFold(n_splits=outer_folds, n_repeats=outer_repeats,
+                                 random_state=random_state)
+
+    rows = []
+    for name in model_names:
+        set_seeds(random_state)
+        acc: dict[str, list[float]] = defaultdict(list)
+        with threadpool_limits(limits=1):
+            for tr, te in cv.split(X, y):
+                Xtr, ytr, wtr = X.iloc[tr], y.iloc[tr], w.iloc[tr].values
+                Xte, yte, wte = X.iloc[te], y.iloc[te].values, w.iloc[te].values
+                if len(np.unique(yte)) < 2:
+                    continue
+
+                # ---- inner out-of-fold TRAIN probabilities (honest) -----------
+                oof = np.full(len(tr), np.nan)
+                skf = StratifiedKFold(n_splits=inner_folds, shuffle=True,
+                                      random_state=random_state)
+                for itr, ite in skf.split(Xtr, ytr):
+                    p = _wrap(get_model(name))
+                    fit_with_sample_weight(p, Xtr.iloc[itr], ytr.iloc[itr], wtr[itr])
+                    oof[ite] = p.predict_proba(Xtr.iloc[ite])[:, 1]
+                ytr_v = ytr.values
+
+                # weighted isotonic calibrator + threshold, both fit on OOF only
+                # NB: module sets transform_output="pandas" globally, which would
+                # make IsotonicRegression.transform return a pandas object; force 1-D
+                # numpy so downstream boolean-masking stays 1-D.
+                iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0)
+                iso.fit(oof, ytr_v, sample_weight=wtr)
+                oof_cal = np.asarray(iso.transform(oof)).ravel()
+                thr_raw = tune_threshold(ytr_v, oof, sample_weight=wtr, metric=metric)
+                thr_cal = tune_threshold(ytr_v, oof_cal, sample_weight=wtr, metric=metric)
+
+                # ---- refit on full train, evaluate on untouched test ----------
+                full = _wrap(get_model(name))
+                fit_with_sample_weight(full, Xtr, ytr, wtr)
+                prob = full.predict_proba(Xte)[:, 1]
+                prob_cal = np.asarray(iso.transform(prob)).ravel()
+
+                def _mcc(pred):
+                    return matthews_corrcoef(yte, pred, sample_weight=wte)
+
+                def _f1(pred):
+                    return f1_score(yte, pred, average="macro", sample_weight=wte)
+
+                acc["roc_auc"].append(roc_auc_score(yte, prob, sample_weight=wte))
+                acc["mcc_at_0.5"].append(_mcc((prob >= 0.5).astype(int)))
+                acc["mcc_tuned"].append(_mcc((prob >= thr_raw).astype(int)))
+                acc["mcc_cal_tuned"].append(_mcc((prob_cal >= thr_cal).astype(int)))
+                acc["f1_at_0.5"].append(_f1((prob >= 0.5).astype(int)))
+                acc["f1_tuned"].append(_f1((prob >= thr_raw).astype(int)))
+                acc["f1_cal_tuned"].append(_f1((prob_cal >= thr_cal).astype(int)))
+                acc["brier_raw"].append(brier_score_loss(yte, prob, sample_weight=wte))
+                acc["brier_cal"].append(brier_score_loss(yte, prob_cal, sample_weight=wte))
+                acc["ece_raw"].append(expected_calibration_error(yte, prob, sample_weight=wte))
+                acc["ece_cal"].append(expected_calibration_error(yte, prob_cal, sample_weight=wte))
+                acc["threshold"].append(thr_raw)
+
+        if not acc["roc_auc"]:
+            print(f"  [skip] {name}: no valid folds", flush=True)
+            continue
+        row = {"model": name, "tuned_for": metric, "n_folds": len(acc["roc_auc"])}
+        for k, vals in acc.items():
+            row[f"{k}_mean"] = round(float(np.mean(vals)), 4)
+        rows.append(row)
+        print(f"  [done] {name}: MCC {row['mcc_at_0.5_mean']:.3f} -> "
+              f"{row['mcc_tuned_mean']:.3f} (tuned) -> {row['mcc_cal_tuned_mean']:.3f} "
+              f"(cal+tuned) | ECE {row['ece_raw_mean']:.3f} -> {row['ece_cal_mean']:.3f}",
+              flush=True)
+
+    return pd.DataFrame(rows)
+
+
 def save_results(obj: Any, path: str | Path) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -23,6 +23,7 @@ import structlog
 
 from src.data.impute import add_missingness_indicators
 from src.data.weights import normalize_weights_within_country
+from src.features.engineer import add_school_aggregates
 from src.features.select import select_features
 from src.features.target import add_point_target
 
@@ -48,6 +49,8 @@ def build_model_data(
     add_indicators: bool = True,
     use_normalized_weights: bool | None = None,
     drop_missing_target: bool = True,
+    add_school_context: bool = False,
+    school_agg_cols: list[str] | None = None,
 ) -> ModelData:
     """
     Construct (X, y, weights) for modeling from a processed dataframe.
@@ -70,9 +73,24 @@ def build_model_data(
             country (stops a large country dominating the loss in cross-country
             models). Default: auto-on when >1 country is present.
         drop_missing_target: drop rows where target cannot be computed
+        add_school_context: add survey-weighted, leave-one-out school-mean features
+            (``SCH_MEAN_<col>`` + ``SCH_N``) from ``CNTSCHID``. School socioeconomic
+            composition is PISA's strongest contextual predictor; an ablation
+            (``scripts/run_school_features_experiment.py`` and its fold-safe
+            confirmation) shows it lifts weighted CV AUC ~+0.05, significant, with
+            an identical delta under fold-safe recomputation (so the full-cohort
+            means used here are not a leakage artefact).
+        school_agg_cols: which student indices to aggregate to school level
+            (default ESCS/HOMEPOS/ANXMAT/TEACHSUP).
     """
     df = add_point_target(df, domain=domain, threshold=threshold)
     target_col = {"math": "AT_RISK_MATH", "reading": "AT_RISK_READ", "science": "AT_RISK_SCIE"}[domain]
+
+    candidate_features = list(candidate_features)
+    if add_school_context:
+        agg_cols = school_agg_cols or ["ESCS", "HOMEPOS", "ANXMAT", "TEACHSUP"]
+        df = add_school_aggregates(df, cols=agg_cols)
+        candidate_features += [f"SCH_MEAN_{c}" for c in agg_cols] + ["SCH_N"]
 
     feats = [f for f in candidate_features if f in df.columns]
 

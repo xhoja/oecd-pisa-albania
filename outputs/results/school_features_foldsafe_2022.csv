@@ -1,0 +1,6 @@
+model,auc_base,auc_school_foldsafe,delta,p_value,significant_5pct
+random_forest,0.7038,0.7656,0.0618,0.0,True
+lightgbm,0.7104,0.7687,0.0583,0.0,True
+catboost,0.723,0.7785,0.0555,0.0,True
+gradient_boosting,0.722,0.7771,0.0551,0.0,True
+logistic_regression,0.7003,0.7331,0.0328,0.0,True

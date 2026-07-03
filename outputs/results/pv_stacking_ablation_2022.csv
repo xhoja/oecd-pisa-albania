@@ -1,0 +1,5 @@
+model,auc_pvmean,auc_pvstack,delta,p_value,significant_5pct
+lightgbm,0.7728,0.7842,0.0114,0.0482,True
+gradient_boosting,0.7753,0.7843,0.0091,0.0068,True
+logistic_regression,0.7539,0.7548,0.0009,0.4893,False
+catboost,0.7821,0.7802,-0.0019,0.5425,False

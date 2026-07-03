@@ -1,0 +1,6 @@
+model,auc_base,auc_school,delta,p_value,significant_5pct
+lightgbm,0.7146,0.7746,0.06,0.0,True
+random_forest,0.7097,0.7692,0.0595,0.0,True
+catboost,0.7314,0.7831,0.0517,0.0,True
+gradient_boosting,0.7268,0.7773,0.0505,0.0,True
+logistic_regression,0.7274,0.7543,0.0269,0.0001,True

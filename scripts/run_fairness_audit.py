@@ -68,7 +68,7 @@ def main() -> None:
     fig_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_parquet(ROOT / "data/processed/alb_2022.parquet")
-    data = build_model_data(df, FEATS, domain="math")
+    data = build_model_data(df, FEATS, domain="math", add_school_context=True)
     X, y, w = data.X, data.y, data.weights
 
     prob = oof_predictions(X, y, w)

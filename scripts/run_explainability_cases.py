@@ -76,7 +76,7 @@ def main() -> None:
     res_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_parquet(ROOT / "data/processed/alb_2022.parquet")
-    data = build_model_data(df, FEATS, domain="math")
+    data = build_model_data(df, FEATS, domain="math", add_school_context=True)
     X_eng = EngineeredFeatureBuilder().fit_transform(data.X)
     (X,) = impute_median(X_eng)
     y = data.y.values
