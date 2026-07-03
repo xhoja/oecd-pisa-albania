@@ -1205,6 +1205,128 @@ def nb_10_stacking() -> list:
     ]
 
 
+# ===========================================================================
+# Notebook 11 — Screener evaluation (decision curve + calibration) & multilevel model
+# ===========================================================================
+
+def nb_11_screener_multilevel() -> list:
+    return [
+        md(
+            "# 11 — Is the Screener Useful, and Is the Ceiling Real? (Albania 2022)\n\n"
+            "Two pre-submission strengthenings that answer the two hardest questions a "
+            "reviewer asks about a ~0.78-AUC model on a **75%-prevalence** problem:\n\n"
+            "1. **Does the model add decision value** over the trivial 'screen everyone' / "
+            "'screen no-one' policies, and are its probabilities trustworthy? → **decision-curve "
+            "analysis + calibration** (`scripts/run_decision_curve.py`).\n"
+            "2. **Is the 0.78 ceiling a modelling shortfall or a property of the data?** → a "
+            "**multilevel (random-intercept) logistic model**, the statistically-correct spec for "
+            "PISA's nested design, which also quantifies how much risk is a *school-level* "
+            "phenomenon (`scripts/run_multilevel.py`).\n\n"
+            "Both scripts do the heavy fitting (leakage-safe, OpenMP-isolated); this notebook "
+            "loads their results and redraws the figures."
+        ),
+        code(HEADER),
+
+        md("## Part A — Decision-curve analysis: does acting on the model help?\n\n"
+           "With ~3 in 4 students at-risk, ROC-AUC is mechanically capped and says little about "
+           "*use*. Net benefit asks the operational question directly: at a given risk tolerance "
+           "$p_t$, does flagging students the model picks beat flagging everyone (or no-one)?"),
+        code(
+            "dca = pd.read_csv('../outputs/results/decision_curve_2022.csv')\n"
+            "from src.visualization.style import apply_publication_style, PALETTE\n"
+            "apply_publication_style()\n"
+            "fig, ax = plt.subplots(figsize=(8,5))\n"
+            "ax.plot(dca.threshold, dca.net_benefit_model, color=PALETTE['blue'], lw=2, label='Model (raw)')\n"
+            "ax.plot(dca.threshold, dca.net_benefit_model_calibrated, color=PALETTE['green'], lw=2, label='Model (isotonic)')\n"
+            "ax.plot(dca.threshold, dca.net_benefit_all, color=PALETTE['vermilion'], lw=1.5, ls='--', label='Screen everyone')\n"
+            "ax.plot(dca.threshold, dca.net_benefit_none, color='0.4', lw=1.2, ls=':', label='Screen no-one')\n"
+            "ax.set_ylim(bottom=min(-0.05, dca.net_benefit_model.min()))\n"
+            "ax.set_xlabel('Threshold probability $p_t$ (risk tolerance)'); ax.set_ylabel('Net benefit (weighted)')\n"
+            "ax.set_title('Decision-curve analysis — Albania 2022'); ax.legend(fontsize=9); plt.show()\n"
+            "better = dca[(dca.net_benefit_model>dca.net_benefit_all)&(dca.net_benefit_model>0)]\n"
+            "print(f'Model beats both references over p_t {better.threshold.min():.2f}-{better.threshold.max():.2f}')"
+        ),
+        md("**Reading:** below the prevalence (~0.75) 'screen everyone' is hard to beat — when "
+           "most students are at-risk, indiscriminate screening is already good. The model earns "
+           "its keep in the **selective regime** (higher $p_t$, ~0.51–0.95), where it holds net "
+           "benefit while 'screen everyone' collapses below zero. A triage tool that must ration "
+           "scarce support — the realistic case — operates exactly there."),
+
+        md("## Part B — Calibration: do the probabilities mean what they say?\n\n"
+           "Raw boosted-tree scores are typically miscalibrated; a weighted isotonic map (fit "
+           "out-of-fold) fixes them. This matters because the decision threshold $p_t$ above is "
+           "only meaningful if $\\hat p$ is a real probability."),
+        code(
+            "raw = pd.read_csv('../outputs/results/calibration_raw_2022.csv')\n"
+            "iso = pd.read_csv('../outputs/results/calibration_isotonic_2022.csv')\n"
+            "fig, ax = plt.subplots(figsize=(6,6))\n"
+            "ax.plot([0,1],[0,1], color='0.5', ls='--', lw=1, label='Perfect calibration')\n"
+            "ax.plot(raw.mean_predicted, raw.observed_fraction, '-o', color=PALETTE['blue'], lw=2, label='Raw')\n"
+            "ax.plot(iso.mean_predicted, iso.observed_fraction, '-s', color=PALETTE['green'], lw=2, label='Isotonic')\n"
+            "ax.set_xlabel('Mean predicted probability'); ax.set_ylabel('Observed at-risk fraction (weighted)')\n"
+            "ax.set_title('Calibration — Albania 2022 (weighted, out-of-fold)'); ax.legend(fontsize=9, loc='upper left'); plt.show()"
+        ),
+        md("**Reading:** the raw model is over-confident (bows above the diagonal); isotonic "
+           "recalibration lands it on the diagonal — weighted **ECE ~0.10 → ~0.01**. Calibrated "
+           "probabilities are what make the decision-curve thresholds actionable."),
+
+        md("## Part C — Multilevel model: how much risk is a *school* effect?\n\n"
+           "A flat logistic treats students as independent; they are not — they are nested in "
+           "schools. A random-intercept model gives each school its own baseline log-odds $u_j$ "
+           "and reports the **ICC**: the share of risk variance that lives *between* schools."),
+        code(
+            "summ = pd.read_csv('../outputs/results/multilevel_summary_2022.csv').iloc[0]\n"
+            "cv = pd.read_csv('../outputs/results/multilevel_cv_2022.csv')\n"
+            "print(f\"ICC (null)        = {summ.icc_null:.3f}  -> ~{summ.icc_null*100:.0f}% of risk variance is BETWEEN schools\")\n"
+            "print(f\"ICC (conditional) = {summ.icc_conditional:.3f}  (student features barely reduce it)\")\n"
+            "print(f\"\\nCV mean AUC: multilevel {summ.auc_multilevel_mean:.4f} vs school-mean LightGBM {summ.auc_school_lgbm_mean:.4f}\")\n"
+            "cv.round(4)"
+        ),
+        md("**Within-school odds ratios** (per 1 SD). Risk-increasing factors in vermilion, "
+           "protective in blue; the school baseline is absorbed by the random intercept."),
+        code(
+            "fe = pd.read_csv('../outputs/results/multilevel_fixed_effects_2022.csv')\n"
+            "fe = fe[fe.term!='Intercept'].copy()\n"
+            "fe['lo']=np.exp(fe.coef-1.96*fe.sd); fe['hi']=np.exp(fe.coef+1.96*fe.sd)\n"
+            "fe = fe.sort_values('odds_ratio'); yp=np.arange(len(fe))\n"
+            "colors=[PALETTE['vermilion'] if o>1 else PALETTE['blue'] for o in fe.odds_ratio]\n"
+            "fig, ax = plt.subplots(figsize=(7,6))\n"
+            "ax.errorbar(fe.odds_ratio, yp, xerr=[fe.odds_ratio-fe.lo, fe.hi-fe.odds_ratio], fmt='none', ecolor='0.5', elinewidth=1, capsize=3, zorder=1)\n"
+            "ax.scatter(fe.odds_ratio, yp, color=colors, s=42, zorder=2)\n"
+            "ax.axvline(1.0, color='0.4', ls='--', lw=1)\n"
+            "ax.set_yticks(yp); ax.set_yticklabels(fe.term)\n"
+            "ax.set_xlabel('Odds ratio per 1 SD (within-school, 95% CI)')\n"
+            "ax.set_title(f\"Random-intercept logistic — ICC {summ.icc_conditional:.2f}\"); plt.show()"
+        ),
+        md("**Reading:** math anxiety (`ANXMAT`) is the strongest within-school risk factor; the "
+           "SES cluster (`HOMEPOS`, `HISEI`, `ESCS`) is protective. `HISCED` flips positive — a "
+           "*partial* effect under SES collinearity (the composite SES protection is already "
+           "carried by HOMEPOS/HISEI/ESCS), not a real reversal; read the SES measures jointly."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The model has genuine decision value — in the selective regime.** Net benefit "
+            "beats both 'screen everyone' and 'screen no-one' for risk thresholds ~0.51–0.95. For "
+            "a triage tool rationing scarce support that is the operating range that matters; the "
+            "modest AUC is the wrong lens.\n"
+            "- **Calibration is essentially fixed.** Weighted isotonic recalibration cuts ECE from "
+            "~0.10 to ~0.01, making the probabilities (and hence the thresholds) trustworthy.\n"
+            "- **The 0.78 ceiling is real, not a modelling shortfall.** The statistically-correct "
+            "multilevel model — student features + a data-driven school random effect — matches "
+            "the hand-crafted school-mean booster on identical folds (CV AUC ~0.78 either way). "
+            "Two independent model families converge on the same ceiling.\n"
+            "- **~31% of risk variance is between schools** (null ICC), barely reduced by student "
+            "features (conditional ICC ~0.26). Risk is heavily a *school-level* phenomenon that "
+            "student background cannot explain away — which is exactly why the remaining headroom "
+            "lives in **school-level information** (the PISA school questionnaire: resources, staff, "
+            "leadership), the deferred data-linkage lever.\n"
+            "- **Caveat:** the mixed model is fit unweighted (no survey weights in the VB GLM), so "
+            "its fixed effects are sample estimates; the ICC/variance-partition conclusions are "
+            "robust. Proper multilevel pseudo-likelihood with scaled weights is the refinement."
+        ),
+    ]
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
@@ -1218,3 +1340,5 @@ if __name__ == "__main__":
     build_notebook(_with_formulas(nb_08_comparative(), "08"), NB_DIR / "08_comparative.ipynb", force)
     build_notebook(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "09_forecast_2026.ipynb", force)
     build_notebook(nb_10_stacking(), NB_DIR / "10_stacking_ensemble.ipynb", force)
+    build_notebook(_with_formulas(nb_11_screener_multilevel(), "11"),
+                   NB_DIR / "11_screener_multilevel.ipynb", force)
