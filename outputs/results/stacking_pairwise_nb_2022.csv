@@ -1,0 +1,6 @@
+model_a,model_b,auc_a,auc_b,mean_diff,t,p_value,significant_0.05
+stacking,catboost,0.7858,0.7831,0.0027,2.342,0.0302,True
+stacking,gradient_boosting,0.7858,0.7773,0.0085,2.776,0.012,True
+stacking,lightgbm,0.7858,0.7746,0.0112,2.551,0.0195,True
+stacking,random_forest,0.7858,0.7692,0.0167,4.655,0.0002,True
+stacking,logistic_regression,0.7858,0.7543,0.0315,4.77,0.0001,True

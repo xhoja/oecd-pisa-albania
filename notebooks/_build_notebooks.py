@@ -1040,6 +1040,155 @@ def nb_09_forecast() -> list:
     ]
 
 
+# ===========================================================================
+# Notebook 10 — Stacking ensemble (Phase 9, Advanced)
+# ===========================================================================
+
+def nb_10_stacking() -> list:
+    return [
+        md(
+            "# 10 — Stacking Ensemble: Can We Beat Single CatBoost? (Albania 2022)\n\n"
+            "**Phase 9 (Advanced).** School context lifted the ceiling to ~0.78 AUC and made CatBoost the "
+            "best single model. The natural next lever is **ensembling**: does a *stacked* combination of "
+            "the base learners extract signal that no single model captures — or, as with the earlier "
+            "PV-stacking experiment, is the gain marginal and not worth the complexity?\n\n"
+            "We answer it with the same rigor as every other comparison in this project: identical "
+            "weighted / leakage-safe CV folds, Nadeau-Bengio corrected intervals, and a **paired** "
+            "significance test. Heavy fitting lives in `scripts/run_stacking_experiment.py`; this notebook "
+            "loads its results and narrates.\n\n"
+            "> **Honesty note.** A statistically significant win that is *practically* nil — or that "
+            "regresses the metrics we actually deploy on — is **not** a headline. We report effect size, "
+            "not just the p-value."
+        ),
+        code(HEADER),
+        md(
+            "## 1. What is stacking, and why this design?\n\n"
+            "**Stacked generalization** (Wolpert, 1992) trains a *meta-learner* on the predictions of "
+            "several *base learners*, letting it learn where each base model is trustworthy instead of "
+            "averaging them blindly.\n\n"
+            "**Protocol (leakage-safe).** For base learners $h_1,\\dots,h_M$ and $K$-fold splits of the "
+            "training data, each base model produces **out-of-fold** predicted probabilities\n\n"
+            "$$\\; z_{i,m} \\;=\\; \\hat p_m^{(-k(i))}(x_i)\\;$$\n\n"
+            "where $k(i)$ is the fold containing $i$, so $x_i$ never influences the model that scores it "
+            "(no leakage). The meta-learner $g$ is fit on the stacked matrix "
+            "$\\{(z_i, y_i)\\}$ with $z_i=(z_{i,1},\\dots,z_{i,M})$. Here $g$ is a class-weighted "
+            "**logistic regression**, so the final risk is\n\n"
+            "$$\\; P(\\text{at-risk}\\mid x) \\;=\\; \\sigma\\!\\Big(\\beta_0 + \\sum_{m=1}^{M} "
+            "\\beta_m\\,\\hat p_m(x)\\Big),\\qquad \\sigma(t)=\\frac{1}{1+e^{-t}} \\;$$\n\n"
+            "At inference the base learners are refit on the full training fold, emit $\\hat p_m(x)$, and "
+            "$g$ combines them. The $\\beta_m$ reveal which base model the ensemble actually leans on.\n\n"
+            "**Three design choices forced by this project's constraints** "
+            "(`src/models/registry.build_stacking_ensemble`):\n"
+            "- **Base learners = bare tree/boosters** (CatBoost + LightGBM + Gradient Boosting + Random "
+            "Forest). `StackingClassifier` forwards the PISA `sample_weight` to each base learner's "
+            "`fit`, and the scaler-wrapped models (LR/SVM) reject a *bare* weight kwarg — so the base set "
+            "must be estimators that accept `sample_weight` directly. All four do, and they are the four "
+            "strongest, most decorrelated school-context models.\n"
+            "- **Plain logistic-regression meta-learner.** Its inputs are probabilities already in "
+            "$[0,1]$, so no scaling is needed; a class-balanced LR on the OOF probabilities is the "
+            "textbook combiner and stays interpretable via its $\\beta_m$.\n"
+            "- **Sequential base fits (`n_jobs=1`).** Parallel booster fits re-trigger the macOS "
+            "libomp/libgomp duplicate-OpenMP crash this project fought; sequential fits inside the "
+            "isolated worker are the safe path."
+        ),
+        md(
+            "## 2. Leaderboard — stacking vs. its own base learners\n\n"
+            "All six models were scored on the **same** weighted 5×4 repeated-stratified-CV folds "
+            "(school-context feature set), each in a fresh OpenMP-isolated interpreter, with "
+            "Nadeau-Bengio corrected 95% CIs (`scripts/run_stacking_experiment.py` → "
+            "`stacking_ensemble_2022.csv`)."
+        ),
+        code(
+            "lb = pd.read_csv('../outputs/results/stacking_ensemble_2022.csv')\n"
+            "lb[['model','roc_auc_mean','roc_auc_95ci_low','roc_auc_95ci_high',\n"
+            "    'pr_auc_mean','f1_macro_mean','mcc_mean']]"
+        ),
+        code(
+            "from src.visualization.style import apply_publication_style, PALETTE\n"
+            "apply_publication_style()\n"
+            "order = lb.sort_values('roc_auc_mean')\n"
+            "# Wong-palette coding: ensemble = purple, best single (CatBoost) = blue, rest = grey.\n"
+            "best_single = order[order.model!='stacking'].sort_values('roc_auc_mean').iloc[-1]['model']\n"
+            "def _c(m):\n"
+            "    if m=='stacking': return PALETTE['purple']\n"
+            "    if m==best_single: return PALETTE['blue']\n"
+            "    return '#BBBBBB'\n"
+            "colors = [_c(m) for m in order['model']]\n"
+            "err_lo = order['roc_auc_mean'] - order['roc_auc_95ci_low']\n"
+            "err_hi = order['roc_auc_95ci_high'] - order['roc_auc_mean']\n"
+            "fig, ax = plt.subplots(figsize=(8,5))\n"
+            "ax.barh(order['model'], order['roc_auc_mean'], color=colors,\n"
+            "        xerr=[err_lo, err_hi], capsize=3, error_kw={'elinewidth':1, 'ecolor':'0.4'})\n"
+            "for i,(m,v) in enumerate(zip(order['model'], order['roc_auc_mean'])):\n"
+            "    ax.text(v+0.001, i, f'{v:.3f}', va='center', fontsize=8)\n"
+            "ax.set_xlim(0.72, 0.82); ax.set_xlabel('Weighted CV ROC-AUC (Nadeau-Bengio 95% CI)')\n"
+            "ax.set_title('Stacking vs. base learners — Albania 2022 (school context)')\n"
+            "plt.tight_layout(); plt.show()"
+        ),
+        md(
+            "**Reading:** stacking (0.786) edges out the best single model, CatBoost (0.783), but the "
+            "Nadeau-Bengio confidence intervals **overlap almost entirely** — the eye already suggests the "
+            "gap is within noise. The next cell tests it properly, *paired* by fold."
+        ),
+        md(
+            "## 3. Is the gain real? Paired Nadeau-Bengio test\n\n"
+            "Because every model shares the same CV splits, fold $j$ is comparable across models and the "
+            "per-fold AUC differences $d_j = \\text{AUC}^{\\text{stack}}_j - \\text{AUC}^{\\text{single}}_j$ "
+            "can be paired. A naïve paired $t$-test is **anti-conservative** here: CV folds share training "
+            "data, so the $d_j$ are positively correlated and their variance is underestimated. The "
+            "**Nadeau-Bengio correction** inflates the variance to account for the train/test overlap,\n\n"
+            "$$\\; t \\;=\\; \\frac{\\bar d}{\\sqrt{\\big(\\tfrac{1}{J} + \\tfrac{n_{\\text{test}}}"
+            "{n_{\\text{train}}}\\big)\\, s_d^2}}, \\qquad \\tfrac{n_{\\text{test}}}{n_{\\text{train}}} "
+            "= \\tfrac{1}{K-1}\\;$$\n\n"
+            "replacing the naïve $1/J$ variance scaling (`src/models/evaluate.corrected_resampled_ttest`)."
+        ),
+        code(
+            "pw = pd.read_csv('../outputs/results/stacking_pairwise_nb_2022.csv')\n"
+            "pw"
+        ),
+        code(
+            "# Effect size vs. statistical significance, side by side.\n"
+            "row = pw[pw.model_b==best_single].iloc[0]\n"
+            "cat = lb[lb.model==best_single].iloc[0]; stk = lb[lb.model=='stacking'].iloc[0]\n"
+            "print(f\"Stacking vs {best_single}:\")\n"
+            "print(f\"  AUC   {stk.roc_auc_mean:.4f} vs {cat.roc_auc_mean:.4f}  \"\n"
+            "      f\"(delta {row.mean_diff:+.4f}, p={row.p_value:.3f})\")\n"
+            "print(f\"  MCC   {stk.mcc_mean:.4f} vs {cat.mcc_mean:.4f}  \"\n"
+            "      f\"(delta {stk.mcc_mean-cat.mcc_mean:+.4f})\")\n"
+            "print(f\"  F1    {stk.f1_macro_mean:.4f} vs {cat.f1_macro_mean:.4f}  \"\n"
+            "      f\"(delta {stk.f1_macro_mean-cat.f1_macro_mean:+.4f})\")"
+        ),
+        md(
+            "**Reading:** the AUC gain is **statistically significant but practically negligible** "
+            "(+0.003, p≈0.03) — and, decisively, stacking **regresses the operating-point metrics** "
+            "(MCC and macro-F1, the quantities a real at-risk *screener* is scored on) while costing ~19× "
+            "the compute of a single CatBoost. A win on the ranking metric that *loses* on the decision "
+            "metrics is not a deployment case."
+        ),
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The ~0.78 ceiling holds.** Stacking four base learners reaches AUC **0.786** vs single "
+            "CatBoost **0.783** — a paired Nadeau-Bengio gain of **+0.003 (p≈0.03)**: real but negligible. "
+            "The signal available in these features is essentially saturated; no combination unlocks a new "
+            "tier.\n"
+            "- **Worse where it counts.** Stacking *lowers* MCC (0.386 vs 0.393) and macro-F1 (0.683 vs "
+            "0.693). For a screening tool the operating-point metrics matter more than AUC, so the "
+            "ensemble is a net negative there.\n"
+            "- **Cost/benefit fails.** ~19× the training time (516s vs 27s) and a far less interpretable, "
+            "harder-to-deploy object, for a third of an AUC point that the CIs barely separate.\n"
+            "- **Decision: single CatBoost remains the headline model.** Stacking is retained as a "
+            "documented **ablation** — evidence that the ceiling is a property of the data, not a modelling "
+            "shortfall — mirroring the earlier PV-stacking result (`stacking_ensemble_2022.csv`, "
+            "`stacking_pairwise_nb_2022.csv`).\n"
+            "- **Where headroom actually lives:** not in fancier learners but in *information* (richer "
+            "school/teacher context, longitudinal linkage) and in the **decision layer** — threshold "
+            "tuning + calibration (notebook: threshold-calibration) already buy more usable lift (MCC/F1, "
+            "ECE) than stacking does. Method choice here is disciplined by effect size, the standard this "
+            "whole project holds itself to."
+        ),
+    ]
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
@@ -1052,3 +1201,4 @@ if __name__ == "__main__":
     build_notebook(nb_07_fairness(), NB_DIR / "07_fairness.ipynb", force)
     build_notebook(nb_08_comparative(), NB_DIR / "08_comparative.ipynb", force)
     build_notebook(nb_09_forecast(), NB_DIR / "09_forecast_2026.ipynb", force)
+    build_notebook(nb_10_stacking(), NB_DIR / "10_stacking_ensemble.ipynb", force)
