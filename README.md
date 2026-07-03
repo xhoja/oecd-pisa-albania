@@ -306,7 +306,7 @@ OECD_PISA_Project/
 ├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
 │                         #   04_modeling, 05_explainability, 06_explainability_cases,
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
-│                         #   10_stacking_ensemble  (all executed)
+│                         #   10_stacking_ensemble, 11_screener_multilevel  (all executed)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
 │                         #   run_school_features_experiment (+_foldsafe), run_threshold_calibration,
@@ -414,12 +414,13 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **88 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
+- **99 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
-  the leave-one-out **school aggregates**, the **forecast** WLS/Monte-Carlo scenarios, and the
-  **stacking** ensemble builder (weight-safe bases, plain-LR meta).
+  the leave-one-out **school aggregates**, the **forecast** WLS/Monte-Carlo scenarios, the
+  **stacking** ensemble builder, the **decision-curve / calibration** algebra (net-benefit
+  references, weighted Brier/ECE), and the **multilevel** ICC + random-intercept fit.
 - **Data contracts** (`src/data/validate.py`) turn silent pipeline regressions into explicit
   `ERROR`/`WARN` violations: weight presence & positivity, plausible-value counts, target
   range, valid cycles, replicate-weight availability, all-missing features. Wire
@@ -489,20 +490,31 @@ choice below is implemented and unit-tested.
   (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
   (`visualization/style`: SEQUENTIAL / SEQUENTIAL_RANK / DIVERGING; dark = more-important),
   and an internal performance / conference-readiness review.
+- **Screener evaluation + multilevel model (pre-submission strengthening, notebook 11):**
+  **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
+  figure `G1`) reframes the ~75%-prevalence problem around *net benefit* — the model beats
+  screen-everyone/screen-no-one over the selective threshold band **0.51–0.95** — and weighted
+  isotonic **calibration** cuts ECE **~0.10 → ~0.01** (`G2`). A **random-intercept logistic**
+  model (`src/models/multilevel.py`, `scripts/run_multilevel.py`, figure `H1`) — the correct
+  spec for PISA's nested design — **matches** the hand-crafted school-mean booster on identical
+  folds (CV AUC ~0.78 either way, confirming the ceiling is real) and shows a school **ICC ≈ 0.31**:
+  ~a third of risk variance is *between schools* and barely touched by student features.
 
 ### Remaining
 - **Phase 10 — Deliverables:** written report, slides, poster, interactive risk-score dashboard.
   This is the true remaining blocker for a conference submission; the analysis is largely done.
+- **School-questionnaire linkage (highest-leverage extension):** the ICC ≈ 0.31 says ~a third of
+  risk is school-level and student features can't explain it — the untapped signal is the PISA
+  **school questionnaire** (resources, staff shortage, class size, leadership). Needs the OECD
+  SCH file downloaded + a new ingest/join on `CNTSCHID`; would test whether the 0.78 ceiling is
+  truly the data or just the feature set.
 - **Advanced levers (optional, not pursued):** conformal prediction (uncertainty),
   counterfactual explanations, policy simulation. Probability calibration is already covered by
-  the threshold-tuning + isotonic pass.
-- **Highest-leverage extensions before submission** (see the readiness review): link the PISA
-  **school questionnaire** (richer school features) and fit a **multilevel/hierarchical** model
-  to test whether the 0.78 ceiling is data or feature-set, and reframe evaluation around
-  **decision value / calibration** rather than AUC for a 75%-prevalence screener.
+  the threshold-tuning + isotonic pass (see notebook 11).
 - **Nice-to-haves:** a fold-safe per-fold school-means transformer (production uses full-cohort
   means — empirically leakage-free); **Phase 5b** — add MLP & SVM to the comparison (fix
-  `_suggest_params` for the sklearn ≥1.8 `penalty` deprecation first).
+  `_suggest_params` for the sklearn ≥1.8 `penalty` deprecation first); proper multilevel
+  pseudo-likelihood with scaled survey weights.
 
 ---
 

@@ -205,6 +205,33 @@ rank 1 darkest.
 **SES gradient** = weighted slope of score on ESCS (notebook 02); Albania's is the
 *flattest* — a floor effect, not equity.""",
 
+    "11": r"""## Methods & formulas (reference)
+
+Two pre-submission strengthenings: an evaluation fit for a high-prevalence
+*screener*, and the statistically-correct model for PISA's nested design.
+
+**Decision-curve analysis (net benefit).** At a threshold probability $p_t$ we flag
+a student when $\hat p \ge p_t$; $p_t$ encodes the harm trade-off (a false alarm
+costs $p_t/(1-p_t)$ times as much as a miss). The weighted net benefit is
+$$\mathrm{NB}(p_t)=\frac{TP_w}{N_w}-\frac{FP_w}{N_w}\,\frac{p_t}{1-p_t},$$
+compared against **screen-everyone** ($\mathrm{NB}=\mathrm{prev}-(1-\mathrm{prev})\,
+p_t/(1-p_t)$) and **screen-no-one** ($\mathrm{NB}=0$). The model earns its keep only
+where its curve sits above both.
+
+**Calibration.** Weighted **Brier** $\frac{\sum_i w_i(\hat p_i-y_i)^2}{\sum_i w_i}$
+and **ECE** $\sum_b \frac{w_b}{W}\lvert \mathrm{obs}_b-\overline{\hat p}_b\rvert$ over
+probability bins; a reliability curve plots observed vs predicted. Isotonic
+regression is a monotone recalibration map fit out-of-fold.
+
+**Random-intercept (multilevel) logistic.** Students $i$ nested in schools $j$:
+$$\operatorname{logit}P(y_{ij}=1)=\beta_0+\beta^\top x_{ij}+u_j,\qquad
+u_j\sim\mathcal N(0,\sigma_u^2).$$
+The **intraclass correlation** on the latent scale,
+$$\mathrm{ICC}=\frac{\sigma_u^2}{\sigma_u^2+\pi^2/3},\qquad \pi^2/3\approx3.29,$$
+is the share of risk variance that is *between schools*. Fixed effects give
+*within-school* odds ratios $e^{\beta}$ (per 1 SD). Fit by variational Bayes;
+unweighted (no survey weights in the mixed GLM) — a noted caveat.""",
+
     "09": r"""## Methods & formulas (reference)
 
 **Why scenarios, not a point forecast.** Five cycles and a 2022 structural break
