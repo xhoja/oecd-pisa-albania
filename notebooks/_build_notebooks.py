@@ -9,9 +9,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import sys as _sys
+
 import nbformat as nbf
 
 NB_DIR = Path(__file__).resolve().parent
+_sys.path.insert(0, str(NB_DIR))
+from _formulas import FORMULAS  # noqa: E402  shared "Methods & formulas" cells
 
 HEADER = """import sys, os
 from pathlib import Path
@@ -29,6 +33,14 @@ def md(text: str) -> nbf.NotebookNode:
 
 def code(text: str) -> nbf.NotebookNode:
     return nbf.v4.new_code_cell(text.strip())
+
+
+def _with_formulas(cells: list, key: str) -> list:
+    """Insert the notebook's 'Methods & formulas' reference cell right after its
+    intro markdown (index 0), keeping a single source in _formulas.FORMULAS."""
+    if key in FORMULAS:
+        return [cells[0], md(FORMULAS[key])] + cells[1:]
+    return cells
 
 
 def _has_outputs(path: Path) -> bool:
@@ -892,20 +904,24 @@ def nb_08_comparative() -> list:
            "(~38–40) but far higher levels. The mid-prevalence Balkan peers (BGR/COL, AUC ~0.86) are the "
            "most separable."),
         md("## 2. SHAP importance rank matrix\n\n"
-           "For each country, features ranked 1 (top driver) … by mean |SHAP|. Green = important, "
-           "red = unimportant. Which drivers are universal, which country-specific?"),
+           "For each country, features ranked 1 (top driver) … by mean |SHAP|. Following the project's "
+           "colormap schema (**dark = more important**; the colorblind-unsafe red-yellow-green map is "
+           "avoided), rank 1 renders darkest. Which drivers are universal, which country-specific?"),
         code(
+            "from src.visualization.style import SEQUENTIAL_RANK_CMAP\n"
             "rank = pd.read_csv('../outputs/results/comparative_shap_rank_matrix.csv', index_col=0)\n"
             "rank = rank.head(12)\n"
             "fig, ax = plt.subplots(figsize=(9, 6))\n"
-            "im = ax.imshow(rank.values, cmap='RdYlGn_r', aspect='auto', vmin=1, vmax=15)\n"
+            "im = ax.imshow(rank.values, cmap=SEQUENTIAL_RANK_CMAP, aspect='auto', vmin=1, vmax=15)\n"
             "ax.set_xticks(range(len(rank.columns))); ax.set_xticklabels(rank.columns)\n"
             "ax.set_yticks(range(len(rank.index))); ax.set_yticklabels(rank.index, fontsize=8)\n"
             "for i in range(len(rank.index)):\n"
             "    for j in range(len(rank.columns)):\n"
-            "        ax.text(j, i, int(rank.values[i,j]), ha='center', va='center', fontsize=7)\n"
+            "        v = int(rank.values[i,j])\n"
+            "        ax.text(j, i, v, ha='center', va='center', fontsize=7,\n"
+            "                color='white' if v <= 5 else 'black')\n"
             "ax.set_title('SHAP importance rank by country — 2022 (1 = top driver)')\n"
-            "fig.colorbar(im, ax=ax, label='rank'); plt.tight_layout(); plt.show()"
+            "fig.colorbar(im, ax=ax, label='rank (1 = most important, dark)'); plt.tight_layout(); plt.show()"
         ),
         md("**Reading:** **math anxiety (`ANXMAT`) is universal** — a top-3 driver in almost every "
            "country, including top-performer Estonia. **School composition** (`SCH_MEAN_HOMEPOS`, "
@@ -1192,13 +1208,13 @@ def nb_10_stacking() -> list:
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
-    build_notebook(nb_01_eda_albania(), NB_DIR / "01_eda_albania.ipynb", force)
-    build_notebook(nb_02_comparative(), NB_DIR / "02_eda_comparative.ipynb", force)
-    build_notebook(nb_03_covariate_shift(), NB_DIR / "03_covariate_shift.ipynb", force)
-    build_notebook(nb_04_modeling(), NB_DIR / "04_modeling.ipynb", force)
-    build_notebook(nb_05_explainability(), NB_DIR / "05_explainability.ipynb", force)
-    build_notebook(nb_06_explainability_cases(), NB_DIR / "06_explainability_cases.ipynb", force)
-    build_notebook(nb_07_fairness(), NB_DIR / "07_fairness.ipynb", force)
-    build_notebook(nb_08_comparative(), NB_DIR / "08_comparative.ipynb", force)
-    build_notebook(nb_09_forecast(), NB_DIR / "09_forecast_2026.ipynb", force)
+    build_notebook(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
+    build_notebook(_with_formulas(nb_02_comparative(), "02"), NB_DIR / "02_eda_comparative.ipynb", force)
+    build_notebook(_with_formulas(nb_03_covariate_shift(), "03"), NB_DIR / "03_covariate_shift.ipynb", force)
+    build_notebook(_with_formulas(nb_04_modeling(), "04"), NB_DIR / "04_modeling.ipynb", force)
+    build_notebook(_with_formulas(nb_05_explainability(), "05"), NB_DIR / "05_explainability.ipynb", force)
+    build_notebook(_with_formulas(nb_06_explainability_cases(), "06"), NB_DIR / "06_explainability_cases.ipynb", force)
+    build_notebook(_with_formulas(nb_07_fairness(), "07"), NB_DIR / "07_fairness.ipynb", force)
+    build_notebook(_with_formulas(nb_08_comparative(), "08"), NB_DIR / "08_comparative.ipynb", force)
+    build_notebook(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "09_forecast_2026.ipynb", force)
     build_notebook(nb_10_stacking(), NB_DIR / "10_stacking_ensemble.ipynb", force)

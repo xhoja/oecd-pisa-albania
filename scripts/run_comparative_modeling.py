@@ -40,7 +40,11 @@ from src.models.experiment import _wrap
 from src.models.prepare import build_model_data, impute_median
 from src.models.registry import get_model
 from src.utils.logging import configure_logging
-from src.visualization.style import apply_publication_style, save_figure
+from src.visualization.style import (
+    SEQUENTIAL_RANK_CMAP,
+    apply_publication_style,
+    save_figure,
+)
 
 FEATS = ["ESCS", "HOMEPOS", "GENDER", "REPEAT", "IMMIG", "BELONG", "TEACHSUP",
          "ICTHOME", "ICTSCH", "ANXMAT", "GRADE", "HISCED", "HISEI"]
@@ -120,14 +124,19 @@ def main() -> None:
 
     # heatmap
     fig, ax = plt.subplots(figsize=(9, max(4, 0.4 * len(rank))))
-    im = ax.imshow(rank.values, cmap="RdYlGn_r", aspect="auto", vmin=1, vmax=15)
+    # project colormap schema: SEQUENTIAL_RANK ("rocket") so rank 1 = dark = most
+    # important (dark = more, everywhere). RdYlGn is avoided (not colorblind-safe).
+    im = ax.imshow(rank.values, cmap=SEQUENTIAL_RANK_CMAP, aspect="auto", vmin=1, vmax=15)
     ax.set_xticks(range(len(rank.columns))); ax.set_xticklabels(rank.columns)
     ax.set_yticks(range(len(rank.index))); ax.set_yticklabels(rank.index, fontsize=8)
     for i in range(len(rank.index)):
         for j in range(len(rank.columns)):
-            ax.text(j, i, int(rank.values[i, j]), ha="center", va="center", fontsize=7)
+            v = int(rank.values[i, j])
+            # white text on the dark (important, low-rank) cells, black on light
+            ax.text(j, i, v, ha="center", va="center", fontsize=7,
+                    color="white" if v <= 5 else "black")
     ax.set_title("SHAP importance rank by country — 2022 (1 = top driver)")
-    fig.colorbar(im, ax=ax, label="rank")
+    fig.colorbar(im, ax=ax, label="rank (1 = most important, dark)")
     save_figure(fig, str(fig_dir / "F1_shap_rank_matrix"))
     plt.close(fig)
 

@@ -13,7 +13,12 @@ from sklearn.metrics import confusion_matrix
 import structlog
 
 from src.models.evaluate import get_calibration_data, get_pr_data, get_roc_data
-from src.visualization.style import apply_publication_style, color_list, save_figure
+from src.visualization.style import (
+    SEQUENTIAL_CMAP,
+    apply_publication_style,
+    color_list,
+    save_figure,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -76,7 +81,7 @@ def plot_confusion(y_true: np.ndarray, y_pred: np.ndarray, title: str = "Confusi
     cm = confusion_matrix(y_true, y_pred)
     cm_norm = cm.astype(float) / cm.sum(axis=1, keepdims=True)
     fig, ax = plt.subplots(figsize=(5, 4.5))
-    sns.heatmap(cm_norm, annot=cm, fmt="d", cmap="Blues", cbar=False,
+    sns.heatmap(cm_norm, annot=cm, fmt="d", cmap=SEQUENTIAL_CMAP, cbar=False,
                 xticklabels=["Proficient", "At-risk"], yticklabels=["Proficient", "At-risk"], ax=ax)
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
