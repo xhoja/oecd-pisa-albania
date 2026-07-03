@@ -154,24 +154,55 @@ def get_model(name: str, **kwargs: Any) -> Any:
 
 def build_stacking_ensemble(
     base_models: list[str] | None = None,
-    meta_learner: str = "logistic_regression",
+    meta_learner: str | None = None,
+    cv: int = 5,
 ) -> StackingClassifier:
     """
-    Build stacking ensemble with specified base models.
-    Default: XGBoost + LightGBM + CatBoost stacked with LR meta-learner.
+    Phase-9 stacking ensemble, wired to survive this project's two hard
+    constraints (survey weights + macOS OpenMP):
+
+    - **Bare base learners only.** StackingClassifier forwards ``sample_weight``
+      to each base estimator's ``fit(X, y, sample_weight=...)`` and to the final
+      estimator's. The registry's scaled models (LR/SVM/KNN/MLP) are
+      ``Pipeline([scaler, clf])`` objects that reject a *bare* ``sample_weight``
+      kwarg (they need ``clf__sample_weight``), so a weighted stack that included
+      one would raise. The default base set is therefore the bare tree/booster
+      estimators, all of which accept ``sample_weight`` directly.
+    - **Plain LR meta-learner.** The final estimator also receives
+      ``sample_weight``, so it must be bare too; and its inputs are the base
+      models' predicted probabilities (already in [0, 1]), so the RobustScaler
+      that ``build_logistic_regression`` adds is unnecessary. A plain
+      class-balanced ``LogisticRegression`` on the OOF probabilities is the
+      textbook meta-learner.
+    - ``n_jobs=1``: base learners are fit sequentially. Parallel booster fits
+      (n_jobs=-1) reintroduce the libomp/libgomp duplicate-runtime collision this
+      project fought (see memory: OpenMP macOS); sequential fits inside the
+      isolated worker are the safe path.
+
+    ``cv=5`` internal folds generate the leakage-free OOF meta-features. Wrap the
+    returned estimator with ``experiment._wrap`` so the outer fold still fits the
+    engineered-feature + median-imputation preprocessing on train data only.
     """
     if base_models is None:
-        base_models = ["xgboost", "lightgbm", "catboost"]
+        # catboost + lightgbm: the two strongest, decorrelated boosters with
+        # school context (0.783 / 0.775); gradient_boosting (sklearn, no libomp)
+        # and random_forest add bagging diversity. All accept sample_weight bare.
+        base_models = ["catboost", "lightgbm", "gradient_boosting", "random_forest"]
 
     estimators = [(name, get_model(name)) for name in base_models]
-    final_estimator = get_model(meta_learner)
+    if meta_learner is None:
+        final_estimator = LogisticRegression(
+            C=1.0, max_iter=2000, class_weight="balanced", random_state=42,
+        )
+    else:
+        final_estimator = get_model(meta_learner)
     return StackingClassifier(
         estimators=estimators,
         final_estimator=final_estimator,
-        cv=5,
+        cv=cv,
         stack_method="predict_proba",
         passthrough=False,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
 
@@ -189,3 +220,11 @@ def build_mlp_from_optuna(trial: Any) -> Pipeline:
         learning_rate_init=lr_init,
         activation=activation,
     )
+
+
+# Registered after the builder is defined (it calls get_model for its base
+# learners). Exposing "stacking" here lets it flow through the exact same
+# isolated / survey-weighted / Nadeau-Bengio CV path as every single model
+# (experiment._cv_worker calls get_model(name)), so stacking and its base models
+# are scored on identical folds and can be compared with the paired NB t-test.
+BUILDERS["stacking"] = build_stacking_ensemble

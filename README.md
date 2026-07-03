@@ -305,7 +305,8 @@ OECD_PISA_Project/
 │   └── visualization/    # style, eda, model_plots
 ├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
 │                         #   04_modeling, 05_explainability, 06_explainability_cases,
-│                         #   07_fairness, 08_comparative, 09_forecast_2026  (all executed)
+│                         #   07_fairness, 08_comparative, 09_forecast_2026,
+│                         #   10_stacking_ensemble  (all executed)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
 │                         #   run_school_features_experiment (+_foldsafe), run_threshold_calibration,
@@ -472,6 +473,17 @@ choice below is implemented and unit-tested.
   pipeline transformer would make it airtight for the final write-up.
 - **PV-stacking: Done (marginal).** Stacking all 10 PVs as training rows lifts LightGBM/GBM
   AUC ~+0.01 (significant) but not CatBoost/LR — kept as an ablation, not headline.
+- **Phase 9 — Stacking ensemble: Done (negligible, worse where it counts).** A
+  StackingClassifier of the four bare tree/booster base learners (CatBoost + LightGBM + GBM +
+  RF) with a class-balanced Logistic-Regression meta-learner on their out-of-fold
+  probabilities, scored in the school-context regime through the identical weighted /
+  leakage-safe / OpenMP-isolated CV path (`scripts/run_stacking_experiment.py`, registry
+  `"stacking"`). Stacking AUC **0.786** vs single CatBoost **0.783** — a paired Nadeau-Bengio
+  gain of **+0.003 (p=0.030)**: statistically significant but practically nil, and it *regresses*
+  the decision-point metrics (MCC 0.386 vs 0.393, F1 0.683 vs 0.693) at ~19× the compute. The
+  ~0.78 ceiling holds; **single CatBoost remains the deployable headline**, stacking is kept as
+  an ablation confirming diminishing returns (`stacking_ensemble_2022.csv`,
+  `stacking_pairwise_nb_2022.csv`).
 - **Phase 5b (deferred):** add MLP & SVM to the comparison (fix `_suggest_params` for the
   sklearn ≥1.8 `penalty` deprecation first). *(LightGBM restored — see OpenMP note.)*
 - **Phase 6 — Explainability (local + PDP/ICE): Done.** SHAP local case studies for one
