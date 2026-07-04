@@ -2,7 +2,7 @@
 Feature engineering for PISA student data.
 
 All transformations are deterministic given the input dataframe.
-No fitting required — these are domain-knowledge-driven constructions.
+No fitting required - these are domain-knowledge-driven constructions.
 """
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def add_country_normalized(
     """
     df = df.copy()
     if country_col not in df.columns:
-        logger.warning("Country column not found — skipping normalization", col=country_col)
+        logger.warning("Country column not found - skipping normalization", col=country_col)
         return df
 
     for feat in features:
@@ -183,7 +183,7 @@ def add_school_aggregates(
     weight_col: str = "W_FSTUWT",
 ) -> pd.DataFrame:
     """
-    School-level contextual features — the *compositional* effect PISA research
+    School-level contextual features - the *compositional* effect PISA research
     finds is often the single strongest predictor of individual achievement.
 
     For each ``col`` we add ``SCH_MEAN_<col>``: the **survey-weighted, leave-one-
@@ -204,7 +204,7 @@ def add_school_aggregates(
         cols = ["ESCS", "HOMEPOS", "ANXMAT", "TEACHSUP"]
     df = df.copy()
     if school_col not in df.columns:
-        logger.warning("School column not found — skipping school aggregates", col=school_col)
+        logger.warning("School column not found - skipping school aggregates", col=school_col)
         return df
 
     w = df[weight_col].astype(float) if weight_col in df.columns else pd.Series(1.0, index=df.index)
@@ -228,6 +228,65 @@ def add_school_aggregates(
     df["SCH_N"] = grp[school_col].transform("size").astype(float)
     logger.info("School aggregates added", cols=cols, n_schools=int(df[school_col].nunique()))
     return df
+
+
+def add_school_questionnaire(
+    df: pd.DataFrame,
+    sch: pd.DataFrame,
+    cols: list[str] | None = None,
+    school_col: str = "CNTSCHID",
+    prefix: str = "SCHQ_",
+) -> pd.DataFrame:
+    """
+    Left-join *independent* school-questionnaire variables onto student rows via
+    ``CNTSCHID``. Unlike ``add_school_aggregates`` (student composition averaged
+    up), these are principal-reported school attributes - resources, staff
+    shortage, class size, leadership, climate - that students cannot encode, so
+    they test whether the ~0.78 AUC ceiling is a feature-set limit or a genuine
+    data limit (ICC ≈ 0.31 says ~a third of risk is school-level).
+
+    Joined columns are prefixed (``SCHQ_<VAR>``) to keep them distinct from the
+    compositional ``SCH_MEAN_*`` features. The join is one-to-one on the school
+    side (``sch`` is de-duplicated on ``school_col``), so student row count is
+    preserved; schools absent from ``sch`` get NaN → the median imputer fills.
+
+    Args:
+        df: student dataframe (must contain ``school_col``).
+        sch: school-level dataframe, one row per ``school_col`` (from
+            ``extract.load_school_questionnaire``).
+        cols: which school variables to bring in (default: all non-key columns
+            of ``sch``).
+        school_col: join key present in both frames.
+        prefix: namespace applied to joined columns.
+    """
+    df = df.copy()
+    if school_col not in df.columns:
+        logger.warning("School column not found - skipping questionnaire join", col=school_col)
+        return df
+    if school_col not in sch.columns:
+        raise ValueError(f"School frame missing join key {school_col!r}")
+
+    if cols is None:
+        cols = [c for c in sch.columns if c != school_col]
+    else:
+        cols = [c for c in cols if c in sch.columns]
+
+    right = sch.drop_duplicates(subset=school_col)[[school_col] + cols].copy()
+    rename = {c: f"{prefix}{c}" for c in cols}
+    right = right.rename(columns=rename)
+
+    n_before = len(df)
+    merged = df.merge(right, on=school_col, how="left")
+    assert len(merged) == n_before, "questionnaire join changed row count"
+
+    matched = df[school_col].isin(set(right[school_col])).mean()
+    logger.info(
+        "School questionnaire joined",
+        cols=list(rename.values()),
+        n_schools=int(right[school_col].nunique()),
+        student_match_rate=round(float(matched), 4),
+    )
+    return merged
 
 
 def add_cycle_features(df: pd.DataFrame) -> pd.DataFrame:

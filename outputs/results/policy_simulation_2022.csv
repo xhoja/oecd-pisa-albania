@@ -1,0 +1,9 @@
+scenario,at_risk_rate,delta_at_risk_rate,delta_mean_prob
+everything (bundle + SES + composition),0.5972,-0.1271,-0.1151
+anxiety -1.0 SD,0.651,-0.0733,-0.0599
+psychosocial bundle,0.6794,-0.0448,-0.0465
+anxiety -0.5 SD,0.6816,-0.0427,-0.0351
+school composition +0.5 SD,0.6996,-0.0247,-0.034
+SES +0.5 SD,0.7114,-0.0128,-0.0183
+teacher support +1 SD,0.7218,-0.0025,-0.0086
+belonging +1 SD,0.7384,0.0141,0.0032

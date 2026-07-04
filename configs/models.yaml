@@ -1,4 +1,4 @@
-# Model registry — hyperparameter spaces for Optuna
+# Model registry - hyperparameter spaces for Optuna
 
 cv:
   outer_folds: 5
@@ -18,10 +18,11 @@ models:
       class_weight: "balanced"
       random_state: 42
     search_space:
+      # sklearn 1.8 deprecated `penalty`; l1_ratio in [0,1] subsumes l2(0)/l1(1)/
+      # elasticnet(between). saga required for l1_ratio. No FutureWarning.
       C: {type: float, low: 0.001, high: 100, log: true}
-      penalty: {type: categorical, choices: ["l1", "l2", "elasticnet"]}
-      solver: {type: categorical, choices: ["saga"]}  # saga supports all penalties
-      l1_ratio: {type: float, low: 0.1, high: 0.9}  # used only for elasticnet
+      l1_ratio: {type: float, low: 0.0, high: 1.0}
+      solver: {type: categorical, choices: ["saga"]}
 
   decision_tree:
     enabled: true

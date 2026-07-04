@@ -1,0 +1,6 @@
+model,auc_base,auc_composition,auc_questionnaire,delta_comp_vs_base,p_comp,delta_q_vs_comp,p_q,q_significant_5pct
+catboost,0.723,0.7797,0.784,0.0567,0.0,0.0043,0.2488,False
+gradient_boosting,0.722,0.7768,0.781,0.0548,0.0,0.0042,0.2469,False
+lightgbm,0.7104,0.7716,0.7743,0.0612,0.0,0.0027,0.6622,False
+random_forest,0.7038,0.7658,0.7672,0.062,0.0,0.0014,0.6255,False
+logistic_regression,0.7003,0.7342,0.7358,0.0339,0.0,0.0016,0.5606,False

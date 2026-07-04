@@ -3,7 +3,7 @@
 
 A data-science project predicting which Albanian 15-year-olds are
 at risk of low mathematics proficiency (below PISA Level 2, score < 420), benchmarked
-against Balkan peers, top performers, and GDP-matched economies — with rigorous PISA
+against Balkan peers, top performers, and GDP-matched economies - with rigorous PISA
 methodology (sampling weights, plausible values), explainability, and a covariate-shift
 analysis of Albania's dramatic 2022 regression.
 
@@ -12,25 +12,31 @@ analysis of Albania's dramatic 2022 regression.
 ## Research Question
 
 > Can machine learning identify Albanian students at risk of low academic proficiency
-> from background variables, and do the predictive factors differ from OECD peers — and
+> from background variables, and do the predictive factors differ from OECD peers - and
 > can those differences explain Albania's catastrophic 2018→2022 reversal?
 
 **Headline findings so far:**
 1. A domain classifier distinguishes 2018 from 2022 Albanian students with **AUC 0.98** on
-   background features alone — the 2022 collapse is a *structural* distributional shift, not
+   background features alone - the 2022 collapse is a *structural* distributional shift, not
    merely lower scores.
 2. **School socioeconomic composition is the missing lever.** Adding survey-weighted
    school-mean features lifts every model's weighted CV AUC ~**+0.05** (CatBoost 0.73→**0.78**,
    significant, fold-safe), and once school context is in, the **gradient boosters pull
    significantly ahead of logistic regression** (GBM vs LR *p* = 0.001). The earlier "LR ties
    the boosters / data-limited ceiling" result was an artefact of an impoverished,
-   student-only feature set — the ceiling was the *features*, not the data or the model.
+   student-only feature set - the ceiling was the *features*, not the data or the model.
+3. **...but the ~0.78 ceiling above school composition is a genuine data limit.** Linking the
+   PISA **school questionnaire** (principal-reported resources, staff, class size, leadership)
+   directly onto students adds **no significant signal beyond school composition** (best +0.004
+   AUC, all *p* > 0.24): school-mean SES already proxies school inputs. Three independent routes -
+   composition booster, multilevel ICC ≈ 0.31, and the direct questionnaire linkage - converge on
+   the same ceiling (notebooks 11–12).
 
 ---
 
 ## Key Results (current)
 
-### Albania 2022 — model comparison (5×4 repeated stratified CV, weighted metrics)
+### Albania 2022 - model comparison (5×4 repeated stratified CV, weighted metrics)
 
 **With school context** (13 student features + survey-weighted school-mean
 ESCS/HOMEPOS/ANXMAT/TEACHSUP + cohort size). This is the current headline set; the
@@ -45,17 +51,23 @@ ESCS/HOMEPOS/ANXMAT/TEACHSUP + cohort size). This is the current headline set; t
 | Extra Trees | 0.758 | +0.051 | 0.884 | 0.641 | 0.332 |
 | XGBoost | 0.756 | +0.058 | 0.892 | 0.657 | 0.333 |
 | Logistic Regression | 0.754 | +0.027 | 0.897 | 0.649 | 0.332 |
+| SVM (RBF) | 0.749 | +0.037 | 0.894 | 0.609 | 0.282 |
+| MLP (128-64) | 0.743 | +0.034 | 0.884 | 0.620 | 0.295 |
 | Naive Bayes | 0.701 | +0.019 | 0.856 | 0.610 | 0.263 |
 | KNN | 0.700 | +0.036 | 0.861 | 0.613 | 0.257 |
 | Decision Tree | 0.609 | +0.041 | 0.797 | 0.608 | 0.217 |
 
-The four boosters (CatBoost/GBM/LightGBM/RF) now form the top band and all beat Logistic
+The four boosters (CatBoost/GBM/LightGBM/RF) form the top band and all beat Logistic
 Regression significantly (e.g. GBM vs LR corrected-resampled *p* = 0.001); the interpretable
 baseline gains least from school context (+0.027) because the boosters exploit the
-student × school-composition interaction a linear model cannot. See
+student × school-composition interaction a linear model cannot. **SVM and MLP (added in the
+Phase 5b completeness pass) land mid-table - below LR and well below the boosters** - confirming
+the podium is a booster story, not an artefact of omitting kernel/neural learners; neither
+non-linear margin nor a small dense net beats gradient boosting on this tabular, ~6k-row,
+weighted problem. MLP is fit unweighted (`MLPClassifier` takes no `sample_weight`). See
 `outputs/results/albania_2022_model_comparison_school.csv` and `..._pairwise_nb_school.csv`.
 
-<details><summary><b>Student-only baseline</b> (original 13-feature set — click to expand)</summary>
+<details><summary><b>Student-only baseline</b> (original 13-feature set - click to expand)</summary>
 
 | Model | ROC-AUC (Nadeau-Bengio 95% CI) | PR-AUC | F1-macro | MCC |
 |---|---|---|---|---|
@@ -63,21 +75,23 @@ student × school-composition interaction a linear model cannot. See
 | Logistic Regression | 0.727 (0.704–0.751) | 0.882 | 0.621 | 0.281 |
 | Gradient Boosting | 0.727 (0.711–0.743) | 0.878 | 0.609 | 0.283 |
 | LightGBM | 0.715 (0.700–0.730) | 0.872 | 0.638 | 0.282 |
+| SVM (RBF) | 0.712 (0.685–0.739) | 0.873 | 0.571 | 0.242 |
 | Random Forest | 0.710 (0.692–0.727) | 0.868 | 0.599 | 0.261 |
+| MLP (128-64) | 0.709 (0.684–0.735) | 0.867 | 0.580 | 0.251 |
 | Extra Trees | 0.707 (0.688–0.726) | 0.866 | 0.608 | 0.260 |
 | XGBoost | 0.698 (0.681–0.715) | 0.863 | 0.617 | 0.262 |
 | Naive Bayes | 0.682 (0.659–0.705) | 0.846 | 0.599 | 0.246 |
 | KNN | 0.664 (0.638–0.689) | 0.842 | 0.588 | 0.215 |
 | Decision Tree | 0.568 (0.548–0.589) | 0.780 | 0.567 | 0.135 |
 
-In the student-only set the top three (CatBoost ≈ LR ≈ GBM) were a statistical tie — the
+In the student-only set the top three (CatBoost ≈ LR ≈ GBM) were a statistical tie - the
 finding that motivated adding school context.
 
 </details>
 
 All metrics are **weighted** with the survey weights (a correctness fix: scaler-wrapped
 models such as Logistic Regression were previously fit unweighted because the weight kwarg
-was routed to the wrong pipeline step — now fixed, which lifted LR from 0.726 to 0.727 and
+was routed to the wrong pipeline step - now fixed, which lifted LR from 0.726 to 0.727 and
 into second place). KNN is the one exception: `KNeighborsClassifier` has no `sample_weight`,
 so its fit is inherently unweighted (its metrics are still weighted at evaluation).
 
@@ -97,14 +111,14 @@ and the naïve interval is too narrow. The correction replaces the `1/k` term wi
 
 A ranking table alone invites over-reading a 0.005 AUC gap. We test it directly.
 
-- **In CV** — pairwise **Nadeau-Bengio corrected resampled t-test** on the paired per-fold
+- **In CV** - pairwise **Nadeau-Bengio corrected resampled t-test** on the paired per-fold
   AUCs. In the **student-only** set (`albania_2022_pairwise_nb.csv`) the top three were a
   statistical tie: CatBoost ≈ LR (*p* = 0.50), CatBoost ≈ GBM (*p* = 0.37), GBM ≈ LR
-  (*p* = 0.91) — a transparent logistic regression matched the best boosters. **Adding school
+  (*p* = 0.91) - a transparent logistic regression matched the best boosters. **Adding school
   context breaks that tie** (`albania_2022_pairwise_nb_school.csv`): the boosters
   (CatBoost/GBM/LightGBM/RF) become a top band that beats LR significantly (GBM vs LR
   *p* = 0.001), because they exploit the student × school-composition interaction LR cannot.
-- **Out-of-sample** — pairwise **DeLong test** on the shared 2022 test set
+- **Out-of-sample** - pairwise **DeLong test** on the shared 2022 test set
   (`oos_2022_experiment.json → delong_pairwise`): the OOS leaders Random Forest, Gradient
   Boosting and LightGBM are mutually indistinguishable (RF vs GBM *p* = 0.64, RF vs LightGBM
   *p* = 0.66, RF vs CatBoost *p* = 0.05), while they all beat XGBoost and LR significantly.
@@ -113,7 +127,7 @@ A ranking table alone invites over-reading a 0.005 AUC gap. We test it directly.
 
 Two levers were tested against the student-only ceiling; both are leakage-safe and weighted.
 
-**1. School context — breaks the AUC ceiling.** HPO gave no significant gain, suggesting a
+**1. School context - breaks the AUC ceiling.** HPO gave no significant gain, suggesting a
 data ceiling; the real cause was a missing feature family. Adding survey-weighted,
 leave-one-out **school-mean** ESCS/HOMEPOS/ANXMAT/TEACHSUP + cohort size lifts weighted CV
 AUC ~**+0.05** for every model (table above), all *p* < 0.001 by the paired corrected
@@ -121,18 +135,18 @@ resampled t-test. A **fold-safe** rerun (school means recomputed from the traini
 reproduces an identical delta (`school_features_foldsafe_2022.csv`), so the lift is a genuine
 compositional effect, not leakage. `scripts/run_school_features_experiment.py` (+ `_foldsafe`).
 
-**2. PV-stacking — marginal.** Training on all 10 plausible values as stacked rows (target
+**2. PV-stacking - marginal.** Training on all 10 plausible values as stacked rows (target
 = PVk < L2, evaluated on the PV-mean target, StratifiedKFold by student) beats the PV-mean
-target only slightly and only for two models — LightGBM +0.011 (*p* = 0.05), GBM +0.009
+target only slightly and only for two models - LightGBM +0.011 (*p* = 0.05), GBM +0.009
 (*p* = 0.007); CatBoost/LR flat. It is the more PISA-correct target treatment but the practical
 AUC gain is small (≪ school context). Kept as an ablation, not folded into the headline.
 `scripts/run_pv_stacking_experiment.py` → `pv_stacking_ablation_2022.csv`.
 
-**3. Operating point — threshold tuning + isotonic calibration.** The comparison scores
+**3. Operating point - threshold tuning + isotonic calibration.** The comparison scores
 F1/MCC at a fixed 0.5, but `class_weight='balanced'` recenters the scores. Tuning the
 threshold on out-of-fold train predictions lifts MCC ~+0.02–0.03 and F1-macro ~+0.03–0.05;
 weighted **isotonic calibration** cuts ECE ~5–7× (CatBoost 0.147→0.027, LR 0.209→0.029) and
-improves Brier — directly strengthening the fairness/calibration story. AUC is unchanged (a
+improves Brier - directly strengthening the fairness/calibration story. AUC is unchanged (a
 ranking metric). `scripts/run_threshold_calibration.py` → `threshold_calibration_2022.csv`,
 figure `M1`.
 
@@ -140,7 +154,7 @@ figure `M1`.
 
 GBM & RF lead at **0.674** AUC, with LightGBM level at 0.673; CatBoost 0.665, Extra Trees
 0.663, XGBoost 0.639, LR 0.622.
-The shift is **detectable** (AUC 0.98) yet models still transfer moderately — a key nuance
+The shift is **detectable** (AUC 0.98) yet models still transfer moderately - a key nuance
 (covariate shift *without* total collapse). Threshold tuned on train only; ECE reported.
 
 ### Hyper-parameter optimisation (Phase 5, nested CV)
@@ -155,15 +169,15 @@ resampled t-test (`outputs/results/hpo_summary.csv`):
 | Gradient Boosting | 0.727 | 0.731 | +0.004 | 0.45 | No |
 | Logistic Regression | 0.726 | 0.726 | −0.001 | 0.43 | No |
 
-**Tuning yields no statistically significant gain** for any model — the registry defaults are
+**Tuning yields no statistically significant gain** for any model - the registry defaults are
 already at the ceiling *for the student-only feature set*. This looked like a data ceiling, but
 it was a **feature** ceiling: adding school context (below) lifts AUC ~+0.05 where tuning could
-not. The lesson holds in reverse — capacity/tuning were maxed; the missing signal was a feature.
+not. The lesson holds in reverse - capacity/tuning were maxed; the missing signal was a feature.
 
 ### SHAP global importance (Albania 2022, LightGBM, school-context model)
 
 `SCH_MEAN_HOMEPOS` > `ANXMAT` > `SCH_MEAN_TEACHSUP` > `SCH_MEAN_ESCS` > `HISCED` > `HOMEPOS` >
-`SCH_N` > `SCH_MEAN_ANXMAT` … **Four of the top seven drivers are school-level** — the model
+`SCH_N` > `SCH_MEAN_ANXMAT` … **Four of the top seven drivers are school-level** - the model
 reads a student's risk more from the socioeconomic *composition* of their school than from their
 own resources (the compositional effect made explicit). Math anxiety (`ANXMAT`) is the strongest
 individual factor; immigration status remains negligible. (On the student-only model the ranking
@@ -171,7 +185,7 @@ was `ANXMAT` > `HISCED` > `HOMEPOS` …; adding school context reorders the whol
 
 **Local explanations (Phase 6).** `scripts/run_explainability_cases.py` adds the local view:
 SHAP waterfalls for one confidently-correct TP (P = 0.997) and TN (P = 0.012) and one
-confidently-*wrong* FP (P = 0.88) and FN (P = 0.07) — the cases worth inspecting — plus PDP +
+confidently-*wrong* FP (P = 0.88) and FN (P = 0.07) - the cases worth inspecting - plus PDP +
 centered-ICE curves for the top raw drivers (`ANXMAT`, `HISCED`, `HOMEPOS`, `BELONG`). Figures:
 `outputs/figures/shap/D3_shap_local_cases`, `D4_pdp_ice`. Notebook 06.
 
@@ -187,44 +201,44 @@ model:
 | Immigrant status | 0.22 (↑ from 0.13) | 0.18 | **0.59** (↑ from 0.38) |
 | GENDER | 0.11 (↓ from 0.18) | 0.09 | 0.05 (↓ from 0.14) |
 
-**SES is still where the model is least fair, and school context does not fix it** — school-mean
+**SES is still where the model is least fair, and school context does not fix it** - school-mean
 SES *is* SES, so making it a top feature doubly encodes the gradient. Bottom-quintile students
 are flagged at 91% vs. 43% for the top, with a **0.63 FPR gap** (equalized-odds concern). Adding
 school context has a **split effect**: the **gender gap shrank** (parity 0.18→0.11, FPR 0.14→0.05
-— school context absorbed part of the gender signal), while the **immigrant FPR gap grew**
-(0.38→0.59; small groups, one FPR=1.0 cell — a flag, not a precise estimate). The threshold sweep
+- school context absorbed part of the gender signal), while the **immigrant FPR gap grew**
+(0.38→0.59; small groups, one FPR=1.0 cell - a flag, not a precise estimate). The threshold sweep
 (`fairness_threshold_sweep_gender.csv`, figure `E1`) shows the gaps shift rather than vanish with
-the operating point — mitigation needs constraints, not a knob. Notebook 07.
+the operating point - mitigation needs constraints, not a knob. Notebook 07.
 
 ### Cross-country (PISA 2022, weighted low-proficiency rate)
 
-Albania **75%** (highest) — above Balkan peers (N. Macedonia 67%, Montenegro 60%) and
+Albania **75%** (highest) - above Balkan peers (N. Macedonia 67%, Montenegro 60%) and
 GDP-matched economies (Colombia 73%, Mexico 67%); Estonia lowest at 14%.
 
-### Comparative modeling (Phase 8) — Albania vs. peers
+### Comparative modeling (Phase 8) - Albania vs. peers
 
 Per-country school-context LightGBM (nine countries, 2022), weighted 5-fold CV
 (`scripts/run_comparative_modeling.py`, notebook 08):
 
 - **Albania: high prevalence, low separability, flat gradient.** Highest at-risk rate (0.75),
-  one of the *lowest* model AUCs (**0.77** — with 3-in-4 at-risk there's little contrast to
+  one of the *lowest* model AUCs (**0.77** - with 3-in-4 at-risk there's little contrast to
   separate), and the **flattest SES gradient (~17 pts/SD)** of all nine countries. The 2022
-  crisis is **broad-based** — depressed across the whole SES distribution, not concentrated in
+  crisis is **broad-based** - depressed across the whole SES distribution, not concentrated in
   the poor. *(This corrects an earlier narrative that misread the gradient plot as "steep";
-  Albania's slope is in fact the flattest, a floor effect — even advantaged students score ~369.)*
+  Albania's slope is in fact the flattest, a floor effect - even advantaged students score ~369.)*
 - **Steep-but-high contrast.** Estonia/Finland have *steeper* gradients (~38–40) yet far higher
   levels; SES predicts more there only because there is more score range to predict.
 - **Drivers are shared, not unique.** A SHAP feature × country **rank matrix**
   (`comparative_shap_rank_matrix.csv`, figure `F1`) shows **math anxiety universal** (top-3 almost
   everywhere, incl. Estonia) and **school socioeconomic composition** dominant in most systems.
-  Albania mirrors its Balkan peers — what differs is the *level/breadth* of low proficiency, not
+  Albania mirrors its Balkan peers - what differs is the *level/breadth* of low proficiency, not
   the mechanism. Country-specific: grade repetition is #2 in Colombia; individual ESCS is #1 in
   Finland.
 - **Policy read:** flat gradient + school-composition dominance means SES-targeted transfers
-  alone miss most at-risk Albanian students — system-wide levers (teacher support, math-anxiety
+  alone miss most at-risk Albanian students - system-wide levers (teacher support, math-anxiety
   reduction, raising the floor across all schools) are needed.
 
-### Forecast — next cycle (2026)
+### Forecast - next cycle (2026)
 
 PISA moved to a **4-year** cadence after COVID delayed 2021 → 2022, so the next assessment is
 **2026**. With only five cycles and a 2022 structural break, a point forecast is indefensible, so
@@ -258,7 +272,7 @@ sit well above Albania's 2018 low of 42%.
 | 2022 | `CY08MSP_STU_QQQ.SAV` | All countries |
 
 - **Albania longitudinal:** 27,042 students, 5 cycles
-- **Comparison set:** 323,121 students — ALB, MKD, MNE, SRB, BGR, EST, FIN, MEX, COL
+- **Comparison set:** 323,121 students - ALB, MKD, MNE, SRB, BGR, EST, FIN, MEX, COL
 - Raw files are **not** committed (multi-GB). Place them in `data/raw/`; processed
   parquet files are regenerated by the pipeline.
 
@@ -268,21 +282,21 @@ sit well above Albania's 2018 low of 42%.
 
 **Design-based estimates.** PISA ships 80 Fay balanced-repeated-replication (BRR) weights.
 The pipeline preserves them, and `src/data/weights.pv_statistic_brr` reports point estimates
-with the *correct* PISA standard error — BRR sampling variance (per plausible value) combined
+with the *correct* PISA standard error - BRR sampling variance (per plausible value) combined
 with the between-PV imputation variance via Rubin's rules. Albania's weighted at-risk math
 trajectory with design-based SEs:
 
 | Cycle | At-risk (math < L2) | SE | 95% CI | BRR |
 |---|---|---|---|---|
-| 2009 | 0.677 | 0.0076 | 0.663–0.692 | — (FWF) |
-| 2012 | 0.607 | 0.0051 | 0.597–0.617 | — (FWF) |
+| 2009 | 0.677 | 0.0076 | 0.663–0.692 | - (FWF) |
+| 2012 | 0.607 | 0.0051 | 0.597–0.617 | - (FWF) |
 | 2015 | 0.533 | 0.0108 | 0.512–0.554 | ✓ |
 | 2018 | 0.424 | 0.0088 | 0.407–0.441 | ✓ |
 | **2022** | **0.739** | **0.0041** | **0.731–0.747** | ✓ |
 
 > **Replicate-weight caveat:** the 80 replicate weights ship only on the SAV cycles
 > (2015/2018/2022). The FWF cycles (2009/2012) fall back to an imputation-only SE, flagged
-> `BRR=False` — an honest limit for any cross-cycle significance claim.
+> `BRR=False` - an honest limit for any cross-cycle significance claim.
 
 ---
 
@@ -306,13 +320,17 @@ OECD_PISA_Project/
 ├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
 │                         #   04_modeling, 05_explainability, 06_explainability_cases,
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
-│                         #   10_stacking_ensemble, 11_screener_multilevel  (all executed)
+│                         #   10_stacking_ensemble, 11_screener_multilevel,
+│                         #   12_school_questionnaire, 13_decision_support  (all executed)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
 │                         #   run_school_features_experiment (+_foldsafe), run_threshold_calibration,
-│                         #   run_pv_stacking_experiment, run_comparative_modeling
-├── tests/                # 84 pytest unit tests (weights, impute, target, transformers,
-│                         #   validate, evaluate, engineer/school, forecast) — no real data needed
+│                         #   run_pv_stacking_experiment, run_comparative_modeling,
+│                         #   build_school_questionnaire, run_school_questionnaire_experiment,
+│                         #   run_school_means_transformer_check, run_conformal,
+│                         #   run_counterfactuals, run_policy
+├── tests/                # 136 pytest unit tests (weights, impute, target, transformers,
+│                         #   validate, evaluate, engineer/school, forecast) - no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
 └── data/                 # raw/ (git-ignored) + processed/ (parquet)
 ```
@@ -326,7 +344,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required — 74 tests on synthetic fixtures)
+# 2. Run the test suite (no data required - 74 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -378,7 +396,7 @@ problem.** LightGBM's wheel links Homebrew's libomp; if scikit-learn's bundled l
 first (which happened because the booster was imported lazily, after `experiment.py` had
 already pulled in scikit-learn), the two runtimes collided and the fit aborted at the C-level
 `Dataset` construction. The isolated workers now import the boosters *before* scikit-learn, so
-LightGBM's libomp goes in first and it runs cleanly — it is back in the comparison, OOS, and
+LightGBM's libomp goes in first and it runs cleanly - it is back in the comparison, OOS, and
 SHAP.
 
 ---
@@ -388,11 +406,11 @@ SHAP.
 This project deliberately corrects the shortcuts common in student PISA analyses. Each
 choice below is implemented and unit-tested.
 
-- **Sampling weights** (`W_FSTUWT`) on *every* descriptive statistic and model metric —
+- **Sampling weights** (`W_FSTUWT`) on *every* descriptive statistic and model metric -
   never an unweighted mean.
 - **Design-based standard errors.** `pv_statistic_brr` combines Balanced Repeated
   Replication (80 Fay replicate weights) with the between-plausible-value variance via
-  Rubin's rules — the OECD PISA Data Analysis Manual method, not a bootstrap that ignores
+  Rubin's rules - the OECD PISA Data Analysis Manual method, not a bootstrap that ignores
   the design. (`src/data/weights.py`)
 - **Plausible values** treated as the 10 multiple imputations they are: per-PV targets and
   Rubin's combining rules, reporting the fraction of missing information (FMI). Collapsing
@@ -404,17 +422,17 @@ choice below is implemented and unit-tested.
   metric CIs use the **Nadeau-Bengio** corrected-resampled variance instead of `S/√k`.
   (`src/models/evaluate.nadeau_bengio_interval`)
 - **Significance testing, not eyeballing.** Model-vs-model differences are tested with the
-  **corrected resampled t-test** in CV and the **DeLong** test on the shared OOS test set —
+  **corrected resampled t-test** in CV and the **DeLong** test on the shared OOS test set -
   so a small AUC gap is reported as a tie when it is one.
   (`src/models/evaluate.corrected_resampled_ttest`, `delong_roc_test`)
 - **Exact OECD Level-2 thresholds** (math 420.07 / reading 407.47 / science 409.54); the
   decision threshold is tuned on train data only, with ECE and Brier calibration reported.
-- **Nested-CV Optuna HPO** — leakage-safe, weighted, OpenMP-isolated tuning that reports
+- **Nested-CV Optuna HPO** - leakage-safe, weighted, OpenMP-isolated tuning that reports
   whether it beats the registry default significantly (`src/models/hpo.py`).
 
 ## Testing & Validation
 
-- **99 unit tests** (`tests/`, `pytest`) run on synthetic fixtures — no PISA data required.
+- **99 unit tests** (`tests/`, `pytest`) run on synthetic fixtures - no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
@@ -431,13 +449,13 @@ choice below is implemented and unit-tested.
 ## Roadmap
 
 ### Done (Phases 1–9)
-- **Phase 1 — Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
+- **Phase 1 - Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
   harmonization, weights/PV handling, full pipeline. 5 cycles × 9 countries processed.
-- **Phase 2 — EDA & statistics:** 8 publication figures, executed notebooks (01–03),
+- **Phase 2 - EDA & statistics:** 8 publication figures, executed notebooks (01–03),
   covariate-shift analysis (AUC 0.98), weighted stats, effect sizes.
-- **Phase 3 — Feature engineering:** SES composites, digital indices, interaction terms,
+- **Phase 3 - Feature engineering:** SES composites, digital indices, interaction terms,
   country-normalized features, selection (VIF / correlation / missingness).
-- **Phase 4 — Modeling:** 9-model weighted comparison (repeated stratified CV) with
+- **Phase 4 - Modeling:** 9-model weighted comparison (repeated stratified CV) with
   Nadeau-Bengio CIs and pairwise significance testing (corrected resampled t-test in CV,
   DeLong out-of-sample); weighted OOS 2022 experiment with Rubin's-rules per-PV evaluation
   and train-only threshold tuning; SHAP global + importance. Notebooks 04–05.
@@ -445,46 +463,46 @@ choice below is implemented and unit-tested.
   design-based standard errors wired into the EDA notebooks, Nadeau-Bengio CIs and
   DeLong/corrected-resampled significance tests. Fixed a weighting bug (scaler-wrapped models
   were fit unweighted).
-- **Phase 5 — HPO:** Optuna in proper nested CV (inner tuning, outer evaluation),
+- **Phase 5 - HPO:** Optuna in proper nested CV (inner tuning, outer evaluation),
   leakage-safe and weighted, OpenMP-isolated per fold, for CatBoost / GBM / LR
   (`src/models/hpo.py`, `scripts/run_hpo.py`). Each tuned model tested against its registry
-  default with the corrected resampled t-test. Result: **no significant gain from tuning** —
+  default with the corrected resampled t-test. Result: **no significant gain from tuning** -
   defaults are already at the accuracy ceiling.
 - **Model-improvement pass:** two levers against the student-only ceiling. **School context**
   (survey-weighted leave-one-out school-mean features) lifts every model ~+0.05 AUC
-  (CatBoost 0.73→**0.78**), fold-safe and significant — breaking the ceiling HPO could not, and
+  (CatBoost 0.73→**0.78**), fold-safe and significant - breaking the ceiling HPO could not, and
   flipping the podium so boosters beat LR. **Threshold tuning + isotonic calibration** lift
   MCC/F1 and cut ECE ~5–7×. `build_model_data(..., add_school_context=True)`; scripts
   `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb05/06) and
   the fairness audit (nb07) were then re-run on the school-augmented model.
-- **Phase 6 — Explainability (local + PDP/ICE):** SHAP local case studies for one
+- **Phase 6 - Explainability (local + PDP/ICE):** SHAP local case studies for one
   representative TP/TN/FP/FN each (`scripts/run_explainability_cases.py` → waterfalls +
   `shap_local_cases_2022.csv`) and PDP + centered-ICE for the top drivers, narrated in
   notebook 06.
-- **Phase 7 — Fairness audit (survey-weighted):** demographic parity, equal opportunity (TPR),
-  FPR and calibration across gender, SES quintile and immigrant status, plus a threshold sweep —
+- **Phase 7 - Fairness audit (survey-weighted):** demographic parity, equal opportunity (TPR),
+  FPR and calibration across gender, SES quintile and immigrant status, plus a threshold sweep -
   all **weighted** (`scripts/run_fairness_audit.py` → `fairness_audit_2022.json`,
   `fairness_threshold_sweep_gender.csv`, `E1` figure), narrated in notebook 07. School context
   *shrinks* the gender gap but leaves the SES gap intact and enlarges the immigrant FPR gap.
-- **Phase 8 — Comparative modeling:** per-country school-context LightGBM (nine countries),
+- **Phase 8 - Comparative modeling:** per-country school-context LightGBM (nine countries),
   weighted CV AUC, SHAP feature × country rank matrix, and SES-gradient comparison
   (`scripts/run_comparative_modeling.py`, notebook 08). Headline: Albania is high-prevalence /
   low-separability / flat-gradient (broad-based crisis); drivers (math anxiety, school
   composition) are shared with peers, not unique.
-- **Forecast — next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 09)
+- **Forecast - next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 09)
   propagating design-based SEs: plausible 2026 low-proficiency range ~21–74%, defensible zone
   partial-reversion (~47%) to persistence (~74%). Honest about the five-cycle / structural-break
   limits.
-- **Phase 9 — Stacking ensemble (negligible, worse where it counts):** a StackingClassifier of
+- **Phase 9 - Stacking ensemble (negligible, worse where it counts):** a StackingClassifier of
   the four bare tree/booster base learners (CatBoost + LightGBM + GBM + RF) with a
   class-balanced Logistic-Regression meta-learner on their out-of-fold probabilities, scored in
   the school-context regime through the identical weighted / leakage-safe / OpenMP-isolated CV
   path (`scripts/run_stacking_experiment.py`, registry `"stacking"`, notebook 10). Stacking AUC
-  **0.786** vs single CatBoost **0.783** — a paired Nadeau-Bengio gain of **+0.003 (p=0.030)**:
+  **0.786** vs single CatBoost **0.783** - a paired Nadeau-Bengio gain of **+0.003 (p=0.030)**:
   significant but practically nil, and it *regresses* the decision-point metrics (MCC 0.386 vs
   0.393, F1 0.683 vs 0.693) at ~19× the compute. The ~0.78 ceiling holds; **single CatBoost
   remains the deployable headline**. Kept as an ablation, alongside the earlier **PV-stacking**
-  result (all 10 PVs as training rows; ~+0.01 AUC for LightGBM/GBM only) — both confirm
+  result (all 10 PVs as training rows; ~+0.01 AUC for LightGBM/GBM only) - both confirm
   diminishing returns (`stacking_ensemble_2022.csv`, `stacking_pairwise_nb_2022.csv`).
 - **Documentation & rigor pass:** per-notebook *Methods & formulas* reference cells
   (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
@@ -492,30 +510,49 @@ choice below is implemented and unit-tested.
   and an internal performance / conference-readiness review.
 - **Screener evaluation + multilevel model (pre-submission strengthening, notebook 11):**
   **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
-  figure `G1`) reframes the ~75%-prevalence problem around *net benefit* — the model beats
-  screen-everyone/screen-no-one over the selective threshold band **0.51–0.95** — and weighted
+  figure `G1`) reframes the ~75%-prevalence problem around *net benefit* - the model beats
+  screen-everyone/screen-no-one over the selective threshold band **0.51–0.95** - and weighted
   isotonic **calibration** cuts ECE **~0.10 → ~0.01** (`G2`). A **random-intercept logistic**
-  model (`src/models/multilevel.py`, `scripts/run_multilevel.py`, figure `H1`) — the correct
-  spec for PISA's nested design — **matches** the hand-crafted school-mean booster on identical
+  model (`src/models/multilevel.py`, `scripts/run_multilevel.py`, figure `H1`) - the correct
+  spec for PISA's nested design - **matches** the hand-crafted school-mean booster on identical
   folds (CV AUC ~0.78 either way, confirming the ceiling is real) and shows a school **ICC ≈ 0.31**:
-  ~a third of risk variance is *between schools* and barely touched by student features.
+  ~a third of risk variance is *between schools* and barely touched by student features. A
+  **survey-weighted pseudo-likelihood** refit (PQL with within-cluster scaled weights, Schall /
+  Rabe-Hesketh & Skrondal - `multilevel.fit_weighted_random_intercept`) gives design-consistent
+  fixed effects: odds ratios shift by ≤0.05 and the ICC stays in the **0.22–0.31** band, so the
+  variance-partition story is robust to how sampling weights are handled.
+- **School-questionnaire linkage - ceiling is data, not features (notebook 12):** the ICC ≈ 0.31
+  motivated linking the PISA 2022 **school questionnaire** (`CY08MSP_SCH_QQQ`: resources, staff
+  shortage, class size, leadership, climate), joined onto students on `CNTSCHID`
+  (`src/features/engineer.py:add_school_questionnaire`, `scripts/run_school_questionnaire_experiment.py`).
+  A paired ablation on shared folds finds these *independent* school inputs add **no significant
+  signal beyond school composition** (best incremental **+0.004** AUC, all *p* > 0.24). School-mean
+  ESCS already proxies school resources/staffing, so the **~0.78 ceiling is a genuine data limit,
+  not a feature-set limit** - a third independent route (composition booster, multilevel ICC,
+  direct questionnaire linkage) converging on the same conclusion.
+
+- **Decision support - uncertainty, recourse, policy (notebook 13):** three tools that turn the
+  screener into something actionable. **Conformal prediction** (`src/models/conformal.py`,
+  `scripts/run_conformal.py`) gives distribution-free prediction sets - the coverage guarantee
+  holds under survey weighting, ~60% confident singletons / ~40% honest abstentions at 90%
+  coverage. **Counterfactual recourse** (`src/explainability/counterfactuals.py`,
+  `scripts/run_counterfactuals.py`) finds the minimal actionable change to un-flag a student;
+  it succeeds for only a minority and is dominated by **math anxiety**, the individual echo of
+  the structural thesis. **Policy simulation** (`src/models/policy.py`, `scripts/run_policy.py`)
+  shows even an everything-at-once population intervention only cuts predicted at-risk ~72%→60%
+  (anxiety the top single lever, ~-7 pp) - no soft lever rescues a 75%-prevalence crisis. All
+  three are model-associational, not causal (stated, not hidden).
 
 ### Remaining
-- **Phase 10 — Deliverables:** written report, slides, poster, interactive risk-score dashboard.
+- **Phase 10 - Deliverables:** written report, slides, poster, interactive risk-score dashboard.
   This is the true remaining blocker for a conference submission; the analysis is largely done.
-- **School-questionnaire linkage (highest-leverage extension):** the ICC ≈ 0.31 says ~a third of
-  risk is school-level and student features can't explain it — the untapped signal is the PISA
-  **school questionnaire** (resources, staff shortage, class size, leadership). Needs the OECD
-  SCH file downloaded + a new ingest/join on `CNTSCHID`; would test whether the 0.78 ceiling is
-  truly the data or just the feature set.
-- **Advanced levers (optional, not pursued):** conformal prediction (uncertainty),
-  counterfactual explanations, policy simulation. Probability calibration is already covered by
-  the threshold-tuning + isotonic pass (see notebook 11).
-- **Nice-to-haves:** a fold-safe per-fold school-means transformer (production uses full-cohort
-  means — empirically leakage-free); **Phase 5b** — add MLP & SVM to the comparison (fix
-  `_suggest_params` for the sklearn ≥1.8 `penalty` deprecation first); proper multilevel
-  pseudo-likelihood with scaled survey weights.
+- **Nice-to-haves - DONE:** fold-safe per-fold school-means transformer
+  (`features.transformers.SchoolMeansTransformer`; `run_school_means_transformer_check.py`
+  confirms full-cohort means are leakage-free, delta <0.003, n.s.); **Phase 5b** - MLP & SVM
+  added to the comparison (both mid-table, boosters still lead) with the sklearn 1.8 `penalty`
+  deprecation fixed (`l1_ratio` replaces the l1/l2/elasticnet categorical); proper multilevel
+  pseudo-likelihood with scaled survey weights (`fit_weighted_random_intercept`, see above).
 
 ---
 
-*Data: OECD PISA 2009–2022 Public Use Files — https://www.oecd.org/pisa/*
+*Data: OECD PISA 2009–2022 Public Use Files - https://www.oecd.org/pisa/*

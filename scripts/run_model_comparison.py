@@ -34,7 +34,8 @@ def main() -> None:
     print("Features:", data.feature_names)
 
     models = ["logistic_regression", "decision_tree", "random_forest", "extra_trees",
-              "gradient_boosting", "xgboost", "lightgbm", "catboost", "knn", "naive_bayes"]
+              "gradient_boosting", "xgboost", "lightgbm", "catboost", "knn", "naive_bayes",
+              "mlp", "svm"]
     csv_path = ROOT / f"outputs/results/albania_2022_model_comparison{suffix}.csv"
     res = compare_models_cv(data, models, outer_folds=5, outer_repeats=4, save_path=csv_path)
     print("\n" + res.to_string(index=False))

@@ -8,7 +8,7 @@ losing their outputs). Notebook 10 already carries its formulas inline, so it ha
 no entry here.
 
 Each value is Markdown with LaTeX ($...$ / $$...$$). Keep the leading marker line
-`## Methods & formulas (reference)` — the injector uses it to stay idempotent.
+`## Methods & formulas (reference)` - the injector uses it to stay idempotent.
 """
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ socioeconomic determinism; a **flat** slope sitting at a low mean is a **floor
 effect** (everyone low regardless of SES), not equity.
 
 **Significance of a country gap.** Two countries differ significantly when their
-design-based 95% intervals $\hat\theta\pm1.96\,\text{SE}$ do not overlap — a
+design-based 95% intervals $\hat\theta\pm1.96\,\text{SE}$ do not overlap - a
 conservative visual test.""",
 
     "03": r"""## Methods & formulas (reference)
@@ -82,7 +82,7 @@ AUC $\gg 0.5$ ⇒ the distributions are distinguishable; AUC $\approx0.5$ ⇒ no
 detectable shift.
 
 **Standardized mean difference (per feature).**
-$\text{SMD}_f=\dfrac{\bar x_{f,2022}-\bar x_{f,2018}}{s_{f,\text{pool}}}$ — which
+$\text{SMD}_f=\dfrac{\bar x_{f,2022}-\bar x_{f,2018}}{s_{f,\text{pool}}}$ - which
 features moved, and how far, in pooled-SD units.
 
 **Maximum Mean Discrepancy (MMD).** A kernel two-sample statistic; with Gaussian
@@ -96,30 +96,30 @@ It is $0$ iff the distributions match; larger = more divergence.""",
 **Task.** Binary classification of *low proficiency* (math PV $<420$, below
 Level 2). Each model outputs $\hat p(x)=P(\text{at-risk}\mid x)$.
 
-**The model zoo — what each optimizes.**
-- **Logistic regression** — linear log-odds
+**The model zoo - what each optimizes.**
+- **Logistic regression** - linear log-odds
   $\log\frac{\hat p}{1-\hat p}=\beta_0+\beta^\top x$, fit by weighted maximum
   likelihood with an $\ell_2$ penalty; the interpretable baseline.
-- **Decision tree** — recursive splits minimizing Gini impurity
+- **Decision tree** - recursive splits minimizing Gini impurity
   $G=\sum_c \hat\pi_c(1-\hat\pi_c)$.
-- **Random forest / Extra-Trees** — average of $B$ decorrelated bagged trees
+- **Random forest / Extra-Trees** - average of $B$ decorrelated bagged trees
   (variance reduction).
-- **Gradient boosting / XGBoost / LightGBM / CatBoost** — additive stagewise
+- **Gradient boosting / XGBoost / LightGBM / CatBoost** - additive stagewise
   trees $F_m=F_{m-1}+\nu\,h_m$, each $h_m$ fitting the negative gradient of
   log-loss; $\nu$ = learning rate.
 
 **Class imbalance.** `class_weight='balanced'` scales class $c$ by $n/(2n_c)$ so
 the minority (proficient) isn't ignored, multiplied by each student's PISA weight.
 
-**Evaluation — repeated stratified $k$-fold CV** ($5\times4$, preserving the
+**Evaluation - repeated stratified $k$-fold CV** ($5\times4$, preserving the
 at-risk ratio); all preprocessing fit **inside** each train fold (no leakage).
 Metrics:
-- **ROC-AUC** $=P(\hat p_{+}>\hat p_{-})$ — threshold-free ranking; **PR-AUC**
+- **ROC-AUC** $=P(\hat p_{+}>\hat p_{-})$ - threshold-free ranking; **PR-AUC**
   (average precision) for the positive class.
 - **Macro-F1** $=\tfrac12(F1_0+F1_1)$, $F1=\frac{2\,\text{prec}\cdot\text{rec}}
   {\text{prec}+\text{rec}}$.
 - **MCC** $=\dfrac{TP\cdot TN-FP\cdot FN}
-  {\sqrt{(TP{+}FP)(TP{+}FN)(TN{+}FP)(TN{+}FN)}}$ — balanced under skew.
+  {\sqrt{(TP{+}FP)(TP{+}FN)(TN{+}FP)(TN{+}FN)}}$ - balanced under skew.
 
 **Corrected inference.** CV folds share training data, so fold scores are
 correlated and a naïve $t$-CI is too narrow; the **Nadeau-Bengio** correction
@@ -134,17 +134,17 @@ ROC-AUCs. The headline AUC is combined across the 10 PVs with **Rubin's rules**
     "05": r"""## Methods & formulas (reference)
 
 **SHAP (SHapley Additive exPlanations).** Attributes a prediction to features via
-the game-theoretic **Shapley value** — the fair payout of feature $i$ averaged
+the game-theoretic **Shapley value** - the fair payout of feature $i$ averaged
 over all orderings:
 $$\phi_i=\!\!\sum_{S\subseteq F\setminus\{i\}}\!\!
 \frac{|S|!\,(|F|-|S|-1)!}{|F|!}\,\big[f(S\cup\{i\})-f(S)\big].$$
 They obey **local accuracy** (additivity): $f(x)=\phi_0+\sum_i\phi_i$, where the
-base value $\phi_0=\mathbb{E}[f]$ — contributions plus base reconstruct the
+base value $\phi_0=\mathbb{E}[f]$ - contributions plus base reconstruct the
 prediction (here in log-odds). **TreeSHAP** computes them *exactly* for tree
 ensembles in polynomial time.
 
 **Global importance.** Mean absolute SHAP over the sample,
-$\text{Imp}_i=\tfrac1n\sum_k|\phi_i^{(k)}|$ — the average magnitude of feature
+$\text{Imp}_i=\tfrac1n\sum_k|\phi_i^{(k)}|$ - the average magnitude of feature
 $i$'s push on the prediction.
 
 **Beeswarm / dependence.** Each dot is one student's $\phi_i$; a dependence plot
@@ -166,8 +166,8 @@ $$\text{PDP}_S(v)=\frac1n\sum_{k=1}^{n} f\big(v,\,x^{(k)}_{\setminus S}\big).$$
 **Individual Conditional Expectation (ICE).** One curve per instance,
 $\text{ICE}^{(k)}_S(v)=f(v,x^{(k)}_{\setminus S})$; the PDP is their average.
 **Centered ICE** anchors each curve at the grid start,
-$\text{ICE}^{(k)}(v)-\text{ICE}^{(k)}(v_0)$, so heterogeneous slopes — the
-fingerprint of interactions — show up where the average curve hides them.""",
+$\text{ICE}^{(k)}(v)-\text{ICE}^{(k)}(v_0)$, so heterogeneous slopes - the
+fingerprint of interactions - show up where the average curve hides them.""",
 
     "07": r"""## Methods & formulas (reference)
 
@@ -199,11 +199,11 @@ prevalence.
 **SHAP rank matrix.** Within each country, features are ranked by mean $|\phi_i|$
 (notebook 05); rank 1 = top driver. The feature $\times$ country matrix exposes
 **universal** drivers (similar rank everywhere) vs **country-specific** ones. The
-colormap follows the project schema — **dark = more important** (colorblind-safe),
+colormap follows the project schema - **dark = more important** (colorblind-safe),
 rank 1 darkest.
 
 **SES gradient** = weighted slope of score on ESCS (notebook 02); Albania's is the
-*flattest* — a floor effect, not equity.""",
+*flattest* - a floor effect, not equity.""",
 
     "11": r"""## Methods & formulas (reference)
 
@@ -230,7 +230,7 @@ The **intraclass correlation** on the latent scale,
 $$\mathrm{ICC}=\frac{\sigma_u^2}{\sigma_u^2+\pi^2/3},\qquad \pi^2/3\approx3.29,$$
 is the share of risk variance that is *between schools*. Fixed effects give
 *within-school* odds ratios $e^{\beta}$ (per 1 SD). Fit by variational Bayes;
-unweighted (no survey weights in the mixed GLM) — a noted caveat.""",
+unweighted (no survey weights in the mixed GLM) - a noted caveat.""",
 
     "09": r"""## Methods & formulas (reference)
 
@@ -249,7 +249,7 @@ percentiles (a 90% predictive interval).
 - **Recovery:** the pre-COVID trend (weighted OLS line through 2009–2018) resumes,
   extrapolated forward (the 2022 spike fully reverses).
 - **Partial:** the mean of persistence and recovery (the shock half-reverses).
-- **Naïve linear** *(discarded):* a weighted line through **all five** cycles —
+- **Naïve linear** *(discarded):* a weighted line through **all five** cycles -
   shown only to demonstrate that ignoring the break manufactures false confidence.
 
 The honest signal is the **width** of the plausible band, not a single number.""",

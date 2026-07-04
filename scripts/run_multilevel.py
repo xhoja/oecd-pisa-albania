@@ -11,11 +11,13 @@ Two questions the flat models can't answer:
 
 The random effect for a test student's school is estimated from that school's
 *training* students (schools span folds), i.e. "predict a new student in a known
-school" — the realistic deployment case. Unseen-school prediction (random effect = 0)
+school" - the realistic deployment case. Unseen-school prediction (random effect = 0)
 is the harder regime and is noted, not hidden.
 
-Caveat: the mixed model is fit unweighted (BinomialBayesMixedGLM takes no survey
-weights); AUCs are evaluated weighted. See src/models/multilevel.py.
+Two mixed fits: the unweighted VB model (BinomialBayesMixedGLM takes no survey
+weights) and a survey-weighted pseudo-likelihood PQL fit with within-cluster
+scaled weights (the design-based refinement). AUCs are evaluated weighted. See
+src/models/multilevel.py.
 
 LightGBM is imported before scikit-learn (macOS OpenMP import-order fix).
 """
@@ -48,6 +50,7 @@ from src.models.experiment import _wrap
 from src.models.multilevel import (
     _standardize,
     fit_random_intercept,
+    fit_weighted_random_intercept,
     predict_random_intercept,
     variance_partition_icc,
 )
@@ -92,6 +95,18 @@ def main() -> None:
     print(f"ICC (conditional on students)  = {fit['icc']:.3f}  "
           f"(school effect σ = {fit['school_sd']:.2f})")
 
+    # ---- survey-weighted pseudo-likelihood (PQL, scaled weights) ------------
+    wfit = fit_weighted_random_intercept(X, y, grp, w, feats, scaling="effective")
+    print(f"ICC (weighted PQL, scaled wts) = {wfit['icc']:.3f}  "
+          f"(school effect σ = {wfit['school_sd']:.2f}; PQL mildly attenuates variance)")
+    # side-by-side fixed-effect odds ratios: unweighted VB vs weighted PQL
+    or_cmp = (fit['fixed_effects'][["term", "odds_ratio"]]
+              .rename(columns={"odds_ratio": "OR_unweighted_vb"})
+              .merge(wfit['fixed_effects'][["term", "odds_ratio", "coef", "sd"]]
+                     .rename(columns={"odds_ratio": "OR_weighted_pql"}), on="term"))
+    or_cmp.round(4).to_csv(res_dir / "multilevel_weighted_vs_unweighted_2022.csv", index=False)
+    wfit['fixed_effects'].round(4).to_csv(res_dir / "multilevel_weighted_fixed_effects_2022.csv", index=False)
+
     # ---- weighted 5-fold CV: mixed vs school-mean booster -------------------
     skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
     rows = []
@@ -117,6 +132,9 @@ def main() -> None:
         "icc_null": round(null['icc'], 4),
         "icc_conditional": round(fit['icc'], 4),
         "school_sd": round(fit['school_sd'], 4),
+        "icc_weighted_pql": round(wfit['icc'], 4),
+        "school_sd_weighted_pql": round(wfit['school_sd'], 4),
+        "weight_scaling": wfit['scaling'],
         "n_schools": int(n_sch),
         "auc_multilevel_mean": round(cv.auc_multilevel.mean(), 4),
         "auc_school_lgbm_mean": round(cv.auc_school_lgbm.mean(), 4),
@@ -124,7 +142,7 @@ def main() -> None:
     cv.to_csv(res_dir / "multilevel_cv_2022.csv", index=False)
     fit['fixed_effects'].round(4).to_csv(res_dir / "multilevel_fixed_effects_2022.csv", index=False)
     pd.DataFrame([summary]).to_csv(res_dir / "multilevel_summary_2022.csv", index=False)
-    print(f"\nCV mean AUC — multilevel {summary['auc_multilevel_mean']:.4f} vs "
+    print(f"\nCV mean AUC - multilevel {summary['auc_multilevel_mean']:.4f} vs "
           f"school-LGBM {summary['auc_school_lgbm_mean']:.4f}")
 
     # ---- odds-ratio forest plot (fixed effects, per-SD) ---------------------
@@ -145,7 +163,7 @@ def main() -> None:
     ax.axvline(1.0, color="0.4", ls="--", lw=1)
     ax.set_yticks(ypos); ax.set_yticklabels(fe.term)
     ax.set_xlabel("Odds ratio per 1 SD (within-school, 95% CI)")
-    ax.set_title(f"Random-intercept logistic — Albania 2022 (school ICC {fit['icc']:.2f})")
+    ax.set_title(f"Random-intercept logistic - Albania 2022 (school ICC {fit['icc']:.2f})")
     save_figure(fig, str(fig_dir / "H1_multilevel_odds_ratios"))
     plt.close(fig)
 

@@ -1,6 +1,7 @@
 # Paths — relative to project root
 paths:
   raw_2022: "../DataScienceProject/CY08MSP_STU_QQQ.SAV"
+  raw_2022_sch: "../DataScienceProject/CY08MSP_SCH_QQQ.SAV"
   raw_2018: "../DataScienceProject/CY07_MSU_STU_QQQ.sav"
   raw_2012_txt: "../DataScienceProject/INT_STU12_DEC03.txt"
   raw_2009_txt: "../DataScienceProject/PISA2009_SPSS_student.txt"

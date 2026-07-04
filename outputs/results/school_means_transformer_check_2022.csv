@@ -1,0 +1,4 @@
+model,auc_static_fullcohort,auc_foldsafe_transformer,delta,p_value
+gradient_boosting,0.7768,0.7771,0.0003,0.9328
+lightgbm,0.7716,0.7687,-0.0029,0.4842
+catboost,0.7797,0.7785,-0.0012,0.6853

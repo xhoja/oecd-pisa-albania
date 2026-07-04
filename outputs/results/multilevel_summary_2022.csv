@@ -1,2 +1,2 @@
-icc_null,icc_conditional,school_sd,n_schools,auc_multilevel_mean,auc_school_lgbm_mean
-0.3085,0.2566,1.0655,274,0.783,0.7728
+icc_null,icc_conditional,school_sd,icc_weighted_pql,school_sd_weighted_pql,weight_scaling,n_schools,auc_multilevel_mean,auc_school_lgbm_mean
+0.3085,0.2566,1.0655,0.2203,0.9641,effective,274,0.783,0.7728

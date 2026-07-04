@@ -22,17 +22,19 @@ def _suggest_params(trial: optuna.Trial, model_name: str) -> dict[str, Any]:
     """Suggest hyperparameters for a given model using Optuna trial."""
 
     if model_name == "logistic_regression":
-        penalty = trial.suggest_categorical("penalty", ["l1", "l2", "elasticnet"])
+        # sklearn 1.8 deprecated `penalty` (removed in 1.10); the elastic-net
+        # `l1_ratio` in [0, 1] now subsumes the whole family - l1_ratio=0 is pure
+        # L2, 1 is pure L1, in between is elastic-net. Searching it continuously
+        # is strictly more expressive than the old l1/l2/elasticnet categorical
+        # and raises no FutureWarning. `saga` is still required for l1_ratio.
         params: dict[str, Any] = {
             "C": trial.suggest_float("C", 0.001, 100, log=True),
-            "penalty": penalty,
+            "l1_ratio": trial.suggest_float("l1_ratio", 0.0, 1.0),
             "solver": "saga",
             "max_iter": 2000,
             "class_weight": "balanced",
             "random_state": 42,
         }
-        if penalty == "elasticnet":
-            params["l1_ratio"] = trial.suggest_float("l1_ratio", 0.1, 0.9)
         return params
 
     if model_name == "random_forest":

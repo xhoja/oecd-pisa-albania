@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.features.transformers import EngineeredFeatureBuilder
+from src.features.transformers import EngineeredFeatureBuilder, SchoolMeansTransformer
 
 
 def _train():
@@ -70,3 +70,67 @@ def test_all_nan_interaction_is_skipped():
 def test_fit_requires_dataframe():
     with pytest.raises(TypeError):
         EngineeredFeatureBuilder().fit(np.zeros((5, 3)))
+
+
+# --- SchoolMeansTransformer ---------------------------------------------------
+
+def _school_df():
+    # two schools, 3 students each; unit weights for easy hand-calc
+    return pd.DataFrame({
+        "CNTSCHID": [1, 1, 1, 2, 2, 2],
+        "W_FSTUWT": [1.0] * 6,
+        "ESCS": [0.0, 1.0, 2.0, 10.0, 20.0, 30.0],
+    })
+
+
+def test_school_means_leave_one_out_on_train():
+    df = _school_df()
+    out = SchoolMeansTransformer(cols=["ESCS"]).fit_transform(df)
+    # school 1, row0 LOO mean = mean(1,2) = 1.5 ; row1 = mean(0,2)=1.0 ; row2 = mean(0,1)=0.5
+    assert list(out["SCH_MEAN_ESCS"].iloc[:3]) == [1.5, 1.0, 0.5]
+    assert list(out["SCH_MEAN_ESCS"].iloc[3:]) == [25.0, 20.0, 15.0]
+    assert list(out["SCH_N"]) == [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]
+
+
+def test_school_means_transform_uses_full_train_mean():
+    train = _school_df()
+    tr = SchoolMeansTransformer(cols=["ESCS"]).fit(train)
+    test = pd.DataFrame({"CNTSCHID": [1, 2], "W_FSTUWT": [1.0, 1.0], "ESCS": [99.0, 99.0]})
+    out = tr.transform(test)
+    # full train school means: school1 = 1.0, school2 = 20.0 (test row's own value ignored)
+    assert list(out["SCH_MEAN_ESCS"]) == [1.0, 20.0]
+
+
+def test_school_means_unseen_school_falls_back_to_global():
+    train = _school_df()
+    tr = SchoolMeansTransformer(cols=["ESCS"]).fit(train)
+    test = pd.DataFrame({"CNTSCHID": [999], "W_FSTUWT": [1.0], "ESCS": [5.0]})
+    out = tr.transform(test)
+    global_mean = train["ESCS"].mean()  # unit weights -> plain mean
+    assert out["SCH_MEAN_ESCS"].iloc[0] == pytest.approx(global_mean)
+    assert out["SCH_N"].iloc[0] == 0.0   # no train students in this school
+
+
+def test_school_means_drops_helper_keys():
+    df = _school_df()
+    out = SchoolMeansTransformer(cols=["ESCS"]).fit_transform(df)
+    assert "CNTSCHID" not in out.columns
+    assert "W_FSTUWT" not in out.columns
+    assert "ESCS" in out.columns          # real features kept
+
+
+def test_school_means_weighted_leave_one_out():
+    df = pd.DataFrame({
+        "CNTSCHID": [1, 1, 1],
+        "W_FSTUWT": [1.0, 2.0, 3.0],
+        "ESCS": [0.0, 1.0, 2.0],
+    })
+    out = SchoolMeansTransformer(cols=["ESCS"]).fit_transform(df)
+    # row0 LOO weighted mean = (2*1 + 3*2)/(2+3) = 8/5 = 1.6
+    assert out["SCH_MEAN_ESCS"].iloc[0] == pytest.approx(1.6)
+
+
+def test_school_means_missing_school_col_is_noop():
+    df = pd.DataFrame({"ESCS": [1.0, 2.0]})
+    out = SchoolMeansTransformer(cols=["ESCS"]).fit_transform(df)
+    assert "SCH_MEAN_ESCS" not in out.columns

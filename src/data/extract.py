@@ -62,7 +62,7 @@ def load_spss_full(
         offset += chunksize
         logger.debug("Chunk loaded", offset=offset, raw=raw_len, rows_kept=len(df))
 
-        # Terminate only when the RAW chunk is short — that means the file is
+        # Terminate only when the RAW chunk is short - that means the file is
         # exhausted. Filtering shrinks df but must NOT trigger early exit.
         if raw_len < chunksize:
             break
@@ -131,6 +131,37 @@ def save_processed(df: pd.DataFrame, path: str | Path) -> None:
 def load_processed(path: str | Path) -> pd.DataFrame:
     """Load parquet file."""
     return pd.read_parquet(path)
+
+
+def load_school_questionnaire(
+    path: str | Path,
+    countries: list[str] | None = None,
+    keep_cols: list[str] | None = None,
+) -> pd.DataFrame:
+    """
+    Load the PISA school questionnaire file (e.g. CY08MSP_SCH_QQQ.SAV) and return
+    one row per school, keyed on ``CNTSCHID``. This is *independent* school-level
+    signal (resources, staff, leadership, climate) as reported by the principal -
+    not derivable from student rows, unlike the compositional ``SCH_MEAN_*``
+    aggregates. Missing codes are converted to NaN.
+
+    Args:
+        path: school SPSS file (single pass; the file is small, ~20MB).
+        countries: optional CNT filter (e.g. ["ALB"]).
+        keep_cols: school variables to keep; ``CNTSCHID`` is always included.
+    """
+    df = load_spss_single_pass(path, countries=countries)
+    df = replace_pisa_missing(df)
+    if keep_cols is not None:
+        cols = ["CNTSCHID"] + [c for c in keep_cols if c in df.columns]
+        missing = [c for c in keep_cols if c not in df.columns]
+        if missing:
+            logger.warning("School vars not in file - skipped", missing=missing)
+        df = df[cols]
+    # one row per school (SCH file is already school-level, but guard duplicates)
+    df = df.drop_duplicates(subset="CNTSCHID")
+    logger.info("School questionnaire loaded", rows=len(df), cols=len(df.columns))
+    return df
 
 
 def load_legacy_csv(path: str | Path) -> pd.DataFrame:

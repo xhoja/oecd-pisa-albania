@@ -8,6 +8,30 @@ plausible_value_prefixes:
   science: ["PV1SCIE", "PV2SCIE", "PV3SCIE", "PV4SCIE", "PV5SCIE",
             "PV6SCIE", "PV7SCIE", "PV8SCIE", "PV9SCIE", "PV10SCIE"]
 
+# School questionnaire (CY08MSP_SCH_QQQ) — independent school-level signal,
+# distinct from student-composition aggregates (SCH_MEAN_*). Joined on CNTSCHID.
+# 2022 only; used by add_school_questionnaire + the questionnaire ablation.
+school_questionnaire:
+  resources:
+    - EDUSHORT    # Shortage of educational material (index)
+    - STAFFSHORT  # Shortage of educational staff (index)
+    - RATCMP1     # Ratio computers to students (higher missingness ~14%)
+    - STRATIO     # Student-teacher ratio
+  size:
+    - SCHSIZE     # Total school enrolment
+    - CLSIZE      # Class size (modal category)
+  leadership:
+    - EDULEAD     # Educational leadership (index)
+    - INSTLEAD    # Instructional leadership (index)
+  staff:
+    - TOTAT       # Total teaching staff
+    - PROATCE     # Proportion fully certified teachers
+  climate:
+    - STUBEHA     # Student-behaviour hindrance to learning (principal-reported)
+    - TEACHBEHA   # Teacher-behaviour hindrance to learning (principal-reported)
+  type:
+    - SCHLTYPE    # School type (public / private)
+
 # Raw feature names per cycle (before harmonization)
 raw_features:
   gender:

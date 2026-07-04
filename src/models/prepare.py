@@ -23,7 +23,7 @@ import structlog
 
 from src.data.impute import add_missingness_indicators
 from src.data.weights import normalize_weights_within_country
-from src.features.engineer import add_school_aggregates
+from src.features.engineer import add_school_aggregates, add_school_questionnaire
 from src.features.select import select_features
 from src.features.target import add_point_target
 
@@ -51,6 +51,8 @@ def build_model_data(
     drop_missing_target: bool = True,
     add_school_context: bool = False,
     school_agg_cols: list[str] | None = None,
+    school_questionnaire: pd.DataFrame | None = None,
+    school_q_cols: list[str] | None = None,
 ) -> ModelData:
     """
     Construct (X, y, weights) for modeling from a processed dataframe.
@@ -82,6 +84,14 @@ def build_model_data(
             means used here are not a leakage artefact).
         school_agg_cols: which student indices to aggregate to school level
             (default ESCS/HOMEPOS/ANXMAT/TEACHSUP).
+        school_questionnaire: optional school-level dataframe (one row per
+            ``CNTSCHID``, from ``extract.load_school_questionnaire``). When given,
+            independent principal-reported school variables are left-joined onto
+            student rows (prefixed ``SCHQ_``) and appended to the feature set.
+            This is the "is the 0.78 ceiling features or data?" lever - distinct
+            from the compositional ``add_school_context`` aggregates.
+        school_q_cols: which questionnaire variables to join (default: all
+            non-key columns of ``school_questionnaire``).
     """
     df = add_point_target(df, domain=domain, threshold=threshold)
     target_col = {"math": "AT_RISK_MATH", "reading": "AT_RISK_READ", "science": "AT_RISK_SCIE"}[domain]
@@ -91,6 +101,11 @@ def build_model_data(
         agg_cols = school_agg_cols or ["ESCS", "HOMEPOS", "ANXMAT", "TEACHSUP"]
         df = add_school_aggregates(df, cols=agg_cols)
         candidate_features += [f"SCH_MEAN_{c}" for c in agg_cols] + ["SCH_N"]
+
+    if school_questionnaire is not None:
+        q_cols = school_q_cols or [c for c in school_questionnaire.columns if c != "CNTSCHID"]
+        df = add_school_questionnaire(df, school_questionnaire, cols=q_cols)
+        candidate_features += [f"SCHQ_{c}" for c in q_cols]
 
     feats = [f for f in candidate_features if f in df.columns]
 

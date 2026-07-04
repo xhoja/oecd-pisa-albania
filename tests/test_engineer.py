@@ -1,9 +1,11 @@
-"""Tests for feature engineering — focus on the school-context aggregates that
+"""Tests for feature engineering - focus on the school-context aggregates that
 now feed the headline model (build_model_data(add_school_context=True))."""
 import numpy as np
 import pandas as pd
 
-from src.features.engineer import add_school_aggregates
+import pytest
+
+from src.features.engineer import add_school_aggregates, add_school_questionnaire
 
 
 def test_school_mean_leave_one_out_unweighted():
@@ -61,3 +63,50 @@ def test_missing_school_column_is_noop():
     df = pd.DataFrame({"ESCS": [1.0, 2.0]})
     out = add_school_aggregates(df, cols=["ESCS"])
     assert "SCH_MEAN_ESCS" not in out.columns  # gracefully skipped
+
+
+# --- add_school_questionnaire -------------------------------------------------
+
+def test_questionnaire_join_preserves_rows_and_prefixes():
+    df = pd.DataFrame({"CNTSCHID": [1, 1, 2], "ESCS": [0.0, 1.0, 2.0]})
+    sch = pd.DataFrame({"CNTSCHID": [1, 2], "STRATIO": [10.0, 20.0]})
+    out = add_school_questionnaire(df, sch, cols=["STRATIO"])
+    assert len(out) == 3                       # no row multiplication
+    assert list(out["SCHQ_STRATIO"]) == [10.0, 10.0, 20.0]
+    assert "STRATIO" not in out.columns        # only the prefixed name is added
+
+
+def test_questionnaire_unmatched_school_is_nan():
+    df = pd.DataFrame({"CNTSCHID": [1, 3], "ESCS": [0.0, 1.0]})
+    sch = pd.DataFrame({"CNTSCHID": [1, 2], "STRATIO": [10.0, 20.0]})
+    out = add_school_questionnaire(df, sch, cols=["STRATIO"])
+    assert out.loc[out["CNTSCHID"] == 1, "SCHQ_STRATIO"].iloc[0] == 10.0
+    assert np.isnan(out.loc[out["CNTSCHID"] == 3, "SCHQ_STRATIO"].iloc[0])  # unseen -> NaN
+
+
+def test_questionnaire_dedup_school_side_no_fanout():
+    df = pd.DataFrame({"CNTSCHID": [1, 2], "ESCS": [0.0, 1.0]})
+    sch = pd.DataFrame({"CNTSCHID": [1, 1, 2], "STRATIO": [10.0, 99.0, 20.0]})
+    out = add_school_questionnaire(df, sch, cols=["STRATIO"])
+    assert len(out) == 2                       # duplicate school rows collapsed
+
+
+def test_questionnaire_default_cols_are_all_non_key():
+    df = pd.DataFrame({"CNTSCHID": [1, 2]})
+    sch = pd.DataFrame({"CNTSCHID": [1, 2], "STRATIO": [1.0, 2.0], "CLSIZE": [3.0, 4.0]})
+    out = add_school_questionnaire(df, sch)
+    assert {"SCHQ_STRATIO", "SCHQ_CLSIZE"} <= set(out.columns)
+
+
+def test_questionnaire_missing_school_column_is_noop():
+    df = pd.DataFrame({"ESCS": [1.0, 2.0]})           # no CNTSCHID
+    sch = pd.DataFrame({"CNTSCHID": [1], "STRATIO": [10.0]})
+    out = add_school_questionnaire(df, sch, cols=["STRATIO"])
+    assert "SCHQ_STRATIO" not in out.columns          # gracefully skipped
+
+
+def test_questionnaire_missing_key_in_school_frame_raises():
+    df = pd.DataFrame({"CNTSCHID": [1], "ESCS": [0.0]})
+    sch = pd.DataFrame({"SCHOOL": [1], "STRATIO": [10.0]})  # wrong key name
+    with pytest.raises(ValueError):
+        add_school_questionnaire(df, sch, cols=["STRATIO"])
