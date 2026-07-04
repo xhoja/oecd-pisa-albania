@@ -545,8 +545,10 @@ choice below is implemented and unit-tested.
 
 ### Remaining
 - **Phase 10 - Deliverables:** written report, slides, poster, interactive risk-score dashboard.
-  This is the true remaining blocker for a conference submission; the analysis is largely done.
-- **Nice-to-haves - DONE:** fold-safe per-fold school-means transformer
+  This is the only remaining item for a conference submission; the analysis is complete.
+
+### Recently completed
+- Fold-safe per-fold school-means transformer
   (`features.transformers.SchoolMeansTransformer`; `run_school_means_transformer_check.py`
   confirms full-cohort means are leakage-free, delta <0.003, n.s.); **Phase 5b** - MLP & SVM
   added to the comparison (both mid-table, boosters still lead) with the sklearn 1.8 `penalty`
