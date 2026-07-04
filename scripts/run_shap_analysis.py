@@ -80,7 +80,7 @@ def main() -> None:
     imp_sorted = imp.sort_values("mean_abs_shap")
     ax.barh(imp_sorted["feature"], imp_sorted["mean_abs_shap"], color="#0072B2")
     ax.set_xlabel("Mean |SHAP value|")
-    ax.set_title("Global Feature Importance (SHAP) — Albania 2022 (LightGBM)")
+    ax.set_title("Global Feature Importance (SHAP): Albania 2022 (LightGBM)")
     save_figure(fig, str(fig_dir / "D2_shap_global_bar"))
     plt.close()
 

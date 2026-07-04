@@ -1,0 +1,47 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+Three in four Albanian fifteen-year-olds were below basic mathematics proficiency in
+2022, and the number with which we began now has an explanation. The collapse was not a
+uniformly weaker cohort but a change in the structure of who is at risk and why: a
+domain classifier separates the 2018 and 2022 cohorts almost perfectly from background
+data alone, the variable that moved most was the support students receive in school
+rather than the resources they have at home, and the decline sits on the flattest
+socioeconomic gradient of the nine countries we compare. Read against Albania's
+history, a destructive 2019 earthquake, an extended pandemic closure, a thin
+remote-learning infrastructure, and the steady emigration of teachers and working-age
+adults, the statistical shape and the economic record tell the same story: a
+supply-side disruption to schooling, not a demand-side collapse in family means.
+
+For anyone who would predict this risk, the practical lesson is where the ceiling comes
+from. Individual background answers plateau at about 0.73 AUC and no amount of tuning
+moves them; the single missing ingredient is the socioeconomic composition of a
+student's school, which lifts every model to about 0.78, after which a multilevel model
+and a direct school-questionnaire linkage independently confirm that the ceiling is now
+a property of what background questionnaires can measure rather than of the model. A
+plateau, in other words, can be a feature ceiling or a data ceiling, and telling them
+apart takes convergent evidence rather than one more round of optimisation.
+
+For anyone who would act on it, the lesson is that a screener trained on a single
+cross-section reports associations, not levers. The same analysis that ranks math
+anxiety highly also shows why reducing a model input is not an intervention estimate,
+and the fairness audit shows a naive threshold over-flagging the poorest students. The
+tool we release is therefore built to widen support, never to ration it. The policy
+direction that follows is not targeted transfers to the poor, whom a flat gradient says
+are not the whole problem, but the rebuilding of schooling capacity for everyone:
+retaining teachers, reconstructing schools, and funding catch-up instruction.
+
+Two questions remain open. First, whether the 0.78 background-data ceiling can be moved
+by richer process data, attendance, formative assessment, and longitudinal records that
+capture the schooling disruption directly rather than through its downstream traces.
+Second, whether the supply-side account can be tested causally, by pairing the
+associational screener with a design that can license a policy claim before any factor
+is treated as a lever. Albania's 2022 result is the clearest natural signal yet of what
+a compounded shock does to a fragile education system; understanding it well is the
+difference between planning for recovery and mistaking a broken process for a weak
+generation of students.
+
+\paragraph{Reproducibility.}
+Code, configuration, the unit-tested pipeline, the calibrated bilingual screener, and
+this manuscript's figures are in the project repository. Raw PISA microdata are public
+from the OECD but not redistributed here.

@@ -1,0 +1,47 @@
+\section{Background and Related Work}
+
+\paragraph{PISA methodology.}
+PISA reports each student's proficiency as ten plausible values drawn from a
+posterior latent-trait distribution, and every published statistic is weighted by
+the final student weight with variance estimated by balanced repeated replication
+(BRR)~\cite{oecd2024pisa,oecd2009manual}. Rubin's rules combine point estimates and
+between-imputation variance across the plausible values~\cite{rubin1987}. These are
+not optional refinements: using a single averaged score as a target understates
+uncertainty, and unweighted statistics do not estimate a population quantity. Much
+secondary PISA analysis nonetheless drops both. We follow the manual throughout.
+
+\paragraph{Machine learning on PISA.}
+A body of work predicts proficiency or at-risk status from PISA background data with
+tree ensembles and reports feature importances (e.g.\ socioeconomic status, grade
+repetition, and school climate as recurring drivers). Gradient-boosted trees,
+XGBoost~\cite{chen2016xgboost}, LightGBM~\cite{ke2017lightgbm}, and
+CatBoost~\cite{prokhorenkova2018catboost}, are the usual strong baselines on this
+tabular regime, and SHAP values~\cite{lundberg2017shap} the usual explanation. Our
+contribution is less a new model than a methodologically disciplined one: weighted
+throughout, leakage-controlled, with model differences tested rather than ranked.
+
+\paragraph{Dataset shift.}
+When the input distribution changes between two populations, a classifier trained to
+tell them apart quantifies the shift; a high domain-classifier
+AUC is direct evidence of covariate shift~\cite{quinonero2009dataset}. We use this
+as the central diagnostic for the 2018$\rightarrow$2022 change rather than only
+comparing marginal score distributions.
+
+\paragraph{Calibration, decision curves, and fairness.}
+A screening probability must be calibrated to be actionable; isotonic
+regression is a standard non-parametric post-hoc
+calibrator~\cite{zadrozny2002isotonic}, and decision-curve analysis evaluates a
+screener by net benefit across operating thresholds rather than by accuracy at a
+single cut~\cite{vickers2006dca}, important when prevalence is high. Group-fairness
+diagnostics (demographic parity, equalized odds) expose disparate error rates across
+protected groups~\cite{hardt2016equalized}. We report all three, survey-weighted.
+
+\paragraph{Nested design and honest comparison.}
+PISA students are nested in schools, so a random-intercept (multilevel) logistic
+model is the design-appropriate specification and its intraclass correlation
+quantifies between-school variance~\cite{goldstein2011multilevel}. Finally, because
+repeated cross-validation folds share training data, naive fold-score intervals are
+anti-conservative; we use the Nadeau--Bengio corrected-resampled
+variance~\cite{nadeau2003inference} and compare models with the corrected resampled
+$t$-test (in-sample) and the DeLong test on shared test
+predictions~\cite{delong1988}.

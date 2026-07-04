@@ -1,0 +1,62 @@
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Survey-correct estimation}
+Every descriptive statistic and every model metric is weighted by the final student
+weight $W_{\mathrm{FSTUWT}}$. Where a model is fit, weights are routed to the
+estimator's own \texttt{sample\_weight} (correcting a subtle bug in which
+scaler-wrapped models, logistic regression, SVM, KNN, MLP, silently fell back
+to an unweighted fit because the weight was passed to the wrong pipeline step).
+Class-conditional statistics rescale the population-scale weights to the effective
+sample size before, e.g., a $\chi^2$ test, so significance is not inflated by the
+weight magnitudes.
+
+\subsection{Leakage-safe pipeline}
+Each fold's pipeline is: (1) an engineered-feature builder that learns component
+means, standard deviations, and the home-possessions rank curve on the training fold
+and replays them on the test fold; (2) median imputation fit on the training fold;
+(3) the estimator. Interaction terms are built from mean-centred components so a
+product is not confounded with its main effects. School-composition features are
+survey-weighted, \emph{leave-one-out} school means (a student's own value is excluded
+from their school mean), and a fold-safe re-computation that recomputes the means
+from the training fold only reproduces an identical effect, so the lift is
+compositional, not leakage.
+
+\subsection{Evaluation and comparison}
+Models are scored with repeated stratified $5\times4$ cross-validation, weighted ROC
+and PR AUC, F1-macro, and MCC. Fold-score confidence intervals use the
+Nadeau--Bengio corrected-resampled variance, which replaces the naive $1/k$ term with
+$1/k + n_{\text{test}}/n_{\text{train}}$ to account for the correlation between folds
+that share training data. Model-vs-model differences are tested directly: the
+corrected resampled $t$-test on paired per-fold AUCs (cross-validation) and the
+DeLong test on shared test-set predictions (out-of-sample). This turns a ranking
+table into a claim about which gaps are real.
+
+\subsection{Covariate-shift diagnostic}
+To quantify the 2018$\rightarrow$2022 change we train a domain classifier to
+distinguish the two cohorts from background features alone, with weighted subsampling,
+pooled-median imputation, and missingness indicators; a high AUC certifies that the
+input distribution, not just the score level, moved. We validate the diagnostic
+on a null (same cohort split at random $\rightarrow$ AUC~$\approx$~0.5).
+
+\subsection{Explanation, calibration, fairness, forecast}
+We compute TreeSHAP global and per-student attributions on the school-context model,
+and partial-dependence / centred-ICE curves for the top drivers. For deployment we
+add out-of-fold isotonic calibration and tune the decision threshold on calibrated
+out-of-fold predictions to maximise weighted MCC. The fairness audit reports weighted
+demographic parity, equal-opportunity (TPR) and false-positive-rate gaps across
+gender, SES quintile, and immigration status, plus a threshold sweep. A random-intercept
+logistic model provides the design-appropriate specification and the between-school
+intraclass correlation. Finally, a scenario Monte-Carlo forecast for 2026 propagates
+each cycle's design-based standard error through a weighted trend fit; with only five
+cycles and a structural break we report scenarios and their intervals, not a point
+prediction.
+
+\subsection{Reproducibility and engineering}
+Logic lives in unit-tested modules ($>$130 tests on synthetic fixtures, covering the
+weighted statistics, Rubin's rules, the leakage-safe transformer, the BRR+PV variance,
+and the Nadeau--Bengio / DeLong maths); notebooks are narrative layers over them. On
+macOS the boosters (Homebrew \texttt{libomp}) and scikit-learn (bundled OpenMP) can
+abort a process if their runtimes collide; we isolate each model fit in a fresh
+subprocess that imports the boosters before scikit-learn, which resolved an
+import-order segfault and returned LightGBM to the comparison.

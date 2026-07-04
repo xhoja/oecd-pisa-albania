@@ -9,6 +9,24 @@ analysis of Albania's dramatic 2022 regression.
 
 ---
 
+## Technology Stack
+
+| Area | Tools |
+|---|---|
+| **Language & core** | Python 3, pandas, NumPy, SciPy, scikit-learn, statsmodels |
+| **Models** | CatBoost, LightGBM, XGBoost, scikit-learn (GBM / RF / ExtraTrees / LogReg / SVM / KNN / MLP / NaiveBayes / DecisionTree), Optuna (nested-CV HPO) |
+| **PISA methodology** | pyreadstat (SPSS `.sav`) + custom fixed-width parser; survey weights, plausible values with Rubin's rules, BRR (80 Fay replicates) |
+| **Explainability & fairness** | SHAP (TreeSHAP), partial dependence / ICE, weighted fairness metrics, conformal prediction, counterfactual recourse |
+| **Visualisation** | matplotlib, seaborn, Altair; colorblind-safe palette |
+| **Testing & quality** | pytest (142 tests on synthetic fixtures), structlog, ruff, mypy |
+| **Paper** | LaTeX + `acmart` (single-column manuscript), BibTeX |
+| **Interactive dashboard (UI)** | Streamlit (app), Altair (charts), fpdf2 (PDF report), joblib (model bundle) |
+
+Logic lives in tested `src/` modules; notebooks are narrative layers over them, so every
+statistic in this README is backed by a unit-tested function.
+
+---
+
 ## Research Question
 
 > Can machine learning identify Albanian students at risk of low academic proficiency
@@ -329,7 +347,7 @@ OECD_PISA_Project/
 │                         #   build_school_questionnaire, run_school_questionnaire_experiment,
 │                         #   run_school_means_transformer_check, run_conformal,
 │                         #   run_counterfactuals, run_policy
-├── tests/                # 136 pytest unit tests (weights, impute, target, transformers,
+├── tests/                # 142 pytest unit tests (weights, impute, target, transformers,
 │                         #   validate, evaluate, engineer/school, forecast) - no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
 └── data/                 # raw/ (git-ignored) + processed/ (parquet)
@@ -344,7 +362,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required - 74 tests on synthetic fixtures)
+# 2. Run the test suite (no data required - 142 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -432,7 +450,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **99 unit tests** (`tests/`, `pytest`) run on synthetic fixtures - no PISA data required.
+- **142 unit tests** (`tests/`, `pytest`) run on synthetic fixtures - no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
@@ -443,6 +461,45 @@ choice below is implemented and unit-tested.
   `ERROR`/`WARN` violations: weight presence & positivity, plausible-value counts, target
   range, valid cycles, replicate-weight availability, all-missing features. Wire
   `assert_valid` into the pipeline to fail fast.
+
+---
+
+## Deliverables (Phase 10)
+
+### Written paper - `reports/paper/` (done)
+A conference-style manuscript built with **LaTeX + `acmart`** (single-column `manuscript`
+layout), authored by **Xhoi Ikonomi, Metropolitan University of Tirana**. It follows the
+Harvard hourglass structure (hook, explicit thesis + roadmap, topic-sentence body,
+hook-returning conclusion) and frames the work around the *science* - the structural-shift
+thesis (AUC 0.98), the feature-vs-data ceiling (~0.78, three convergent routes), the
+broad-based flat-gradient crisis, and an honest fairness account. A dedicated
+**economic-context section** ties the collapse to Albania's 2019 Durrës earthquake and
+COVID-19 school closures (the OECD country note makes the same attribution), with
+web-verified macro facts (remittances, GDP, education spending, the 2023 census) and real
+citations. No em-dashes anywhere (prose and figure titles). Build:
+
+```bash
+cd reports/paper && make          # pdflatex + bibtex -> main.pdf (14 pp)
+```
+
+### Interactive risk-screener dashboard - `reports/dashboard/` (done)
+A **bilingual (English / Albanian) Streamlit** web app over the headline model
+(survey-weighted CatBoost + school composition, isotonically calibrated). A student answers
+**13 plain-language questions** (books at home, parents' education and work, feelings about
+maths, school resources) - no PISA jargon - and each answer is mapped onto the model's OECD
+indices using the real Albania-2022 weighted quantiles. The UI returns a **calibrated risk
+probability**, a **stable Altair diverging chart** of the factor groups pushing risk up (red)
+or down (blue), prominent caveats, and a **downloadable PDF report card** (`fpdf2`) in the
+chosen language. The model bundle is exported by `scripts/export_dashboard_model.py`.
+
+- **UI framework:** Streamlit (`reports/dashboard/app.py`); light card layout, language toggle.
+- **Charts:** Altair (rounded diverging bars, fixed order + colours so they never reshuffle).
+- **Report export:** fpdf2 (native single-page PDF, EN/SQ).
+- **Run:** `pip install -e ".[dashboard]"` then `streamlit run reports/dashboard/app.py`.
+
+### Slides & poster - **not done yet (planned next)**
+The conference **presentation (slides)** and the **poster** are the only remaining Phase 10
+items. Everything else (analysis, paper, dashboard) is complete.
 
 ---
 
@@ -544,8 +601,11 @@ choice below is implemented and unit-tested.
   three are model-associational, not causal (stated, not hidden).
 
 ### Remaining
-- **Phase 10 - Deliverables:** written report, slides, poster, interactive risk-score dashboard.
-  This is the only remaining item for a conference submission; the analysis is complete.
+- **Phase 10 - Deliverables (mostly done):** the **written paper** (`reports/paper/`, LaTeX +
+  `acmart`) and the **interactive bilingual risk-screener dashboard** (`reports/dashboard/`,
+  Streamlit + Altair + fpdf2) are complete - see [Deliverables](#deliverables-phase-10) above.
+  The only outstanding items are the conference **slides** and the **poster**, planned next.
+  The analysis itself is finished.
 
 ### Recently completed
 - Fold-safe per-fold school-means transformer

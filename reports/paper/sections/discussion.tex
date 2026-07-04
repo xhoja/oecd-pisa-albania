@@ -1,0 +1,53 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the shift means.}
+The single most important result is that the 2022 collapse is structural: a classifier
+tells 2018 from 2022 Albanian students almost perfectly from background data, and the
+variables that moved most are process variables: teacher support fell while
+reported home possessions rose. This is not the signature of a household-wealth shock;
+it is consistent with a disruption to schooling itself (the pandemic and its long
+tail), and it explains why models trained on the pre-crisis trajectory transfer only
+moderately to 2022. A ``weaker cohort'' framing would misdirect policy toward
+uniform remediation; a structural-shift framing points at the school process.
+
+\paragraph{Why the ceiling matters.}
+The instinct on hitting a plateau is to tune harder or add capacity. Here that instinct
+is wrong twice over. Tuning did nothing; capacity (a neural net, a kernel machine, a
+four-model stack) did nothing. The missing ingredient was a \emph{feature family}, school
+socioeconomic composition, and once added, the plateau moves and the model
+class that wins changes. But the new plateau at $\sim$0.78 is then real, corroborated
+by a multilevel ICC of $\approx$0.31 and by a direct school-questionnaire linkage that
+adds nothing. The lesson for educational data mining is methodological: distinguish a
+\emph{feature} ceiling (movable, and diagnosable by what a richer feature family buys)
+from a \emph{data} ceiling (a property of the measurement instrument), and use
+convergent evidence rather than a single learning curve to tell them apart.
+
+\paragraph{Shared drivers, distinctive breadth.}
+Albania's risk mechanism is not exotic. Math anxiety and school composition drive risk
+across the nine countries; what distinguishes Albania is that low proficiency is
+\emph{broad}, sitting on a flat SES gradient and a low floor. This reframes the policy
+conversation away from targeting the poor (whom a flat gradient says are not
+disproportionately the whole problem) toward system-wide levers.
+
+\paragraph{On causality, and the screener.}
+Every model here is associational and fit on a single cross-section. The clearest
+illustration is anxiety: lower reported math anxiety co-occurs with higher scores, but
+it is partly a \emph{consequence} of doing well, so a counterfactual that ``reduces
+anxiety'' in the model is not a defensible intervention estimate. We therefore ship the
+risk screener, calibrated probabilities, per-student SHAP drivers, and the fairness
+audit, as a \emph{triage and communication} aid, not a lever simulator. The fairness
+result reinforces the point: a naive threshold over-flags the poorest quintile, so the
+tool is only defensible as a way to widen support.
+
+\paragraph{Limitations.}
+The student questionnaire is the only instrument here; we have no teacher or parent
+files, and the school questionnaire, while linked, adds no signal beyond composition.
+Albania lacks ESCS in 2012 and 2015, limiting its own cross-cycle socioeconomic
+comparison (the peer-benchmarked and 2018-vs-2022 analyses are unaffected). Design-based
+standard errors are available only for the 2015--2022 cycles; the fixed-width 2009/2012
+cycles fall back to an imputation-only SE. The forecast rests on five cycles and one
+structural break, which is why we report scenarios rather than a number. Finally, the
+$\sim$0.78 ceiling is specific to background-questionnaire prediction of a binary
+Level-2 target; richer process data (attendance, formative assessment, longitudinal
+records) could move it, and testing that is the natural next step.

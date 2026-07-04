@@ -102,7 +102,7 @@ def plot_cv_distribution(comparison_df: pd.DataFrame, metric: str = "roc_auc") -
     ax.barh(df["model"], df[f"{metric}_mean"], xerr=yerr, capsize=4,
             color=color_list(len(df)))
     ax.set_xlabel(f"{metric.upper()} (mean ± 95% CI)")
-    ax.set_title(f"Model Comparison — {metric.upper()}")
+    ax.set_title(f"Model Comparison: {metric.upper()}")
     ax.set_xlim(left=max(0.4, df[f"{metric}_95ci_low"].min() - 0.02))
     fig.tight_layout()
     return fig

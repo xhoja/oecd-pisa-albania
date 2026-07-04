@@ -1,0 +1,193 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{The 2022 collapse is a structural shift}
+A domain classifier separates 2018 from 2022 Albanian students with weighted
+AUC~\textbf{0.98} on background features alone. The 2022 cohort is not simply a
+lower-scoring version of 2018 along a stable structure; the input distribution
+itself moved. The most-shifted variables (Figure~\ref{fig:drift}) are teacher support
+in mathematics (standardised mean difference $-0.31$) and home possessions ($+0.27$),
+with school belonging, grade repetition, and ESCS following. That teacher support
+fell while reported home possessions rose is consistent with a disruption to the
+\emph{schooling process} rather than a household-wealth shock, and it foreshadows the
+compositional result below. Out-of-sample the shift is detectable but not
+catastrophic: models trained on 2009--2018 still transfer to 2022 at AUC~$\approx$~0.67
+(covariate shift without total collapse).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{B5_feature_drift}
+\caption{Standardised 2018$\rightarrow$2022 drift of Albanian background features.
+Teacher support and home possessions move most; the domain classifier that
+separates the cohorts reaches AUC~0.98.}
+\label{fig:drift}
+\end{figure}
+
+\subsection{An accuracy ceiling, and its cause}
+On the thirteen student features, twelve estimators cluster tightly
+(Figure~\ref{fig:models}). CatBoost leads at weighted CV AUC~0.731, but a paired
+Nadeau--Bengio test finds the top three statistically \emph{tied}: CatBoost
+$\approx$ logistic regression ($p=0.50$) $\approx$ gradient boosting ($p=0.37$): a
+transparent linear model matches the best boosters. Nested-CV Optuna tuning of the
+top three yields no significant gain (CatBoost $+0.002$, $p=0.81$; GBM $+0.004$,
+$p=0.45$; LR $-0.001$, $p=0.43$). This looks like a data ceiling.
+
+It is not; it is a \emph{feature} ceiling. Adding survey-weighted, leave-one-out
+\textbf{school-mean} ESCS, home possessions, anxiety, and teacher support, plus cohort size,
+lifts every model by $\sim$0.05 AUC (Table~\ref{tab:models}): CatBoost
+$0.731\rightarrow\mathbf{0.783}$, and the effect is identical under fold-safe
+re-computation. Crucially, adding school context \emph{breaks the tie}: the boosters
+now beat logistic regression significantly (GBM vs LR $p=0.001$), because they exploit
+a student $\times$ school-composition interaction a linear model cannot. SVM and MLP,
+added for completeness, land mid-table: the podium is a booster story, not an
+artefact of omitting kernel or neural learners.
+
+\begin{table}[t]
+\centering
+\caption{Albania 2022, weighted $5\times4$ CV, \emph{with} school context.
+$\Delta$AUC is the lift over the student-only baseline.}
+\label{tab:models}
+\begin{tabular}{lccccc}
+\toprule
+Model & AUC & $\Delta$AUC & PR-AUC & F1 & MCC \\
+\midrule
+\textbf{CatBoost}   & \textbf{0.783} & $+0.052$ & 0.907 & 0.693 & 0.393 \\
+Gradient Boosting   & 0.777 & $+0.050$ & 0.905 & 0.665 & 0.365 \\
+LightGBM            & 0.775 & $+0.060$ & 0.902 & 0.688 & 0.381 \\
+Random Forest       & 0.769 & $+0.060$ & 0.895 & 0.644 & 0.345 \\
+Extra Trees         & 0.758 & $+0.051$ & 0.884 & 0.641 & 0.332 \\
+XGBoost             & 0.756 & $+0.058$ & 0.892 & 0.657 & 0.333 \\
+Logistic Regression & 0.754 & $+0.027$ & 0.897 & 0.649 & 0.332 \\
+SVM (RBF)           & 0.749 & $+0.037$ & 0.894 & 0.609 & 0.282 \\
+MLP (128-64)        & 0.743 & $+0.034$ & 0.884 & 0.620 & 0.295 \\
+Naive Bayes         & 0.701 & $+0.019$ & 0.856 & 0.610 & 0.263 \\
+KNN                 & 0.700 & $+0.036$ & 0.861 & 0.613 & 0.257 \\
+Decision Tree       & 0.609 & $+0.041$ & 0.797 & 0.608 & 0.217 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{C4_model_comparison_auc}
+\caption{Weighted CV AUC with Nadeau--Bengio intervals. Boosters form a top band once
+school context is included; the interpretable logistic-regression baseline gains least
+because it cannot use the student $\times$ school interaction.}
+\label{fig:models}
+\end{figure}
+
+\subsection{$\sim$0.78 is a genuine data ceiling}
+Three independent routes converge on $\sim$0.78. (i) The composition booster above
+plateaus there. (ii) A random-intercept logistic model, the design-appropriate
+specification, \emph{matches} the hand-crafted school-mean booster on identical
+folds (CV AUC~$\approx$~0.78) and reports a school intraclass correlation
+ICC~$\approx$~0.31: about a third of risk variance is \emph{between} schools and
+barely touched by student features. (iii) Linking the PISA school questionnaire
+(principal-reported resources, staff, class size, leadership) directly onto students
+adds no significant signal beyond composition (best $+0.004$ AUC, all $p>0.24$),
+because school-mean SES already proxies the school inputs. The ceiling is a property
+of what background questionnaires can measure, not of tuning or model capacity. An
+ensemble stack of the four boosters confirms this: it reaches AUC~0.786 vs single
+CatBoost 0.783 ($+0.003$, $p=0.03$): statistically significant, practically nil,
+and it \emph{regresses} MCC and F1 at $\sim$19$\times$ the compute. Single CatBoost
+stays the deployable headline.
+
+\subsection{Drivers: anxiety and school composition, shared with peers}
+On the school-context model, four of the top seven SHAP drivers are school-level
+(Figure~\ref{fig:shap}): school-mean home possessions leads, followed by individual
+math anxiety, school-mean teacher support, and school-mean ESCS. The model reads a
+student's risk more from the socioeconomic \emph{composition} of their school than
+from their own resources; this is the compositional effect made explicit. Immigration
+status is negligible. A feature $\times$ country SHAP rank matrix
+(Figure~\ref{fig:rankmatrix}) shows these drivers are \emph{shared}: math anxiety is a
+top-3 driver almost everywhere (including Estonia), and school composition dominates
+most systems. What is distinctive about Albania is the \emph{level and breadth} of low
+proficiency, not the mechanism.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{D2_shap_global_bar}
+\caption{Global SHAP importance (school-context model). Four of the top seven drivers
+are school-level; math anxiety is the strongest individual factor.}
+\label{fig:shap}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{F1_shap_rank_matrix}
+\caption{SHAP driver ranks by country. Math anxiety and school composition recur
+across systems; Albania mirrors its peers in mechanism.}
+\label{fig:rankmatrix}
+\end{figure}
+
+\subsection{A broad-based, flat-gradient crisis}
+Per-country school-context models (Figure~\ref{fig:gradient}) place Albania at the
+highest at-risk rate (75\%) but one of the \emph{lowest} model AUCs (0.77): with three
+in four students at risk there is little contrast to separate. Albania also has the
+\textbf{flattest} SES gradient of the nine countries ($\sim$17 score points per SD),
+a floor effect: even advantaged Albanian students score near 369, close to the
+line. Estonia and Finland have \emph{steeper} gradients ($\sim$38--40) yet far higher
+levels, because there is more score range for SES to predict. The policy reading is
+direct: a flat gradient plus school-composition dominance means SES-targeted transfers
+alone miss most at-risk Albanian students; system-wide levers (teacher support,
+math-anxiety reduction, raising the floor across all schools) are required.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{G2_ses_gradient_2022}
+\caption{SES gradient of mathematics score, 2022. Albania's slope is the flattest of
+the nine countries, a floor effect, not a steep advantage gap.}
+\label{fig:gradient}
+\end{figure}
+
+\subsection{A calibrated, fair-audited screener}
+Raw CatBoost probabilities are sharp but mis-calibrated (weighted ECE~$\approx$~0.12);
+out-of-fold isotonic calibration cuts this to $\approx$~0.01
+(Figure~\ref{fig:calibration}), and decision-curve analysis shows the model beats
+screen-everyone / screen-no-one across the selective threshold band, the relevant
+test at 75\% prevalence. The fairness audit is less comfortable
+(Figure~\ref{fig:fairness}): at a fixed threshold the screener over-flags the poorest
+SES quintile (false-positive rate $\approx$~0.86 vs $\approx$~0.24 for the richest;
+parity gap 0.48, FPR gap 0.63). Because school-mean SES \emph{is} SES, making it a top
+feature doubly encodes the gradient; adding school context shrinks the gender gap but
+leaves the SES gap intact. This is an equalized-odds concern, and it is why we frame
+the screener as a tool to \emph{widen} support, never to ration it.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{calibration}
+\caption{Reliability curve before/after out-of-fold isotonic calibration; weighted
+ECE falls from $\approx$~0.12 to $\approx$~0.01.}
+\label{fig:calibration}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{E1_fairness_threshold_sweep}
+\caption{Weighted fairness gaps by decision threshold (gender shown). Gaps shift with
+the operating point rather than vanishing, mitigation needs constraints, not a knob.}
+\label{fig:fairness}
+\end{figure}
+
+\subsection{Forecast for 2026}
+With five cycles and a 2022 structural break, a point forecast is indefensible, so we
+report scenarios with design-based intervals (Table~\ref{tab:forecast}). The honest
+message is the width: absent a strong targeted recovery, the defensible zone runs from
+partial reversion ($\sim$47\%) to persistence ($\sim$74\%), both well above Albania's
+2018 low of 42\%.
+
+\begin{table}[t]
+\centering
+\caption{Scenario forecast for the 2026 below-Level-2 rate (Monte-Carlo, design-based
+SEs propagated).}
+\label{tab:forecast}
+\begin{tabular}{lcc}
+\toprule
+Scenario & 2026 median & 90\% PI \\
+\midrule
+Persistence (crisis holds)      & \textbf{0.74} & 0.66--0.82 \\
+Partial reversion               & 0.47 & 0.43--0.52 \\
+Pre-COVID recovery              & 0.21 & 0.18--0.24 \\
+\bottomrule
+\end{tabular}
+\end{table}

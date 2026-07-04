@@ -1,0 +1,85 @@
+\documentclass[manuscript,nonacm]{acmart}
+
+% ============================================================
+% Predicting Albanian Student Low-Proficiency Risk from OECD PISA (2009-2022)
+% Conference-style manuscript (EDM / LAK register), ACM sigconf layout.
+% nonacm: drop ACM copyright/DOI apparatus for a course/preprint build.
+% ============================================================
+
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{subcaption}
+
+\graphicspath{{figures/}}
+
+\begin{document}
+
+\title{A Structural Break, Not a Weaker Cohort: Explaining Albania's 2022
+PISA Collapse with Survey-Weighted Machine Learning}
+
+\author{Xhoi Ikonomi}
+\affiliation{%
+  \institution{Metropolitan University of Tirana}
+  \department{MSc Artificial Intelligence (Data Science profile)}
+  \city{Tirana}
+  \country{Albania}
+}
+\email{ikonomixhoja@gmail.com}
+
+\begin{abstract}
+Albania's share of 15-year-olds below PISA mathematics Level~2 rose from 42\% in
+2018 to 75\% in 2022, the sharpest regression in the assessment. We ask whether
+machine learning on background questionnaire data can identify at-risk students,
+\emph{why} they are at risk, and whether the 2022 collapse is merely a lower-scoring
+cohort or a change in the risk structure itself. Using all five Albanian PISA cycles
+(2009--2022; 27{,}042 students) and eight comparison countries (323{,}121 students),
+and applying the survey methodology PISA requires, final student weights on every
+estimate, plausible values combined by Rubin's rules, and balanced repeated
+replication for design-based standard errors, we report four findings. First, a
+domain classifier separates 2018 from 2022 Albanian students with AUC~0.98 on
+background features alone: the collapse is a \emph{structural covariate shift}, not
+just lower scores. Second, individual background variables hit an accuracy ceiling
+(weighted cross-validated AUC~0.73) that hyperparameter tuning cannot move, but adding
+survey-weighted \emph{school socioeconomic composition} lifts every model by
+$\sim$0.05 AUC to $\sim$0.78 and makes gradient boosters significantly outperform
+logistic regression. Third, that $\sim$0.78 is a genuine data ceiling: a multilevel
+model (school ICC~$\approx$~0.31) and a direct school-questionnaire linkage
+(no significant gain, all $p>0.24$) independently converge on it. Fourth, the crisis
+is \emph{broad-based}: Albania has the flattest SES gradient of the nine countries, its
+risk drivers (math anxiety, school composition) are shared with peers, and a fairness
+audit shows a naive threshold over-flags the poorest quintile. We release a calibrated,
+interpretable risk screener but frame it as associational, not a policy lever.
+\end{abstract}
+
+\keywords{PISA, educational data mining, covariate shift, survey weights,
+plausible values, model calibration, algorithmic fairness, low proficiency}
+
+% acmart's manuscript byline sets the author line in ALL CAPS via \MakeUppercase.
+% Neutralise it just around \maketitle (page style is plain, so no header/other
+% caps are affected) so the byline reads in normal case.
+\makeatletter
+\let\ORI@MakeUppercase\MakeUppercase
+\renewcommand{\MakeUppercase}[1]{#1}
+\makeatother
+\maketitle
+\makeatletter
+\let\MakeUppercase\ORI@MakeUppercase
+\makeatother
+
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/data}
+\input{sections/methods}
+\input{sections/results}
+\input{sections/context}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs}
+
+\end{document}

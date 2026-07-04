@@ -43,3 +43,14 @@ catboost_info/
 
 # coverage
 .coverage
+
+# LaTeX build artifacts (keep main.pdf as the deliverable + hyperxmp.sty to build)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.synctex.gz
+reports/paper/hyperxmp.dtx
+reports/paper/hyperxmp.ins
+reports/paper/hyperxmp-stds.tex

@@ -102,7 +102,7 @@ def main() -> None:
     for ax, (k, c), v, b in zip(axes.ravel(), cases.items(), vals, base):
         _waterfall(ax, v, b, c["prob"], names, X.iloc[c["index"]].values)
         ax.set_ylabel(f"{k} — {c['label']}", fontsize=9)
-    fig.suptitle("Local SHAP explanations — Albania 2022 (LightGBM)", fontsize=12)
+    fig.suptitle("Local SHAP explanations: Albania 2022 (LightGBM)", fontsize=12)
     fig.tight_layout()
     save_figure(fig, str(fig_dir / "D3_shap_local_cases"))
     plt.close(fig)
@@ -128,7 +128,7 @@ def main() -> None:
         ax.set_xlabel(feat)
         ax.set_ylabel("Δ P(at-risk) vs. grid start")
         ax.legend(fontsize=8)
-    fig.suptitle("Partial dependence + centered ICE — Albania 2022 (LightGBM)", fontsize=12)
+    fig.suptitle("Partial dependence + centered ICE: Albania 2022 (LightGBM)", fontsize=12)
     fig.tight_layout()
     save_figure(fig, str(fig_dir / "D4_pdp_ice"))
     plt.close(fig)

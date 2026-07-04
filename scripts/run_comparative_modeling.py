@@ -135,7 +135,7 @@ def main() -> None:
             # white text on the dark (important, low-rank) cells, black on light
             ax.text(j, i, v, ha="center", va="center", fontsize=7,
                     color="white" if v <= 5 else "black")
-    ax.set_title("SHAP importance rank by country — 2022 (1 = top driver)")
+    ax.set_title("SHAP importance rank by country: 2022 (1 = top driver)")
     fig.colorbar(im, ax=ax, label="rank (1 = most important, dark)")
     save_figure(fig, str(fig_dir / "F1_shap_rank_matrix"))
     plt.close(fig)

@@ -1,0 +1,64 @@
+\section{Introduction}
+
+In four years, three in four Albanian fifteen-year-olds crossed the line into low
+mathematics proficiency. The OECD Programme for International Student Assessment
+(PISA) measures whether students can apply reading, mathematics, and science to real
+problems, and its \emph{Level~2} boundary marks basic proficiency; students below it
+are the international ``low performers'' that education systems target. In PISA~2018,
+42\% of Albanian students fell below the mathematics Level~2 line. In PISA~2022, 75\%
+did. No other participating system regressed so far in a single cycle. A drop of this
+magnitude invites an obvious reading: the 2022 cohort was simply weaker, and the
+country needs broad remediation. Whether that reading is right is not a semantic
+question. It determines whether policy should treat 2022 as more of the same, only
+worse, or as evidence that \emph{who} is at risk, and \emph{why}, has changed.
+
+This paper treats the question as one of educational data mining, and it insists on
+the survey methodology that PISA requires. PISA is a stratified, clustered sample
+reported through final student weights, and each achievement score arrives as ten
+\emph{plausible values}, multiple imputations of a latent proficiency. Analyses that
+ignore the weights do not estimate a population quantity, and analyses that collapse
+the plausible values to a single number understate their uncertainty. A large body of
+secondary PISA work nonetheless does both. Every estimate below is survey-weighted;
+plausible values are combined by Rubin's rules; and where the data permit (the
+2015, 2018, and 2022 cycles carry 80 balanced-repeated-replication weights) standard
+errors are design-based.
+
+From the student background questionnaire, socioeconomic status, home possessions,
+parental education and occupation, grade repetition, immigration status, school
+belonging, teacher support, math anxiety, and access to information technology, we ask
+three questions. Can a classifier identify Albanian students at risk of low
+mathematics proficiency, and how well? Which factors drive that risk, and do they
+differ from the drivers in comparable countries? And does the 2022 collapse represent
+a change in the risk \emph{structure} that can explain the 2018-to-2022 reversal? The
+economic and structural conditions of Albania in this exact window, a destructive 2019
+earthquake, an extended pandemic school closure, a thin remote-learning infrastructure,
+and sustained emigration of working-age adults and teachers, give these questions a
+concrete backdrop that we return to in Section~\ref{sec:context}.
+
+\paragraph{Thesis.}
+Albania's 2022 mathematics collapse is not a uniformly weaker cohort but a
+\emph{structural break in the risk-generating process}, driven by a disruption to the
+supply of schooling rather than to household resources; the students at risk are
+identifiable from background data only up to a genuine ceiling of about 0.78 AUC that
+three independent methods confirm, their risk is broad-based rather than concentrated
+in the poor, and its drivers are the same ones that operate across the region.
+
+\paragraph{Roadmap.}
+Section~\ref{sec:data} describes the five-cycle data and the design-based estimation.
+Section~\ref{sec:methods} sets out the leakage-safe, survey-weighted modelling and the
+covariate-shift diagnostic. Section~\ref{sec:results} reports the four empirical
+findings: the structural shift (AUC~0.98), the feature-versus-data ceiling, the shared
+and broad-based driver structure, and the calibrated, fairness-audited screener.
+Section~\ref{sec:context} then reads those findings against Albania's economic and
+structural conditions, arguing that a supply-side shock, not a household-income shock,
+best fits the evidence. Section~\ref{sec:discussion} discusses implications and limits,
+and Section~\ref{sec:conclusion} returns to the collapse with which we began.
+
+\paragraph{Contributions.}
+We (i) show the 2022 collapse is a structural covariate shift rather than a level
+change; (ii) locate an accuracy ceiling and diagnose it as a feature ceiling that
+becomes a genuine data ceiling once school socioeconomic composition is added;
+(iii) characterise the crisis as broad-based and shared with regional peers; and
+(iv) connect these statistical findings to Albania's economic and structural context,
+while delivering a calibrated, interpretable, and honestly-bounded risk screener that
+we argue should not be read causally.

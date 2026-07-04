@@ -121,7 +121,7 @@ def main() -> None:
     ax.plot(sweep["threshold"], sweep["opportunity_gap"], "-s", label="Equal-opportunity (TPR) gap")
     ax.plot(sweep["threshold"], sweep["fpr_gap"], "-^", label="FPR gap")
     ax.set_xlabel("Decision threshold"); ax.set_ylabel("Weighted group gap (max − min)")
-    ax.set_title("Fairness gaps vs. threshold — Albania 2022, GENDER (weighted)")
+    ax.set_title("Fairness gaps vs. threshold: Albania 2022, GENDER (weighted)")
     ax.legend(fontsize=8)
     save_figure(fig, str(fig_dir / "E1_fairness_threshold_sweep"))
     plt.close(fig)
