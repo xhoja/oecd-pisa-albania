@@ -97,6 +97,55 @@ def nb_01_eda_albania() -> list:
             "print('Rows:', len(df), '| Cycles:', sorted(df.CYCLE.unique()))\n"
             "df[['CYCLE','MATH_PV_MEAN','ESCS','HOMEPOS','AT_RISK_MATH','W_FSTUWT']].head()"
         ),
+        md("## 0. Data dictionary & provenance\n\n"
+           "Before any statistic, *what are we looking at?* Each analytic variable, its plain-English "
+           "meaning, the underlying PISA source item, the direction of the scale, and the cycles in which "
+           "it is available for Albania. The OECD background **indices** (ESCS, HOMEPOS, BELONG, …) are "
+           "standardised to an OECD mean 0 / SD 1, so a value of −0.75 means ~0.75 SD *below* the OECD "
+           "student average - already an interpretation aid before we compute anything."),
+        code(
+            "meta = {\n"
+            "  'MATH_PV_MEAN': ('Math score (mean of 10 plausible values)', 'PV1-10MATH', 'higher = better'),\n"
+            "  'AT_RISK_MATH': ('Low proficiency: math < 420 (below PISA Level 2)', 'derived', '1 = at risk'),\n"
+            "  'ESCS':     ('Economic, social & cultural status index', 'ESCS', 'higher = advantaged'),\n"
+            "  'HOMEPOS':  ('Home possessions (material + educational)', 'HOMEPOS', 'higher = more'),\n"
+            "  'HISCED':   ('Highest parental education (ISCED level)', 'HISCED', 'higher = more'),\n"
+            "  'HISEI':    ('Highest parental occupational status (ISEI)', 'HISEI', 'higher = higher status'),\n"
+            "  'BELONG':   ('Sense of belonging at school', 'BELONG', 'higher = more belonging'),\n"
+            "  'TEACHSUP': ('Perceived teacher support', 'TEACHSUP', 'higher = more support'),\n"
+            "  'ANXMAT':   ('Mathematics anxiety', 'ANXMAT', 'higher = more anxious'),\n"
+            "  'REPEAT':   ('Has repeated a grade', 'REPEAT', '1 = repeated'),\n"
+            "  'IMMIG':    ('Immigrant background', 'IMMIG', '1 = 1st/2nd gen'),\n"
+            "  'GRADE':    ('Grade relative to modal grade', 'GRADE', '0 = modal'),\n"
+            "  'GENDER':   ('Student gender', 'ST004D01T', 'coded 0/1'),\n"
+            "}\n"
+            "rows = []\n"
+            "for v,(desc,src,direction) in meta.items():\n"
+            "    if v not in df.columns: continue\n"
+            "    cyc = [int(c) for c in sorted(df.CYCLE.unique())\n"
+            "           if df.loc[df.CYCLE==c, v].notna().any()]\n"
+            "    rows.append({'variable':v,'meaning':desc,'PISA_source':src,\n"
+            "                 'direction':direction,'cycles_available':cyc})\n"
+            "pd.set_option('display.max_colwidth', 60)\n"
+            "pd.DataFrame(rows).set_index('variable')"
+        ),
+        md("**Reading:** ESCS is genuinely absent for Albania in **2012 & 2015** (an OECD data gap, not a "
+           "processing bug); HOMEPOS covers all five cycles and so is the safer longitudinal SES proxy. "
+           "The attitudinal indices (BELONG, TEACHSUP, ANXMAT) arrive only in the cycles that fielded the "
+           "relevant questionnaire rotation."),
+        md("## 0b. Survey-weighted descriptive summary (2022)\n\n"
+           "The population-level 'know your data' table for the crisis cohort: weighted mean, weighted SD, "
+           "the raw range, the weighted median and - critically - **how much is missing**. High missingness "
+           "on an index is itself a finding (it caps how much that feature can contribute downstream)."),
+        code(
+            "from src.data.weights import weighted_describe\n"
+            "feats = ['MATH_PV_MEAN','ESCS','HOMEPOS','HISCED','HISEI','BELONG',\n"
+            "         'TEACHSUP','ANXMAT','GRADE']\n"
+            "weighted_describe(df[df.CYCLE==2022], feats)"
+        ),
+        md("**Reading:** ESCS/HOMEPOS sit well below 0 (Albania is ~0.8 SD below the OECD SES average). "
+           "The attitudinal indices carry 30-40% missingness in 2022 - so any model leaning on TEACHSUP or "
+           "ANXMAT is really fitting the ~60% who answered, a caveat that recurs in the modeling notebooks."),
         md("## 1. Target trajectory - the V-shaped crisis\n\n"
            "Weighted low-proficiency rate (math score < 420, below PISA Level 2) and mean score by cycle."),
         code(
@@ -163,6 +212,20 @@ def nb_01_eda_albania() -> list:
             "from src.visualization.eda import plot_ses_quintile_heatmap\n"
             "fig = plot_ses_quintile_heatmap(df); plt.show()"
         ),
+        md("## 4b. The SES gradient as a probability curve\n\n"
+           "The quintile grid bins SES into five steps; here we show the *continuous* gradient - "
+           "**P(low proficiency | ESCS)** - as a descriptive weighted-logistic curve, overlaid with the "
+           "weighted at-risk rate in each SES decile (markers). Comparing **2018 vs 2022** asks whether the "
+           "crisis merely lifted the whole curve or *steepened* it (hit the disadvantaged harder). This is a "
+           "single-predictor descriptive gradient, not the multivariable models of notebooks 04/11."),
+        code(
+            "from src.visualization.eda import plot_ses_logistic_curve\n"
+            "fig = plot_ses_logistic_curve(df, cycles=(2018, 2022)); plt.show()"
+        ),
+        md("**Reading:** the 2022 curve sits far above 2018 at *every* SES level - the crisis raised risk "
+           "across the board, not only for the poor. The gradient (slope) persists, so disadvantage still "
+           "matters, but a pure 'poverty shock' story would predict a steepening the data only partly shows - "
+           "consistent with the feature-drift result below."),
         md("## 5. Feature correlation structure"),
         code(
             "from src.visualization.eda import plot_correlation_matrix\n"
@@ -182,6 +245,25 @@ def nb_01_eda_albania() -> list:
             "dval = weighted_cohens_d(ar['ESCS'], pr['ESCS'], ar['W_FSTUWT'], pr['W_FSTUWT'])\n"
             "print('Weighted Cohen d (ESCS, at-risk vs proficient):', round(dval,3))"
         ),
+        md("## 5c. Which features separate at-risk students? (effect-size ranking)\n\n"
+           "The single most reviewer-friendly table in the EDA: every candidate predictor ranked by the "
+           "*strength* of its weighted association with low proficiency, not just its significance (with "
+           "n≈6k almost everything is 'significant'). Numeric features use weighted **Cohen's d** "
+           "(at-risk vs proficient; sign = direction); categoricals use **Cramer's V** with the chi-square "
+           "*p*. This is what a feature-importance plot later has to beat."),
+        code(
+            "from src.statistics.tests import feature_effect_sizes\n"
+            "feature_effect_sizes(\n"
+            "    d22,\n"
+            "    numeric_features=['ESCS','HOMEPOS','HISCED','HISEI','BELONG','TEACHSUP','ANXMAT','GRADE'],\n"
+            "    categorical_features=['GENDER','REPEAT','IMMIG'],\n"
+            ")"
+        ),
+        md("**Reading:** HOMEPOS, ESCS and **math anxiety (ANXMAT)** are the strongest separators "
+           "(|d| ≈ 0.5, medium); parental occupation (HISEI) follows. The demographic categoricals - gender, "
+           "immigrant status - are *statistically* significant but trivially small (V < 0.1), so risk here is "
+           "an SES-and-affect story far more than a demographic one. Immigrant status is not even significant "
+           "(p ≈ 0.16), unusual internationally and worth a sentence in the write-up."),
         md("## 6. The 2022 crisis - feature drift (2018 → 2022)\n\n"
            "Standardized mean difference (Cohen's d) of each feature between the 2018 baseline and the 2022 "
            "crisis cohort. This previews the covariate-shift analysis in notebook 03."),
@@ -227,6 +309,29 @@ def nb_02_comparative() -> list:
             "print('Rows:', len(df))\n"
             "df.pivot_table(index='COUNTRY', columns='CYCLE', values='MATH_PV_MEAN', aggfunc='count', fill_value=0).astype(int)"
         ),
+        md("## 0. Sample composition & cross-country comparability (2022)\n\n"
+           "Before ranking countries we ask *are these samples comparable?* For each 2022 cohort: the "
+           "sample size, the survey-weighted mean math score, the weighted SES level (ESCS), the weighted "
+           "low-proficiency rate, and how much ESCS is missing. Big gaps in N or in ESCS coverage would "
+           "temper any head-to-head claim - the honest caveat a reviewer expects up front."),
+        code(
+            "from src.data.weights import weighted_mean, weighted_proportion\n"
+            "d22 = df[df.CYCLE==2022]\n"
+            "rows = []\n"
+            "for cnt, g in d22.groupby('COUNTRY'):\n"
+            "    w = g['W_FSTUWT']\n"
+            "    rows.append({'country':cnt, 'N':len(g),\n"
+            "                 'mean_score':round(weighted_mean(g['MATH_PV_MEAN'], w),1),\n"
+            "                 'mean_ESCS':round(weighted_mean(g['ESCS'], w),3),\n"
+            "                 'at_risk_%':round(weighted_proportion(g['AT_RISK_MATH'], w)*100,1),\n"
+            "                 'ESCS_missing_%':round(100*g['ESCS'].isna().mean(),1)})\n"
+            "pd.DataFrame(rows).set_index('country').sort_values('at_risk_%', ascending=False)"
+        ),
+        md("**Reading:** the samples are broadly comparable in size and ESCS coverage (missingness ≤9%), so "
+           "the ranking that follows is not an artefact of one country being thinly or selectively measured. "
+           "Albania has the *highest* low-proficiency rate - yet Colombia and Mexico sit at a **lower** mean "
+           "ESCS and still post *lower* risk. SES level alone therefore does not explain Albania's position; "
+           "the gradient's *slope*, not just its level, is what §2 examines."),
         md("## 1. Low-proficiency ranking (2022)\n\n"
            "Where does Albania stand against peers?"),
         code(

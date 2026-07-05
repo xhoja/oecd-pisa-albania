@@ -305,3 +305,58 @@ def wilcoxon_signed_rank(
         logger.warning("Few paired samples for Wilcoxon test", n=len(diffs))
     stat, p = stats.wilcoxon(diffs, alternative="greater")
     return {"statistic": float(stat), "p_value": float(p), "mean_diff": float(diffs.mean())}
+
+
+def feature_effect_sizes(
+    df: pd.DataFrame,
+    numeric_features: list[str],
+    categorical_features: list[str],
+    target_col: str = "AT_RISK_MATH",
+    weight_col: str = "W_FSTUWT",
+) -> pd.DataFrame:
+    """Rank features by their survey-weighted association with the at-risk target.
+
+    One table so a reviewer sees "what separates at-risk students" at a glance:
+
+    - **Numeric** features -> weighted Cohen's *d* (at-risk group vs proficient
+      group). Sign shows direction; a negative *d* means at-risk students have
+      *lower* values (e.g. ESCS). Bands: |d|~0.2 small, 0.5 medium, 0.8 large.
+    - **Categorical** features -> Cramer's *V* with the chi-square *p*-value from
+      the normalized-weight test (so W_FSTUWT's population scale doesn't inflate
+      it). Bands: V~0.1 small, 0.3 medium, 0.5 large.
+
+    Both land on a common ``magnitude`` (|d| or V) column, so the frame sorts
+    into a single descending ranking. Descriptive/associational, not causal.
+    """
+    w = (
+        df[weight_col]
+        if weight_col in df.columns
+        else pd.Series(np.ones(len(df)), index=df.index)
+    )
+    at = df[target_col] == 1
+    rows: list[dict[str, Any]] = []
+    for f in numeric_features:
+        if f not in df.columns:
+            continue
+        d = weighted_cohens_d(
+            df.loc[at, f].values, df.loc[~at, f].values,
+            w[at].values, w[~at].values,
+        )
+        rows.append({
+            "feature": f, "type": "numeric", "measure": "cohens_d",
+            "value": round(d, 3), "magnitude": round(abs(d), 3), "p_value": np.nan,
+        })
+    for f in categorical_features:
+        if f not in df.columns:
+            continue
+        res = weighted_chi_square(df, f, target_col, weight_col=weight_col)
+        rows.append({
+            "feature": f, "type": "categorical", "measure": "cramers_v",
+            "value": round(res["cramers_v"], 3), "magnitude": round(res["cramers_v"], 3),
+            "p_value": round(res["p_value"], 4),
+        })
+    return (
+        pd.DataFrame(rows)
+        .sort_values("magnitude", ascending=False)
+        .reset_index(drop=True)
+    )

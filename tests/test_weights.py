@@ -11,6 +11,7 @@ from src.data.weights import (
     normalize_weights_within_country,
     pv_statistic_brr,
     replicate_weight_cols,
+    weighted_describe,
     weighted_mean,
     weighted_proportion,
     weighted_quantile,
@@ -151,3 +152,28 @@ def test_pv_brr_mean_score_matches_grand_pv_mean(pisa_df):
         weighted_mean(pisa_df[f"PV{i}MATH"], pisa_df["W_FSTUWT"]) for i in range(1, 11)
     ])
     assert res["estimate"] == pytest.approx(grand)
+
+
+def test_weighted_describe_matches_helpers_and_reports_missing(pisa_df):
+    df = pisa_df.copy()
+    df.loc[df.index[:40], "ESCS"] = np.nan  # 40/400 = 10% missing
+    out = weighted_describe(df, ["ESCS", "HOMEPOS", "NOT_A_COL"])
+    assert list(out.index) == ["ESCS", "HOMEPOS"]  # missing column skipped
+    assert out.loc["ESCS", "n"] == 360
+    assert out.loc["ESCS", "pct_missing"] == pytest.approx(10.0)
+    # weighted mean/sd agree with the underlying primitives on the clean rows
+    m = df["ESCS"].notna()
+    assert out.loc["ESCS", "w_mean"] == pytest.approx(
+        round(weighted_mean(df.loc[m, "ESCS"], df.loc[m, "W_FSTUWT"]), 3)
+    )
+    assert out.loc["ESCS", "w_sd"] == pytest.approx(
+        round(weighted_std(df.loc[m, "ESCS"], df.loc[m, "W_FSTUWT"]), 3)
+    )
+    assert out.loc["HOMEPOS", "pct_missing"] == 0.0
+
+
+def test_weighted_describe_unit_weights_when_no_weight_col(pisa_df):
+    df = pisa_df.drop(columns=["W_FSTUWT"])
+    out = weighted_describe(df, ["ESCS"])
+    # falls back to unit weights -> matches unweighted mean
+    assert out.loc["ESCS", "w_mean"] == pytest.approx(round(df["ESCS"].mean(), 3))

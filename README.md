@@ -25,8 +25,8 @@ analysis of Albania's dramatic 2022 regression.
 ![Altair](https://img.shields.io/badge/Altair-charts-1F77B4)
 ![matplotlib](https://img.shields.io/badge/matplotlib-figures-11557C)
 ![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
-![LaTeX](https://img.shields.io/badge/LaTeX-acmart%20paper-008080?logo=latex&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-142%20passing-0A9EDC?logo=pytest&logoColor=white)
+![LaTeX](https://img.shields.io/badge/LaTeX-article%20report-008080?logo=latex&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-149%20passing-0A9EDC?logo=pytest&logoColor=white)
 
 | Area | Tools |
 |---|---|
@@ -35,8 +35,8 @@ analysis of Albania's dramatic 2022 regression.
 | **PISA methodology** | pyreadstat (SPSS `.sav`) + custom fixed-width parser; survey weights, plausible values with Rubin's rules, BRR (80 Fay replicates) |
 | **Explainability & fairness** | SHAP (TreeSHAP), partial dependence / ICE, weighted fairness metrics, conformal prediction, counterfactual recourse |
 | **Visualisation** | matplotlib, seaborn, Altair; colorblind-safe palette |
-| **Testing & quality** | pytest (142 tests on synthetic fixtures), structlog, ruff, mypy |
-| **Paper** | LaTeX + `acmart` (single-column manuscript), BibTeX |
+| **Testing & quality** | pytest (149 tests on synthetic fixtures), structlog, ruff, mypy |
+| **Paper** | LaTeX `article` (single-column report: title page, table of contents, running headers), BibTeX |
 | **Interactive dashboard (UI)** | Streamlit (app), Altair (charts), fpdf2 (PDF report), joblib (model bundle) |
 
 Logic lives in tested `src/` modules; notebooks are narrative layers over them, so every
@@ -341,32 +341,42 @@ trajectory with design-based SEs:
 OECD_PISA_Project/
 ├── configs/              # data / features / models / experiment YAML
 ├── src/
-│   ├── data/             # extract, parse_fwf, harmonize, weights (BRR+Rubin),
-│   │                     #   validate (data contracts), impute, pipeline
+│   ├── data/             # extract, parse_fwf, harmonize, weights (BRR+Rubin,
+│   │                     #   weighted_describe), validate (data contracts), impute, pipeline
 │   ├── features/         # engineer, select, target, transformers (fold-safe)
 │   ├── models/           # registry, hpo (Optuna nested CV), optimize (search space),
 │   │                     #   evaluate (metrics, Nadeau-Bengio, DeLong), prepare,
-│   │                     #   experiment (Rubin's rules), train, _isolated_worker
-│   ├── explainability/   # SHAP analysis, partial dependence (PDP/ICE)
+│   │                     #   experiment (Rubin's rules), train, _isolated_worker,
+│   │                     #   conformal, decision_curve, multilevel, policy
+│   ├── explainability/   # SHAP analysis, partial dependence (PDP/ICE), counterfactuals
 │   ├── fairness/         # group-fairness metrics
 │   ├── forecast/         # scenario forecast (WLS trend + Monte-Carlo, BRR-aware)
-│   ├── statistics/       # tests (chi², MMD, covariate shift, effect sizes)
-│   └── visualization/    # style, eda, model_plots
+│   ├── statistics/       # tests (chi², MMD, covariate shift, effect sizes,
+│   │                     #   feature_effect_sizes)
+│   ├── visualization/    # style, eda (incl. plot_ses_logistic_curve), model_plots
+│   └── utils/            # config, logging, reproducibility
 ├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
 │                         #   04_modeling, 05_explainability, 06_explainability_cases,
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
 │                         #   12_school_questionnaire, 13_decision_support  (all executed)
+│                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
 │                         #   run_school_features_experiment (+_foldsafe), run_threshold_calibration,
-│                         #   run_pv_stacking_experiment, run_comparative_modeling,
+│                         #   run_pv_stacking_experiment, run_stacking_experiment,
+│                         #   run_comparative_modeling, run_multilevel, run_decision_curve,
+│                         #   run_conformal, run_counterfactuals, run_policy,
 │                         #   build_school_questionnaire, run_school_questionnaire_experiment,
-│                         #   run_school_means_transformer_check, run_conformal,
-│                         #   run_counterfactuals, run_policy
-├── tests/                # 142 pytest unit tests (weights, impute, target, transformers,
-│                         #   validate, evaluate, engineer/school, forecast), no real data needed
+│                         #   run_school_means_transformer_check, replot_paper_figures,
+│                         #   export_dashboard_model
+├── reports/              # paper/ (LaTeX article report → main.pdf; sections/, figures/),
+│                         #   dashboard/ (Streamlit risk-screener app.py), presentation/
+├── tests/                # 149 pytest unit tests (weights, impute, target, transformers,
+│                         #   validate, evaluate, engineer/school, forecast, statistics,
+│                         #   eda_viz, dashboard), no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
+│                         #   + models/ (dashboard bundle) + shap/
 └── data/                 # raw/ (git-ignored) + processed/ (parquet)
 ```
 
@@ -379,7 +389,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required, 142 tests on synthetic fixtures)
+# 2. Run the test suite (no data required, 149 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -467,7 +477,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **142 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **149 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
@@ -484,8 +494,11 @@ choice below is implemented and unit-tested.
 ## Deliverables (Phase 10)
 
 ### Written paper, `reports/paper/` (done)
-A manuscript built with **LaTeX + `acmart`** (single-column `manuscript`
-layout), authored by **Xhoi Ikonomi, Metropolitan University of Tirana**. It follows the
+A single-column **LaTeX `article` report** (standalone title page, table of contents,
+running headers, colored inline statistics), authored by **Xhoi Ikonomi, Metropolitan
+University of Tirana**. The Data section carries a full exploratory pass, a data
+dictionary, survey-weighted descriptives, an effect-size ranking, a cross-country
+comparability table, and the descriptive SES-gradient probability curve. It follows the
 Harvard hourglass structure (hook, explicit thesis + roadmap, topic-sentence body,
 hook-returning conclusion) and frames the work around the *science*, the structural-shift
 thesis (AUC 0.98), the feature-vs-data ceiling (~0.78, three convergent routes), the
@@ -496,7 +509,7 @@ web-verified macro facts (remittances, GDP, education spending, the 2023 census)
 citations. No em-dashes anywhere (prose and figure titles). Build:
 
 ```bash
-cd reports/paper && make          # pdflatex + bibtex -> main.pdf (14 pp)
+cd reports/paper && make          # pdflatex + bibtex -> main.pdf (20 pp)
 ```
 
 ### Interactive risk-screener dashboard, `reports/dashboard/` (done)
@@ -625,7 +638,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   pseudo-likelihood with scaled survey weights (`fit_weighted_random_intercept`, see above).
 
 ### Remaining
-- **Phase 10, Deliverables:** the **written paper** (`reports/paper/`, LaTeX + `acmart`) and the
+- **Phase 10, Deliverables:** the **written paper** (`reports/paper/`, LaTeX `article` report) and the
   **interactive bilingual risk-screener dashboard** (`reports/dashboard/`, Streamlit + Altair +
   fpdf2) are complete, see [Deliverables](#deliverables-phase-10) above. The **slides** and
   **poster** are the only outstanding items.

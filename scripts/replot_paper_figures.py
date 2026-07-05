@@ -24,13 +24,26 @@ from src.visualization.style import (
     apply_publication_style, save_figure, PALETTE, SEQUENTIAL_RANK_CMAP,
 )
 from src.visualization.model_plots import plot_cv_distribution
+from src.visualization.eda import plot_ses_logistic_curve
+from src.features.target import add_all_targets
 
 RES = ROOT / "outputs" / "results"
 FIG = ROOT / "outputs" / "figures"
+PAPER_FIG = ROOT / "reports" / "paper" / "figures"
 
 
 def main() -> None:
     apply_publication_style()
+
+    # G3  descriptive SES gradient as a probability curve (2018 vs 2022).
+    # Written straight into the paper's figure dir; sourced from the Albania
+    # longitudinal parquet, no model fitting beyond the descriptive logistic.
+    long = add_all_targets(
+        pd.read_parquet(ROOT / "data" / "processed" / "albania_longitudinal.parquet")
+    )
+    fig = plot_ses_logistic_curve(long, cycles=(2018, 2022))
+    save_figure(fig, str(PAPER_FIG / "G3_ses_logistic_curve"))
+    plt.close(fig)
 
     # C4  model comparison (reuse the library plot; title fixed at source)
     df = pd.read_csv(RES / "albania_2022_model_comparison_school.csv")

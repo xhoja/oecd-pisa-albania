@@ -15,7 +15,12 @@ import seaborn as sns
 
 import structlog
 
-from src.data.weights import weighted_mean, weighted_proportion, weighted_std
+from src.data.weights import (
+    weighted_mean,
+    weighted_proportion,
+    weighted_quantile,
+    weighted_std,
+)
 from src.visualization.style import (
     AT_RISK_COLORS,
     COUNTRY_COLORS,
@@ -182,6 +187,78 @@ def plot_ses_quintile_heatmap(
     ax.set_title("Low-Proficiency Rate by SES Quintile and Cycle (%)")
     ax.set_xlabel("PISA Cycle")
     ax.set_ylabel("SES Quintile (1=lowest)")
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# B3b: Descriptive socioeconomic gradient - P(at-risk | SES) probability curve
+# ---------------------------------------------------------------------------
+
+def plot_ses_logistic_curve(
+    df: pd.DataFrame,
+    ses_col: str = "ESCS",
+    target_col: str = "AT_RISK_MATH",
+    cycle_col: str = "CYCLE",
+    cycles: tuple[int, ...] = (2018, 2022),
+    n_bins: int = 10,
+) -> plt.Figure:
+    """Descriptive socioeconomic gradient: P(low proficiency | SES) as a curve.
+
+    For each cycle we (a) split students into weighted SES deciles and plot the
+    weighted at-risk rate per bin (markers), and (b) overlay a weighted logistic
+    fit of the at-risk indicator on SES (smooth line). This is a *descriptive*,
+    single-predictor marginal gradient - not the multivariable model of notebooks
+    04/11 - meant to show how steeply low proficiency rises as SES falls, and
+    whether that slope steepened in the 2022 crisis.
+    """
+    from sklearn.linear_model import LogisticRegression
+
+    apply_publication_style()
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    colors = color_list(max(len(cycles), 2))
+    for ci, cyc in enumerate(cycles):
+        cols = [c for c in (ses_col, target_col, WEIGHT_COL) if c in df.columns]
+        s = df[df[cycle_col] == cyc][cols].dropna()
+        if len(s) < 50 or ses_col not in s.columns:
+            continue
+        x = s[ses_col].to_numpy(dtype=float)
+        y = s[target_col].to_numpy(dtype=int)
+        w = _w(s).to_numpy(dtype=float)
+
+        # (a) weighted decile points
+        edges = weighted_quantile(
+            pd.Series(x), pd.Series(w), list(np.linspace(0, 1, n_bins + 1))
+        )
+        edges = np.unique(edges)
+        if len(edges) >= 3:
+            binned = pd.DataFrame({"x": x, "y": y, "w": w})
+            binned["bin"] = pd.cut(binned.x, bins=edges, include_lowest=True)
+            pts = []
+            for _, g in binned.groupby("bin", observed=True):
+                if len(g) < 5:
+                    continue
+                pts.append(
+                    (np.average(g.x, weights=g.w), np.average(g.y, weights=g.w))
+                )
+            if pts:
+                px, py = zip(*pts)
+                ax.scatter(px, np.array(py) * 100, color=colors[ci], s=45,
+                           zorder=3, edgecolor="white", linewidth=0.7)
+
+        # (b) weighted logistic fit
+        lr = LogisticRegression()
+        lr.fit(x.reshape(-1, 1), y, sample_weight=w)
+        grid = np.linspace(np.percentile(x, 1), np.percentile(x, 99), 200)
+        prob = lr.predict_proba(grid.reshape(-1, 1))[:, 1]
+        ax.plot(grid, prob * 100, color=colors[ci], lw=2.2,
+                label=f"{cyc} (n={len(s):,})")
+
+    ax.set_xlabel(f"{ses_col}  (socioeconomic status - higher = more advantaged)")
+    ax.set_ylabel("P(low proficiency)  %")
+    ax.set_title("Socioeconomic Gradient of Low-Proficiency Risk")
+    ax.set_ylim(0, 100)
+    ax.legend(title="Cycle")
     fig.tight_layout()
     return fig
 

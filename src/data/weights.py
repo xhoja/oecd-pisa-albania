@@ -54,6 +54,50 @@ def weighted_std(values: pd.Series, weights: pd.Series) -> float:
     return float(np.sqrt(variance))
 
 
+def weighted_describe(
+    df: pd.DataFrame,
+    features: list[str],
+    weight_col: str = "W_FSTUWT",
+) -> pd.DataFrame:
+    """Survey-weighted descriptive summary, one row per feature.
+
+    Columns: ``n`` (non-missing count), ``pct_missing``, ``w_mean``, ``w_sd``,
+    ``min``, ``w_median`` (weighted median) and ``max``. Mean/SD/median use the
+    PISA sampling weights so they are population estimates; ``min``/``max`` are
+    raw sample extremes (weighting can't extend the support). Missing features
+    are skipped. This is the "know your data" table that a reviewer looks for
+    before trusting any downstream statistic.
+    """
+    n_total = len(df)
+    w_all = (
+        df[weight_col]
+        if weight_col in df.columns
+        else pd.Series(np.ones(n_total), index=df.index)
+    )
+    rows = []
+    for f in features:
+        if f not in df.columns:
+            continue
+        v = df[f]
+        mask = v.notna() & w_all.notna() & (w_all > 0)
+        n = int(mask.sum())
+        vv, ww = v[mask], w_all[mask]
+        median = float(weighted_quantile(vv, ww, [0.5])[0]) if n >= 1 else np.nan
+        rows.append(
+            {
+                "feature": f,
+                "n": n,
+                "pct_missing": round(100.0 * (1 - n / n_total), 1) if n_total else np.nan,
+                "w_mean": round(weighted_mean(vv, ww), 3) if n >= 1 else np.nan,
+                "w_sd": round(weighted_std(vv, ww), 3) if n >= 2 else np.nan,
+                "min": round(float(vv.min()), 2) if n >= 1 else np.nan,
+                "w_median": round(median, 3) if n >= 1 else np.nan,
+                "max": round(float(vv.max()), 2) if n >= 1 else np.nan,
+            }
+        )
+    return pd.DataFrame(rows).set_index("feature")
+
+
 def weighted_quantile(
     values: pd.Series,
     weights: pd.Series,
