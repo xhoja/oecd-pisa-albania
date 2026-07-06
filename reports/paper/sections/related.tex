@@ -1,47 +1,94 @@
 \section{Background and Related Work}
+\label{sec:related}
 
-\paragraph{PISA methodology.}
+\paragraph{PISA survey methodology.}
 PISA reports each student's proficiency as ten plausible values drawn from a
-posterior latent-trait distribution, and every published statistic is weighted by
-the final student weight with variance estimated by balanced repeated replication
-(BRR)~\cite{oecd2024pisa,oecd2009manual}. Rubin's rules combine point estimates and
-between-imputation variance across the plausible values~\cite{rubin1987}. These are
-not optional refinements: using a single averaged score as a target understates
-uncertainty, and unweighted statistics do not estimate a population quantity. Much
-secondary PISA analysis nonetheless drops both. We follow the manual throughout.
+posterior latent-trait distribution, and every published statistic is weighted by the
+final student weight, with sampling variance estimated by balanced repeated
+replication (BRR)~\cite{oecd2024pisa,oecd2009manual}. Rubin's rules combine the point
+estimates and the between-imputation variance across the plausible
+values~\cite{rubin1987}. These are not optional refinements: using a single averaged
+score as a target understates uncertainty, and unweighted statistics do not estimate a
+population quantity. A large share of secondary PISA analysis nonetheless drops both
+conventions, which, as we argue below, is part of why the accuracy figures it reports
+should be read with care. We follow the manual throughout.
 
-\paragraph{Machine learning on PISA.}
-A body of work predicts proficiency or at-risk status from PISA background data with
-tree ensembles and reports feature importances (e.g.\ socioeconomic status, grade
-repetition, and school climate as recurring drivers). Gradient-boosted trees,
-XGBoost~\cite{chen2016xgboost}, LightGBM~\cite{ke2017lightgbm}, and
-CatBoost~\cite{prokhorenkova2018catboost}, are the usual strong baselines on this
-tabular regime, and SHAP values~\cite{lundberg2017shap} the usual explanation. Our
-contribution is less a new model than a methodologically disciplined one: weighted
-throughout, leakage-controlled, with model differences tested rather than ranked.
+\paragraph{Machine learning on PISA background data.}
+Predicting achievement or at-risk status from PISA background questionnaires is by now
+a well-populated literature, and it converges on a consistent picture in which tree
+ensembles dominate. Masci, Johnes and Agasisti~\cite{masci2018student} analyse
+PISA~2015 across nine countries with a two-stage tree-based model and recover
+socioeconomic status, grade repetition and school climate as leading correlates, while
+stressing that much of the variation sits at the school rather than the student level.
+On the most recent cycle, Djekourmane et al.~\cite{djekourmane2026east} predict
+mathematics scores across six East Asian systems in PISA~2022 and find gradient
+boosting strongest: XGBoost reaches $R^2\approx0.57$ and a thresholded AUC near
+$0.81$, with LightGBM close behind, and, tellingly, the linear baselines trail badly on
+$R^2$ yet come within a few points on AUC. Erdo\u{g}an and
+Ta\c{s}tan~\cite{erdogan2024turkish} recover the same ordering on the Turkish PISA~2018
+subset, where a boosted regression tree edges out ridge, LASSO, bagging and random
+forests. For the post-pandemic window most relevant to us,
+Delprato~\cite{delprato2025latam} models low-performing students across ten Latin
+American systems in PISA~2022 and uses SHAP attributions to rank their determinants,
+foregrounding interpretation over any single accuracy number. Throughout,
+XGBoost, LightGBM and CatBoost~\cite{chen2016xgboost,ke2017lightgbm,prokhorenkova2018catboost}
+are the recurring strong baselines on this tabular regime, and SHAP
+values~\cite{lundberg2017shap} the usual explanation layer.
+
+Two regularities in this work frame our own contribution. First, reported performance
+sits in a narrow band, roughly AUC $0.78$ to $0.84$, or accuracy in the high seventies,
+largely irrespective of country, cycle, or the exact ensemble chosen. Second, the
+strong learners and the linear baselines are usually separated by a fraction of an AUC
+point, yet that gap is presented as a ranking rather than tested for significance, and
+even studies that expose it directly (linear models trailing on $R^2$ while nearly
+tying on AUC~\cite{djekourmane2026east}) stop short of asking whether the difference is
+real or what would move it. The literature reports where the accuracy lands but rarely
+diagnoses why it lands there.
+
+\paragraph{Accuracy ceilings, and what they are made of.}
+That recurring ceiling near AUC~$0.8$ is usually treated as a fixed backdrop, a number
+to beat with a better learner or more tuning. We instead make it the object of study,
+and this is the paper's central methodological contribution. A plateau in predictive
+accuracy can have two very different causes. It may be a \emph{feature ceiling}, in
+which a model has exhausted the signal in the feature families it was given but a richer
+family (here, the socioeconomic composition of a student's school) would move it; or it
+may be a \emph{data ceiling}, in which the measurement instrument itself, the background
+questionnaire, cannot resolve risk any further and no feature engineering or model class
+will help. The two are indistinguishable from a single learning curve, and the reflex
+of tuning harder or adding capacity cannot separate them, because it holds the feature
+family fixed. We argue the distinction is nonetheless diagnosable, but only with
+\emph{convergent evidence}: a feature ceiling is demonstrated when a new feature family
+lifts every model together, and a data ceiling is demonstrated when independent routes
+(a hand-crafted composition model, a design-appropriate multilevel model, and a direct
+school-questionnaire linkage) all plateau at the same value. We are not aware of a prior
+PISA study that draws this line explicitly, which is why the field's shared $\sim0.8$
+has gone largely uninterrogated.
 
 \paragraph{Dataset shift.}
 When the input distribution changes between two populations, a classifier trained to
-tell them apart quantifies the shift; a high domain-classifier
-AUC is direct evidence of covariate shift~\cite{quinonero2009dataset}. We use this
-as the central diagnostic for the 2018$\rightarrow$2022 change rather than only
-comparing marginal score distributions.
+tell them apart quantifies the change, and a high domain-classifier AUC is direct
+evidence of covariate shift~\cite{quinonero2009dataset}. We use this as the central
+diagnostic for the 2018-to-2022 reversal rather than relying only on marginal score
+distributions, which cannot separate a merely lower-scoring cohort from one whose risk
+structure has moved.
 
 \paragraph{Calibration, decision curves, and fairness.}
-A screening probability must be calibrated to be actionable; isotonic
-regression is a standard non-parametric post-hoc
-calibrator~\cite{zadrozny2002isotonic}, and decision-curve analysis evaluates a
-screener by net benefit across operating thresholds rather than by accuracy at a
-single cut~\cite{vickers2006dca}, important when prevalence is high. Group-fairness
-diagnostics (demographic parity, equalized odds) expose disparate error rates across
-protected groups~\cite{hardt2016equalized}. We report all three, survey-weighted.
+A screening probability must be calibrated to be actionable. Isotonic regression is a
+standard non-parametric post-hoc calibrator~\cite{zadrozny2002isotonic}, and
+decision-curve analysis evaluates a screener by net benefit across operating thresholds
+rather than by accuracy at a single cut~\cite{vickers2006dca}, which matters when
+prevalence is high. Group-fairness diagnostics such as demographic parity and equalized
+odds expose disparate error rates across protected groups~\cite{hardt2016equalized}. We
+report all three, survey-weighted, a combination seldom applied together in the PISA
+setting.
 
 \paragraph{Nested design and honest comparison.}
-PISA students are nested in schools, so a random-intercept (multilevel) logistic
-model is the design-appropriate specification and its intraclass correlation
-quantifies between-school variance~\cite{goldstein2011multilevel}. Finally, because
-repeated cross-validation folds share training data, naive fold-score intervals are
+PISA students are nested in schools, so a random-intercept (multilevel) logistic model
+is the design-appropriate specification, and its intraclass correlation quantifies the
+between-school variance~\cite{goldstein2011multilevel}. Finally, because repeated
+cross-validation folds share training data, naive fold-score intervals are
 anti-conservative; we use the Nadeau--Bengio corrected-resampled
 variance~\cite{nadeau2003inference} and compare models with the corrected resampled
 $t$-test (in-sample) and the DeLong test on shared test
-predictions~\cite{delong1988}.
+predictions~\cite{delong1988}. This is the machinery that turns the field's informal
+ranking of near-tied models into a tested claim about which gaps are real.

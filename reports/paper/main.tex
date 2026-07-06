@@ -80,15 +80,17 @@ identify at-risk students, \emph{why} they are at risk, and whether the 2022
 collapse is merely a lower-scoring cohort or a change in the risk structure itself.
 Using all five Albanian PISA cycles (2009--2022; 27{,}042 students) and eight
 comparison countries (323{,}121 students), and applying the survey methodology PISA
-requires --- final student weights on every estimate, plausible values combined by
-Rubin's rules, and balanced repeated replication for design-based standard errors ---
+requires (final student weights on every estimate, plausible values combined by
+Rubin's rules, and balanced repeated replication for design-based standard errors),
 we report four findings. First, a domain classifier separates 2018 from 2022 Albanian
 students with AUC~0.98 on background features alone: the collapse is a \emph{structural
-covariate shift}, not just lower scores. Second, individual background variables hit an
-accuracy ceiling (weighted cross-validated AUC~0.73) that hyperparameter tuning cannot
-move, but adding survey-weighted \emph{school socioeconomic composition} lifts every
-model by $\sim$0.05 AUC to $\sim$0.78 and makes gradient boosters significantly
-outperform logistic regression. Third, that $\sim$0.78 is a genuine data ceiling: a
+covariate shift}, not just lower scores. Second, and this is our central methodological
+contribution, the accuracy ceiling that individual background variables hit (weighted
+cross-validated AUC~0.73, unmoved by hyperparameter tuning) is a \emph{feature} ceiling,
+not a data ceiling: adding survey-weighted \emph{school socioeconomic composition} lifts
+every model by $\sim$0.05 AUC to $\sim$0.78 and makes gradient boosters significantly
+outperform logistic regression. Third, the new $\sim$0.78 ceiling is then a genuine
+\emph{data} ceiling, and we establish the difference by convergent evidence: a
 multilevel model (school ICC~$\approx$~0.31) and a direct school-questionnaire linkage
 (no significant gain, all $p>0.24$) independently converge on it. Fourth, the crisis is
 \emph{broad-based}: Albania has the flattest SES gradient of the nine countries, its
