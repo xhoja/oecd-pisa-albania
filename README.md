@@ -341,6 +341,29 @@ systems and self-limits in equitable ones — reported as a boundary, not buried
 leg, the school-questionnaire null, needs the linked questionnaire only Albania has, so it stays
 single-country.)
 
+### Can a new modality move the ceiling? (CBA process data)
+
+Every feature so far is one questionnaire modality. We link a genuinely new source — PISA's
+**computer-based-assessment process data** (`src/features/process.py`,
+`scripts/run_process_modality.py`, notebook 16), joined 1:1 by `CNTSTUID`: per-item response
+**time + visits** (2022 `STU_COG`, 2018 `STU_TTM`) and questionnaire **response latency** (2022
+`STU_TIM`). Only *behavioural* features are used — item correctness mechanically defines the target,
+so it is never a feature.
+
+| 2022, at the student+school ceiling | +process AUC | lift | p |
+|---|---|---|---|
+| cognitive + questionnaire | **0.858** | +0.085 | <.001 |
+| cognitive-only | 0.851 | +0.078 | <.001 |
+| questionnaire-only *(deployable)* | 0.784 | **+0.011** | .019 |
+
+A new modality **does** move the number — 0.773 → **0.86**, the first thing to break 0.78. **But
+it is not deployable:** ~90% of the lift is cognitive-test process data, which is endogenous to the
+proficiency it predicts and only exists *after* a student sits the CBA. The only pre-test modality
+(questionnaire latency) adds **+1.1 pp**. So the **screening** ceiling holds at ~0.78 — the ceiling
+is about *what is knowable before the test*. Reported honestly, including the large cognitive-process
+lift we cannot use for early warning. (Albania fielded neither the parent nor teacher questionnaire —
+both ruled out at source.)
+
 ---
 
 ## Data
@@ -390,7 +413,7 @@ OECD_PISA_Project/
 ├── src/
 │   ├── data/             # extract, parse_fwf, harmonize, weights (BRR+Rubin,
 │   │                     #   weighted_describe), validate (data contracts), impute, pipeline
-│   ├── features/         # engineer, select, target, transformers (fold-safe)
+│   ├── features/         # engineer, select, target, transformers (fold-safe), process (CBA)
 │   ├── models/           # registry, hpo (Optuna nested CV), optimize (search space),
 │   │                     #   evaluate (metrics, Nadeau-Bengio, DeLong), prepare,
 │   │                     #   experiment (Rubin's rules), train, _isolated_worker,
@@ -408,7 +431,8 @@ OECD_PISA_Project/
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
 │                         #   12_school_questionnaire, 13_decision_support,
-│                         #   14_causal_earthquake, 15_ceiling_generalization  (all executed)
+│                         #   14_causal_earthquake, 15_ceiling_generalization,
+│                         #   16_process_modality  (all executed)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
@@ -526,7 +550,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **158 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **164 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
