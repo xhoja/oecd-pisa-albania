@@ -246,7 +246,7 @@ def nb_01_eda_albania() -> list:
             "print('Weighted Cohen d (ESCS, at-risk vs proficient):', round(dval,3))"
         ),
         md("## 5c. Which features separate at-risk students? (effect-size ranking)\n\n"
-           "The single most reviewer-friendly table in the EDA: every candidate predictor ranked by the "
+           "The single most decision-relevant table in the EDA: every candidate predictor ranked by the "
            "*strength* of its weighted association with low proficiency, not just its significance (with "
            "n≈6k almost everything is 'significant'). Numeric features use weighted **Cohen's d** "
            "(at-risk vs proficient; sign = direction); categoricals use **Cramer's V** with the chi-square "
@@ -313,7 +313,7 @@ def nb_02_comparative() -> list:
            "Before ranking countries we ask *are these samples comparable?* For each 2022 cohort: the "
            "sample size, the survey-weighted mean math score, the weighted SES level (ESCS), the weighted "
            "low-proficiency rate, and how much ESCS is missing. Big gaps in N or in ESCS coverage would "
-           "temper any head-to-head claim - the honest caveat a reviewer expects up front."),
+           "temper any head-to-head claim - an honest caveat stated up front."),
         code(
             "from src.data.weights import weighted_mean, weighted_proportion\n"
             "d22 = df[df.CYCLE==2022]\n"
@@ -1321,8 +1321,8 @@ def nb_11_screener_multilevel() -> list:
     return [
         md(
             "# 11 - Is the Screener Useful, and Is the Ceiling Real? (Albania 2022)\n\n"
-            "Two pre-submission strengthenings that answer the two hardest questions a "
-            "reviewer asks about a ~0.78-AUC model on a **75%-prevalence** problem:\n\n"
+            "Two pre-submission strengthenings that answer the two hardest questions "
+            "about a ~0.78-AUC model on a **75%-prevalence** problem:\n\n"
             "1. **Does the model add decision value** over the trivial 'screen everyone' / "
             "'screen no-one' policies, and are its probabilities trustworthy? → **decision-curve "
             "analysis + calibration** (`scripts/run_decision_curve.py`).\n"
@@ -1688,6 +1688,122 @@ def nb_13_decision_support() -> list:
     ]
 
 
+def nb_14_causal_earthquake() -> list:
+    return [
+        md(
+            "# 14 - A Natural Experiment That Does Not Hold: the 2019 Durres Earthquake\n\n"
+            "Every result so far is *associational*. This notebook tests whether the one plausible "
+            "**causal** design in reach - the 26 November 2019 M6.4 Durres earthquake as a natural "
+            "experiment - can upgrade a slice of the paper. PISA's sampling `STRATUM` encodes a "
+            "North / Center / South band; quake damage concentrated in the **Center** band (Durres + "
+            "Tirana). A difference-in-differences compares the change in the at-risk rate in Center "
+            "(treated) vs North+South (control) from pre-quake **2018** to post-quake **2022**.\n\n"
+            "The honest result: **the design fails its own diagnostics.** The naive DiD looks "
+            "significant, but the pre-quake placebo rejects parallel trends, the urbanicity "
+            "triple-difference is ~0, and the effect is null under school-clustered inference. We "
+            "therefore report a *well-identified null* - the 2022 collapse is national, not a "
+            "localised shock - which strengthens the paper's structural-crisis reading. Results are "
+            "pre-computed by `scripts/run_causal_did.py` (design-based BRR + Rubin SEs)."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "es = pd.read_csv('../outputs/results/causal_event_study_2015_2022.csv')\n"
+             "summ = json.load(open('../outputs/results/causal_did_summary.json'))\n"
+             "lookup = pd.read_csv('../outputs/results/stratum_region_lookup.csv')"),
+
+        md("## 0. Region encoding from the sampling stratum\n\n"
+           "Albania has no subnational `REGION` in the public file, but the explicit sampling "
+           "stratum labels every school `<Urbanicity> / <Region band> / <Sector>`. The band is "
+           "stable across 2015/2018/2022 even though the numeric codes change; we parse the label "
+           "text. Center = quake-affected treated group."),
+        code("lookup[lookup.region.notna()][['CYCLE','STRATUM','region','urbanicity','sector']]"
+             ".sort_values(['CYCLE','region']).head(12)"),
+
+        md("## 1. Event study: at-risk rate by region band\n\n"
+           "The parallel-trends assumption is visual here: do the bands move together *before* the "
+           "quake (2015 to 2018)? Bars are design-based 95% CIs (BRR + plausible values)."),
+        code("fig, ax = plt.subplots(figsize=(7.5,4.6))\n"
+             "cmap = {'Center':PALETTE['vermilion'],'North':PALETTE['blue'],'South':PALETTE['green']}\n"
+             "for band, s in es.groupby('region'):\n"
+             "    s = s.sort_values('CYCLE')\n"
+             "    lbl = band + (' (treated)' if band=='Center' else '')\n"
+             "    ax.errorbar(s.CYCLE, s.at_risk, yerr=1.96*s.se, marker='o', capsize=3,\n"
+             "                color=cmap[band], label=lbl, ls='--' if band=='Center' else '-')\n"
+             "ax.axvspan(2019.9, 2022, color='0.5', alpha=0.08)\n"
+             "ax.axvline(2019.9, color='0.5', ls=':', lw=1)\n"
+             "ax.text(2020.05, 0.44, 'Nov 2019\\nM6.4 quake', fontsize=8, color='0.4')\n"
+             "ax.set_xticks([2015,2018,2022]); ax.set_xlabel('PISA cycle')\n"
+             "ax.set_ylabel('Share below Level 2 (math)')\n"
+             "ax.set_title('Event study by region band (design-based 95% CI)')\n"
+             "ax.legend(frameon=False); plt.tight_layout(); plt.show()\n"
+             "es.round(3)"),
+        md("**Reading:** the bands do **not** move in parallel before the quake. From 2015 to 2018 "
+           "the Center band improved faster (fell ~15 pp) than North (~7 pp) or South (~8 pp) - it "
+           "was already on a steeper trajectory. Then from 2018 to 2022 *every* band explodes "
+           "upward by ~30-40 pp. The pre-quake divergence is the first warning that a DiD here will "
+           "not cleanly isolate the earthquake."),
+
+        md("## 2. Difference-in-differences and its placebo\n\n"
+           "$\\text{DiD} = (Y^{\\text{Center}}_{\\text{post}}-Y^{\\text{Center}}_{\\text{pre}}) - "
+           "(Y^{\\text{Control}}_{\\text{post}}-Y^{\\text{Control}}_{\\text{pre}})$. The placebo runs "
+           "the identical estimator on the pre-quake window 2015 to 2018, where the true effect is "
+           "zero by construction - a non-zero placebo means parallel trends is violated."),
+        code("d, pl = summ['did_main_2018_2022'], summ['did_placebo_2015_2018']\n"
+             "tab = pd.DataFrame({\n"
+             "  'window':['main 2018->2022','placebo 2015->2018'],\n"
+             "  'treated_change':[d['treated_change'], pl['treated_change']],\n"
+             "  'control_change':[d['control_change'], pl['control_change']],\n"
+             "  'DiD':[d['did'], pl['did']], 'se':[d['se'], pl['se']],\n"
+             "  '95%CI':[f\"[{d['ci95_low']:.3f}, {d['ci95_high']:.3f}]\",\n"
+             "           f\"[{pl['ci95_low']:.3f}, {pl['ci95_high']:.3f}]\"],\n"
+             "  'p':[d['p_value'], pl['p_value']]})\n"
+             "tab.round(4)"),
+        md("**Reading:** the naive DiD is **+4.7 pp** (p < 0.001, design-based) - superficially a "
+           "localised quake effect. But the **placebo is -7.0 pp (p < 0.001)**: in the pre-quake "
+           "window the Center band was already diverging from control by *more* than the main "
+           "estimate, in the opposite direction. Parallel trends is decisively rejected, so the "
+           "main DiD is not a credible causal estimate - it is mostly the continuation of a "
+           "pre-existing capital-region trend."),
+
+        md("## 3. Triple-difference: netting out the capital-region trend\n\n"
+           "The quake damage was concentrated in the **urban** cores of the Center band (Durres and "
+           "Tirana cities). A real quake effect should widen the urban-minus-rural at-risk gap in "
+           "Center more than in control. Differencing on urbanicity removes any Center-wide secular "
+           "trend - the confound that broke the placebo."),
+        code("ddd, dpl = summ['ddd_main_2018_2022'], summ['ddd_placebo_2015_2018']\n"
+             "reg = summ['did_regression_clustered_2018_2022']\n"
+             "pd.DataFrame({\n"
+             "  'estimate':['DDD main 2018->2022','DDD placebo 2015->2018','DiD school-clustered'],\n"
+             "  'value':[ddd['ddd'], dpl['ddd'], reg['did']],\n"
+             "  'se':[ddd['se'], dpl['se'], reg['se']],\n"
+             "  'p':[ddd['p_value'], dpl['p_value'], reg['p_value']]}).round(4)"),
+        md("**Reading:** the triple-difference is **~-3 pp and not significant (p ~ 0.37)** - and "
+           "the wrong sign for a quake story (urban Center did not worsen *more* than its rural "
+           "counterpart). Once the capital-wide trend is differenced out, the apparent effect "
+           "disappears. The school-clustered regression agrees: **+5 pp but p ~ 0.22**, null. The "
+           "tight design-based SE on the naive DiD was an artefact of ignoring school-level "
+           "clustering and the pre-trend."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The natural experiment does not identify a causal earthquake effect.** A plausible "
+            "DiD is rejected by its own placebo (parallel trends fail), collapses under an "
+            "urbanicity triple-difference, and is null under school-clustered inference.\n"
+            "- **The 2022 collapse is national, not localised.** At-risk jumps ~30-40 pp in *every* "
+            "band and urbanicity cell - consistent with a country-wide COVID-plus-sample-coverage "
+            "shock, not a Durres-region disaster signal.\n"
+            "- **Why report a null?** It is the honest, well-identified answer, and it forecloses "
+            "the natural over-claim that the earthquake caused the crisis. It reinforces the "
+            "paper's thesis that the 2022 crisis is structural and national.\n"
+            "- **Data ceiling.** The public file cannot separate Durres (epicentre) from Tirana, and "
+            "only two pre-periods (2015, 2018) carry a decodable band - so no estimator can rescue "
+            "identification here. Reported for transparency, not buried."
+        ),
+    ]
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
@@ -1705,3 +1821,4 @@ if __name__ == "__main__":
                    NB_DIR / "11_screener_multilevel.ipynb", force)
     build_notebook(nb_12_school_questionnaire(), NB_DIR / "12_school_questionnaire.ipynb", force)
     build_notebook(nb_13_decision_support(), NB_DIR / "13_decision_support.ipynb", force)
+    build_notebook(nb_14_causal_earthquake(), NB_DIR / "14_causal_earthquake.ipynb", force)

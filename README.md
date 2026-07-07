@@ -294,6 +294,29 @@ that assumes the pre-COVID trajectory resumes untouched. The naive line only *lo
 because it ignores the break. Bottom line: absent a strong targeted recovery, plan for 2026 to
 sit well above Albania's 2018 low of 42%.
 
+### Causal probe — 2019 Durrës earthquake (a well-identified null)
+
+The whole framework is associational, so we test the one natural experiment in reach: the
+26 Nov 2019 M6.4 Durrës earthquake. PISA's sampling `STRATUM` encodes a North/Center/South band;
+quake damage concentrated in the **Center** band (Durrës + Tirana). A difference-in-differences
+(Center = treated vs North+South, **2018 → 2022**) with design-based BRR + PV standard errors
+(`src/causal/`, `scripts/run_causal_did.py`, notebook 14):
+
+| Estimator | Effect on at-risk rate | p |
+|---|---|---|
+| Naïve DiD, 2018→2022 | **+4.7 pp** | <0.001 |
+| Placebo DiD, 2015→2018 (parallel-trends test) | **−7.0 pp** | <0.001 |
+| Triple-difference (× urbanicity), 2018→2022 | −3.3 pp | 0.37 |
+| DiD, school-clustered SE | +5.2 pp | 0.22 |
+
+The naïve DiD **does not survive**: the pre-quake placebo rejects parallel trends (Center was
+already on a steeper improving trajectory), the urbanicity triple-difference is ~0 with the wrong
+sign, and the effect is null once inference clusters on schools. At-risk jumps ~30–40 pp in *every*
+band, so the 2022 collapse is **national** (COVID + sample-coverage shock), not a localised Durrës
+signal. We report the null for transparency — it forecloses the "earthquake caused the crisis"
+over-claim and reinforces the structural-crisis reading. The public file cannot separate Durrës
+from Tirana and only 2015/2018 carry a decodable band, so no estimator can rescue identification.
+
 ---
 
 ## Data
@@ -349,6 +372,7 @@ OECD_PISA_Project/
 │   │                     #   experiment (Rubin's rules), train, _isolated_worker,
 │   │                     #   conformal, decision_curve, multilevel, policy
 │   ├── explainability/   # SHAP analysis, partial dependence (PDP/ICE), counterfactuals
+│   ├── causal/           # earthquake DiD / triple-difference (design-based SE)
 │   ├── fairness/         # group-fairness metrics
 │   ├── forecast/         # scenario forecast (WLS trend + Monte-Carlo, BRR-aware)
 │   ├── statistics/       # tests (chi², MMD, covariate shift, effect sizes,
@@ -359,7 +383,8 @@ OECD_PISA_Project/
 │                         #   04_modeling, 05_explainability, 06_explainability_cases,
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
-│                         #   12_school_questionnaire, 13_decision_support  (all executed)
+│                         #   12_school_questionnaire, 13_decision_support,
+│                         #   14_causal_earthquake  (all executed)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
@@ -477,13 +502,14 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **149 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **158 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
   the leave-one-out **school aggregates**, the **forecast** WLS/Monte-Carlo scenarios, the
   **stacking** ensemble builder, the **decision-curve / calibration** algebra (net-benefit
-  references, weighted Brier/ECE), and the **multilevel** ICC + random-intercept fit.
+  references, weighted Brier/ECE), the **multilevel** ICC + random-intercept fit, and the
+  **causal DiD / triple-difference** (planted-effect recovery, stratum-label parsing).
 - **Data contracts** (`src/data/validate.py`) turn silent pipeline regressions into explicit
   `ERROR`/`WARN` violations: weight presence & positivity, plausible-value counts, target
   range, valid cycles, replicate-weight availability, all-missing features. Wire

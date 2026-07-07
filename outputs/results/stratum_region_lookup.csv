@@ -1,0 +1,39 @@
+CYCLE,STRATUM,label,urbanicity,region,sector
+2015,ALB0010,ALB - stratum 10: Rural \ Center \ Private,Rural,Center,Private
+2015,ALB0001,ALB - stratum 01: Urban \ North \ Public,Urban,North,Public
+2015,ALB0011,ALB - stratum 11: Rural \ South \ Public,Rural,South,Public
+2015,ALB0002,ALB - stratum 02: Urban \ North \ Private,Urban,North,Private
+2015,ALB0012,ALB - stratum 12: Rural \ South \ Private,Rural,South,Private
+2015,ALB0003,ALB - stratum 03: Urban \ Center \ Public,Urban,Center,Public
+2015,ALB0004,ALB - stratum 04: Urban \ Center \ Private,Urban,Center,Private
+2015,ALB0005,ALB - stratum 05: Urban \ South \ Public,Urban,South,Public
+2015,ALB0006,ALB - stratum 06: Urban \ South \ Private,Urban,South,Private
+2015,ALB0007,ALB - stratum 07: Rural \ North \ Public,Rural,North,Public
+2015,ALB9797,Undisclosed STRATUM - Albania,,,
+2015,ALB0008,ALB - stratum 08: Rural \ North \ Private,Rural,North,Private
+2015,ALB0009,ALB - stratum 09: Rural \ Center \ Public,Rural,Center,Public
+2018,ALB0210,ALB - stratum 10: Rural / Center / Private,Rural,Center,Private
+2018,ALB0101,ALB - stratum 01: Urban / North / Public,Urban,North,Public
+2018,ALB0211,ALB - stratum 11: Rural / South / Public,Rural,South,Public
+2018,ALB0202,ALB - stratum 02: Urban / North / Private,Urban,North,Private
+2018,ALB0212,ALB - stratum 12: Rural / South / Private,Rural,South,Private
+2018,ALB0203,ALB - stratum 03: Urban / Center / Public,Urban,Center,Public
+2018,ALB0204,ALB - stratum 04: Urban / Center / Private,Urban,Center,Private
+2018,ALB0105,ALB - stratum 05: Urban / South / Public,Urban,South,Public
+2018,ALB0206,ALB - stratum 06: Urban / South / Private,Urban,South,Private
+2018,ALB0107,ALB - stratum 07: Rural / North / Public,Rural,North,Public
+2018,ALB9797,Undisclosed STRATUM - Albania,,,
+2018,ALB0208,ALB - stratum 08: Rural / North / Private,Rural,North,Private
+2018,ALB0109,ALB - stratum 09: Rural / Center / Public,Rural,Center,Public
+2022,ALB10,ALB - stratum 10: Rural / South / Public,Rural,South,Public
+2022,ALB01,ALB - stratum 01: Urban / North / Public,Urban,North,Public
+2022,ALB11,ALB - stratum 11: Rural / South / Private,Rural,South,Private
+2022,ALB02,ALB - stratum 02: Urban / North / Private,Urban,North,Private
+2022,ALB03,ALB - stratum 03: Urban / Center / Public,Urban,Center,Public
+2022,ALB04,ALB - stratum 04: Urban / Center / Private,Urban,Center,Private
+2022,ALB05,ALB - stratum 05: Urban / South / Public,Urban,South,Public
+2022,ALB06,ALB - stratum 06: Urban / South / Private,Urban,South,Private
+2022,ALB07,ALB - stratum 07: Rural / North / Public and Private,Rural,North,Public
+2022,ALB97,Undisclosed STRATUM - Albania,,,
+2022,ALB08,ALB - stratum 08: Rural / Center / Public,Rural,Center,Public
+2022,ALB09,ALB - stratum 09: Rural / Center / Private,Rural,Center,Private
