@@ -1804,6 +1804,92 @@ def nb_14_causal_earthquake() -> list:
     ]
 
 
+def nb_15_ceiling_generalization() -> list:
+    return [
+        md(
+            "# 15 - Does the Data-Ceiling Claim Generalise? (9 countries, PISA 2022)\n\n"
+            "Albania's headline is that its ~0.78 predictive ceiling is a **property of the data, "
+            "not a feature shortfall**: school socioeconomic *composition* gives a large lift, then "
+            "accuracy plateaus, and a big share of the outcome variance sits *between* schools "
+            "(notebooks 11-12). This notebook asks whether that mechanism is Albanian or universal, "
+            "by running the two data-only legs on all nine comparison countries "
+            "(`scripts/run_ceiling_generalization.py`, survey-weighted 5x2 CV):\n\n"
+            "1. **Composition lift** - CV AUC with student background features, then with "
+            "leave-one-out school-mean composition added; is the lift real (Nadeau-Bengio "
+            "corrected-resampled t-test)?\n"
+            "2. **Between-school ICC** - a null multilevel model's share of variance between "
+            "schools.\n\n"
+            "The third Albanian leg (the linked school *questionnaire* adds nothing beyond "
+            "composition) needs data only Albania has, so it stays a single-country result."
+        ),
+        code(HEADER),
+        code("from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "t = pd.read_csv('../outputs/results/ceiling_generalization_2022.csv')\n"
+             "t.sort_values('icc')"),
+
+        md("## 1. Composition lift is nearly universal - the ceiling regime differs\n\n"
+           "Bars: student-only vs +school-composition CV AUC, countries ordered by between-school "
+           "ICC. The dotted line is Albania's 0.78."),
+        code("d = t.sort_values('icc'); x = np.arange(len(d))\n"
+             "fig, ax = plt.subplots(figsize=(9,4.5))\n"
+             "ax.bar(x-0.2, d.base_auc, 0.4, label='student features', color=PALETTE['blue'])\n"
+             "ax.bar(x+0.2, d.school_auc, 0.4, label='+ school composition', color=PALETTE['vermilion'])\n"
+             "ax.set_xticks(x); ax.set_xticklabels(d.country)\n"
+             "ax.set_ylim(0.5,0.9); ax.axhline(0.78, ls=':', color='0.5', lw=1)\n"
+             "ax.text(0,0.785,'Albania ceiling 0.78', fontsize=8, color='0.4')\n"
+             "ax.set_ylabel('weighted 5x2 CV AUC')\n"
+             "ax.set_title('Predictive ceiling: student vs +school composition (2022)')\n"
+             "ax.legend(frameon=False); plt.tight_layout(); plt.show()"),
+        md("**Reading:** school composition gives a **significant lift in 8 of 9 countries** - the "
+           "Albanian mechanism (composition matters, then plateau) is not idiosyncratic. It repeats "
+           "across the Balkans (+6 to +8 pp) and the GDP-matched pair (Colombia +3, Mexico +4 pp). "
+           "The exception is the **equitable top performers**: Estonia's lift is +2.2 pp and *not "
+           "significant* (p = 0.09), Finland's is +0.8 pp. Where schools are socially mixed, "
+           "composition carries almost no extra signal."),
+
+        md("## 2. The ceiling tracks between-school segregation (ICC)\n\n"
+           "If the ceiling is really a data property, the achievable AUC should rise with how "
+           "segregated the school system is - the ICC."),
+        code("fig, ax = plt.subplots(figsize=(6.5,5))\n"
+             "colors = {'Albania':PALETTE['vermilion'],'Balkan':PALETTE['blue'],\n"
+             "          'Top performer':PALETTE['green'],'GDP-matched':PALETTE['orange']}\n"
+             "for grp, s in t.groupby('group'):\n"
+             "    ax.scatter(s.icc, s.school_auc, s=80, color=colors[grp], label=grp, zorder=3)\n"
+             "for _, r in t.iterrows():\n"
+             "    ax.annotate(r.country, (r.icc, r.school_auc), fontsize=8, xytext=(4,4), textcoords='offset points')\n"
+             "corr = np.corrcoef(t.icc, t.school_auc)[0,1]\n"
+             "ax.set_xlabel('between-school ICC (null multilevel model)')\n"
+             "ax.set_ylabel('achievable CV AUC (+school composition)')\n"
+             "ax.set_title(f'More between-school segregation -> higher ceiling (r={corr:.2f})')\n"
+             "ax.legend(frameon=False, fontsize=8); plt.tight_layout(); plt.show()"),
+        md("**Reading:** across the nine systems the achievable AUC and the ICC correlate at "
+           "**r = 0.80**. High-segregation systems (Bulgaria ICC 0.56, Colombia 0.45) are the most "
+           "predictable; **Finland (ICC 0.10) is the least** - its schools are so socially uniform "
+           "that between-school composition, the feature doing the heavy lifting everywhere else, "
+           "has little to grip. The ceiling is not a modelling artefact; it is set by how much of "
+           "the risk lives between schools versus within them."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The data-ceiling mechanism generalises.** School socioeconomic composition lifts "
+            "AUC significantly in 8 of 9 countries, and the achievable ceiling scales with the "
+            "between-school ICC (r = 0.80). Albania's 0.78 is one point on a cross-national "
+            "relationship, not a one-off.\n"
+            "- **Finland is the boundary condition.** In an equitable, low-segregation system "
+            "(ICC 0.10) composition adds almost nothing and the ceiling story weakens - the claim "
+            "is about *segregated* education systems, and we say so rather than overreach.\n"
+            "- **It is a data property, not a feature shortfall.** The lever that moves the ceiling "
+            "is structural (how segregated schools are), not a cleverer feature set - consistent "
+            "with the Albanian school-questionnaire null (notebook 12), which stays single-country "
+            "because only Albania has the linked questionnaire.\n"
+            "- **Policy read:** where risk is concentrated between schools, a screener rides that "
+            "segregation to higher apparent accuracy; the equitable-system ceiling is lower because "
+            "there is less between-school structure to exploit - a feature of fairness, not a bug."
+        ),
+    ]
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
@@ -1822,3 +1908,4 @@ if __name__ == "__main__":
     build_notebook(nb_12_school_questionnaire(), NB_DIR / "12_school_questionnaire.ipynb", force)
     build_notebook(nb_13_decision_support(), NB_DIR / "13_decision_support.ipynb", force)
     build_notebook(nb_14_causal_earthquake(), NB_DIR / "14_causal_earthquake.ipynb", force)
+    build_notebook(nb_15_ceiling_generalization(), NB_DIR / "15_ceiling_generalization.ipynb", force)

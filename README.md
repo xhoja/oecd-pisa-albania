@@ -317,6 +317,30 @@ signal. We report the null for transparency — it forecloses the "earthquake ca
 over-claim and reinforces the structural-crisis reading. The public file cannot separate Durrës
 from Tirana and only 2015/2018 carry a decodable band, so no estimator can rescue identification.
 
+### Does the data-ceiling claim generalise? (9 countries)
+
+Albania's thesis — its ~0.78 ceiling is a **data property, not a feature shortfall** — is tested
+on all nine countries by running its two data-only legs (`src/models/multilevel.py`,
+`scripts/run_ceiling_generalization.py`, notebook 15): the **school-composition lift** (weighted 5×2
+CV AUC, student features vs + leave-one-out school-mean composition, Nadeau-Bengio corrected test)
+and the **between-school ICC** (null multilevel model).
+
+| System | ICC | base → +composition AUC | lift | sig |
+|---|---|---|---|---|
+| Balkans (MKD/MNE/SRB/BGR) | .34–.56 | up to .79 → .86 | +.06 to +.08 | ✓ |
+| GDP-matched (COL/MEX) | .31–.45 | .75–.83 → .79–.86 | +.03 to +.04 | ✓ |
+| Albania | .31 | .71 → .77 | +.059 | ✓ |
+| Estonia *(boundary)* | .21 | .73 → .75 | +.022 | n.s. (p=.09) |
+| Finland *(boundary)* | .10 | .78 → .79 | +.008 | weak |
+
+The composition lift is **significant in 8/9 countries** and the achievable AUC tracks the ICC at
+**r = 0.80** — the ceiling is set by how much risk lives *between* schools, not by the feature set.
+The boundary is the **equitable top performers**: in Finland (ICC 0.10) schools are socially mixed,
+composition adds almost nothing, and the mechanism weakens. So the claim generalises to segregated
+systems and self-limits in equitable ones — reported as a boundary, not buried. (The third Albanian
+leg, the school-questionnaire null, needs the linked questionnaire only Albania has, so it stays
+single-country.)
+
 ---
 
 ## Data
@@ -384,7 +408,7 @@ OECD_PISA_Project/
 │                         #   07_fairness, 08_comparative, 09_forecast_2026,
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
 │                         #   12_school_questionnaire, 13_decision_support,
-│                         #   14_causal_earthquake  (all executed)
+│                         #   14_causal_earthquake, 15_ceiling_generalization  (all executed)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
