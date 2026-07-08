@@ -2,7 +2,7 @@
 Build the processed 2022 school-questionnaire parquet (one row per CNTSCHID).
 
 Source of truth for `data/processed/alb_2022_school.parquet`, consumed by the
-questionnaire ablation (`run_school_questionnaire_experiment.py`) and notebook 12.
+questionnaire ablation (`run_school_questionnaire_experiment.py`) and notebook 06 (Part B).
 Independent principal-reported school signal (resources, staff, leadership,
 climate) - distinct from the student-composition `SCH_MEAN_*` aggregates.
 """

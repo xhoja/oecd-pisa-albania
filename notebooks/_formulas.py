@@ -124,12 +124,12 @@ Metrics:
 **Corrected inference.** CV folds share training data, so fold scores are
 correlated and a naïve $t$-CI is too narrow; the **Nadeau-Bengio** correction
 inflates the variance by $\big(\tfrac1J+\tfrac{n_\text{test}}{n_\text{train}}\big)$
-(notebook 10). For a single held-out set we use the **DeLong** test for correlated
+(notebook 03, Part B). For a single held-out set we use the **DeLong** test for correlated
 ROC-AUCs. The headline AUC is combined across the 10 PVs with **Rubin's rules**
 (notebook 01).
 
 **Out-of-sample protocol.** Train 2009–2018, test 2022: if the covariate shift
-(notebook 03) matters, transfer AUC falls.""",
+(notebook 02) matters, transfer AUC falls.""",
 
     "05": r"""## Methods & formulas (reference)
 
@@ -191,13 +191,13 @@ operating point can buy fairness.""",
     "08": r"""## Methods & formulas (reference)
 
 **Per-country models.** One school-context LightGBM per country, scored by weighted
-5-fold CV AUC (notebook 04 metrics). Per-country AUCs are **not** directly
+5-fold CV AUC (notebook 03 metrics). Per-country AUCs are **not** directly
 comparable as "model quality": separability is hardest near a saturated base rate
 (when $\approx\!3/4$ are at-risk there is little contrast), so AUC partly reflects
 prevalence.
 
 **SHAP rank matrix.** Within each country, features are ranked by mean $|\phi_i|$
-(notebook 05); rank 1 = top driver. The feature $\times$ country matrix exposes
+(notebook 04); rank 1 = top driver. The feature $\times$ country matrix exposes
 **universal** drivers (similar rank everywhere) vs **country-specific** ones. The
 colormap follows the project schema - **dark = more important** (colorblind-safe),
 rank 1 darkest.

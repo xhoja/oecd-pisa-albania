@@ -43,6 +43,60 @@ def _with_formulas(cells: list, key: str) -> list:
     return cells
 
 
+# --------------------------------------------------------------------------- #
+# Notebook merging: several short notebooks are installments of one topic.     #
+# `_assemble` stitches their bodies into a single coherent notebook - one      #
+# intro + one header, each former notebook a "Part", its `##` sections demoted #
+# to `###` so the merged notebook keeps a clean two-level outline.             #
+# --------------------------------------------------------------------------- #
+def _demote(cells: list) -> list:
+    """Copy cells, demoting markdown `## ` headers to `### ` (keeps one H2 per
+    Part in the merged notebook). Code cells pass through unchanged."""
+    out = []
+    for c in cells:
+        if c.cell_type == "markdown":
+            src = "\n".join(("#" + ln) if ln.startswith("## ") else ln
+                            for ln in c.source.splitlines())
+            out.append(md(src))
+        else:
+            out.append(c)
+    return out
+
+
+def _part(letter: str, title: str) -> nbf.NotebookNode:
+    return md(f"---\n\n## Part {letter} — {title}")
+
+
+def _combined_formulas(keys: list[str]) -> nbf.NotebookNode:
+    """One Methods-&-formulas cell built from several notebooks' blocks; keeps a
+    single header, concatenates the rest."""
+    blocks = []
+    for i, k in enumerate(keys):
+        txt = FORMULAS[k]
+        if i > 0:
+            lines = txt.splitlines()
+            if lines and lines[0].startswith("## Methods"):
+                txt = "\n".join(lines[1:])
+        blocks.append(txt.rstrip())
+    return md("\n\n".join(blocks))
+
+
+def _assemble(intro: str, header_src: str, formula_keys: list[str],
+              parts: list[tuple[str, str, "callable"]]) -> list:
+    """Build a merged notebook: intro, combined formulas, one header, then each
+    part (former notebook) as a demoted section. Each ``fn`` is an existing
+    ``nb_*`` builder; its intro (cell 0) and header (cell 1) are dropped."""
+    cells = [md(intro)]
+    fk = [k for k in formula_keys if k in FORMULAS]
+    if fk:
+        cells.append(_combined_formulas(fk))
+    cells.append(code(header_src))
+    for letter, title, fn in parts:
+        cells.append(_part(letter, title))
+        cells += _demote(fn()[2:])
+    return cells
+
+
 def _has_outputs(path: Path) -> bool:
     """True if an existing notebook already has executed cell outputs."""
     if not path.exists():
@@ -217,7 +271,7 @@ def nb_01_eda_albania() -> list:
            "**P(low proficiency | ESCS)** - as a descriptive weighted-logistic curve, overlaid with the "
            "weighted at-risk rate in each SES decile (markers). Comparing **2018 vs 2022** asks whether the "
            "crisis merely lifted the whole curve or *steepened* it (hit the disadvantaged harder). This is a "
-           "single-predictor descriptive gradient, not the multivariable models of notebooks 04/11."),
+           "single-predictor descriptive gradient, not the multivariable models of notebooks 03/06."),
         code(
             "from src.visualization.eda import plot_ses_logistic_curve\n"
             "fig = plot_ses_logistic_curve(df, cycles=(2018, 2022)); plt.show()"
@@ -246,7 +300,7 @@ def nb_01_eda_albania() -> list:
             "print('Weighted Cohen d (ESCS, at-risk vs proficient):', round(dval,3))"
         ),
         md("## 5c. Which features separate at-risk students? (effect-size ranking)\n\n"
-           "The single most reviewer-friendly table in the EDA: every candidate predictor ranked by the "
+           "The single most decision-relevant table in the EDA: every candidate predictor ranked by the "
            "*strength* of its weighted association with low proficiency, not just its significance (with "
            "n≈6k almost everything is 'significant'). Numeric features use weighted **Cohen's d** "
            "(at-risk vs proficient; sign = direction); categoricals use **Cramer's V** with the chi-square "
@@ -266,7 +320,7 @@ def nb_01_eda_albania() -> list:
            "(p ≈ 0.16), unusual internationally and worth a sentence in the write-up."),
         md("## 6. The 2022 crisis - feature drift (2018 → 2022)\n\n"
            "Standardized mean difference (Cohen's d) of each feature between the 2018 baseline and the 2022 "
-           "crisis cohort. This previews the covariate-shift analysis in notebook 03."),
+           "crisis cohort. This previews the covariate-shift analysis in notebook 02 (Part B)."),
         code(
             "from src.visualization.eda import plot_feature_drift\n"
             "fig = plot_feature_drift(df, ['ESCS','HOMEPOS','BELONG','TEACHSUP','ANXMAT','GRADE','REPEAT','IMMIG'])\n"
@@ -286,7 +340,7 @@ def nb_01_eda_albania() -> list:
             "(Cramér's V ≈ 0.07).\n"
             "- **Data-availability caveat.** Albania genuinely lacks ESCS in 2012 & 2015 (an OECD gap, "
             "not a bug) - longitudinal SES comparisons must skip those cycles.\n"
-            "- **Next:** notebook 03 formalises the 2018→2022 change as *covariate shift*."
+            "- **Next:** notebook 02 (Part B) formalises the 2018→2022 change as *covariate shift*."
         ),
     ]
 
@@ -313,7 +367,7 @@ def nb_02_comparative() -> list:
            "Before ranking countries we ask *are these samples comparable?* For each 2022 cohort: the "
            "sample size, the survey-weighted mean math score, the weighted SES level (ESCS), the weighted "
            "low-proficiency rate, and how much ESCS is missing. Big gaps in N or in ESCS coverage would "
-           "temper any head-to-head claim - the honest caveat a reviewer expects up front."),
+           "temper any head-to-head claim - an honest caveat stated up front."),
         code(
             "from src.data.weights import weighted_mean, weighted_proportion\n"
             "d22 = df[df.CYCLE==2022]\n"
@@ -406,7 +460,7 @@ def nb_02_comparative() -> list:
             "- **Shared but uneven regression.** Several peers dipped in 2022, none as sharply as "
             "Albania - its spike is structurally distinct, not a common regional shock.\n"
             "- **Next:** is Albania's shift merely lower scores, or a change in *who* is at risk? "
-            "→ notebook 03."
+            "→ Part B below."
         ),
     ]
 
@@ -468,7 +522,7 @@ def nb_03_covariate_shift() -> list:
         md("## 4. Interpretation\n\n"
            "If shift-AUC is high and TEACHSUP/HOMEPOS dominate the drift, the 2022 regression reflects a "
            "*structural* change in students' learning environment - not just lower scores. This is the "
-           "mechanism we test against the predictive models in notebooks 05–07 (where tree models trained "
+           "mechanism we test against the predictive models in notebooks 03–04 (where tree models trained "
            "on 2009–2018 collapse out-of-sample on 2022)."),
         md(
             "## Conclusions & Interpretation\n\n"
@@ -479,7 +533,7 @@ def nb_03_covariate_shift() -> list:
             "the 2022 cohort differs most in reported teacher support and material resources - not in "
             "immigration or grade.\n"
             "- **Why it matters.** Covariate shift predicts that a model trained on the improving "
-            "2009–2018 era should transfer *worse* to 2022 - tested directly in notebook 04.\n"
+            "2009–2018 era should transfer *worse* to 2022 - tested directly in notebook 03.\n"
             "- **Caveat.** Detection AUC depends on imputation/subsampling; we report a **weighted** "
             "subsample with a 95% CI and median-imputed missing indicators to avoid inflating it."
         ),
@@ -597,7 +651,7 @@ def nb_04_modeling() -> list:
            "modest uncertainty, captured by FMI). This confirms the model ranking is not an artefact of "
            "collapsing the plausible values."),
         md("**Takeaway:** out-of-sample AUC falls to ~0.62–0.67 for every model. The covariate shift "
-           "(notebook 03, detection AUC 0.98) is real and degrades transfer, but no model fully "
+           "(notebook 02, detection AUC 0.98) is real and degrades transfer, but no model fully "
            "collapses - the 2022 risk structure shifted yet remains partly predictable from history."),
         md(
             "## Conclusions & Interpretation\n\n"
@@ -812,7 +866,7 @@ def nb_06_explainability_cases() -> list:
         md(
             "## Conclusions & Interpretation\n\n"
             "- **Local confirms global.** The confidently-correct (TP/TN) waterfalls are dominated by the "
-            "same drivers notebook 05 flagged globally - **school-context** features (school-mean "
+            "same drivers notebook 04 flagged globally - **school-context** features (school-mean "
             "HOMEPOS/TEACHSUP/ESCS) plus individual math anxiety - so the compositional story isn't an "
             "averaging artefact.\n"
             "- **Where the model fails.** FP/FN cases show the failure mode: the model leans on school "
@@ -1067,7 +1121,7 @@ def nb_08_comparative() -> list:
 def nb_09_forecast() -> list:
     return [
         md(
-            "# 09 - Forecast: Albania's Low-Proficiency Rate for the Next Cycle (2026)\n\n"
+            "# 10 - Forecast: Albania's Low-Proficiency Rate for the Next Cycle (2026)\n\n"
             "After COVID delayed PISA 2021 to 2022, the assessment moved to a **4-year** cadence, so the "
             "next cycle is **2026**. Can we anticipate Albania's weighted "
             "low-proficiency (math < Level 2) rate? With only **five** cycles and a structural break in "
@@ -1147,7 +1201,7 @@ def nb_09_forecast() -> list:
             "- **Plausible 2026 range is wide: ~21% (full recovery) to ~74% (persistence).** With five "
             "cycles and a COVID break, that width is the honest message - not a single number.\n"
             "- **Central expectation leans high.** The 2022 spike (74%) reflects durable disruptions "
-            "(learning loss, teacher-support drop seen in notebook 03's covariate shift) unlikely to fully "
+            "(learning loss, teacher-support drop seen in notebook 02's covariate shift) unlikely to fully "
             "reverse by 2026, so the **partial-reversion (~47%) to persistence (~74%)** band is the more "
             "defensible zone; the ~21% *recovery* scenario assumes the pre-COVID trend resumes untouched "
             "and is best read as an optimistic floor.\n"
@@ -1158,7 +1212,7 @@ def nb_09_forecast() -> list:
             "its precision with suspicion. Forecast is of the **aggregate** rate (no 2026 microdata exists); "
             "it is a planning aid, not a prediction of a break.\n"
             "- **Policy read:** absent a strong, targeted recovery in school resources and teacher support "
-            "(the notebook 03 drivers), Albania should plan for a 2026 low-proficiency rate still well "
+            "(the notebook 02 drivers), Albania should plan for a 2026 low-proficiency rate still well "
             "above its 2018 low of 42%."
         ),
     ]
@@ -1321,8 +1375,8 @@ def nb_11_screener_multilevel() -> list:
     return [
         md(
             "# 11 - Is the Screener Useful, and Is the Ceiling Real? (Albania 2022)\n\n"
-            "Two pre-submission strengthenings that answer the two hardest questions a "
-            "reviewer asks about a ~0.78-AUC model on a **75%-prevalence** problem:\n\n"
+            "Two pre-submission strengthenings that answer the two hardest questions "
+            "about a ~0.78-AUC model on a **75%-prevalence** problem:\n\n"
             "1. **Does the model add decision value** over the trivial 'screen everyone' / "
             "'screen no-one' policies, and are its probabilities trustworthy? → **decision-curve "
             "analysis + calibration** (`scripts/run_decision_curve.py`).\n"
@@ -1541,15 +1595,15 @@ def nb_12_school_questionnaire() -> list:
         md(
             "## Conclusions & Interpretation\n\n"
             "- **The 0.78 ceiling is a genuine data limit, not a feature-set limit.** Linking the "
-            "full PISA school questionnaire - the exact 'missing school-level information' notebook "
-            "11 pointed to - adds **no significant predictive signal** beyond the compositional "
+            "full PISA school questionnaire - the exact 'missing school-level information' Part A "
+            "pointed to - adds **no significant predictive signal** beyond the compositional "
             "school-mean features (best incremental +0.004 AUC, all *p* > 0.24). The deferred "
             "data-linkage lever is now **tested and closed**.\n"
             "- **Composition subsumes inputs.** School-mean ESCS is correlated with staffing, "
             "resources and student-teacher ratio, so the compositional features already carry the "
             "school-level signal that matters for predicting individual low-proficiency risk.\n"
             "- **This strengthens the headline story rather than weakening it.** Three independent "
-            "routes - a school-mean booster, a random-intercept multilevel model (notebook 11), and "
+            "routes - a school-mean booster, a random-intercept multilevel model (Part A), and "
             "now a direct school-questionnaire linkage - converge on the same ~0.78 ceiling. The "
             "limit is the information questionnaire data carries about a 15-year-old's math risk, "
             "not the model or an un-linked file.\n"
@@ -1568,9 +1622,9 @@ def nb_12_school_questionnaire() -> list:
 def nb_13_decision_support() -> list:
     return [
         md(
-            "# 13 - Decision Support: Uncertainty, Recourse, and Policy What-Ifs (Albania 2022)\n\n"
-            "The screener is deployable (notebook 11) and its ceiling is understood (notebooks "
-            "11-12). This notebook adds three tools that turn a probability into something a "
+            "# 08 - Decision Support: Uncertainty, Recourse, and Policy What-Ifs (Albania 2022)\n\n"
+            "The screener is deployable and its ceiling is understood (notebook 06). "
+            "This notebook adds three tools that turn a probability into something a "
             "policymaker can act on, each loading a pre-computed script result:\n\n"
             "1. **Conformal prediction** (`scripts/run_conformal.py`) - prediction *sets* with a "
             "finite-sample coverage guarantee: when is the model confident vs abstaining?\n"
@@ -1688,20 +1742,547 @@ def nb_13_decision_support() -> list:
     ]
 
 
+def nb_14_causal_earthquake() -> list:
+    return [
+        md(
+            "# 14 - A Natural Experiment That Does Not Hold: the 2019 Durres Earthquake\n\n"
+            "Every result so far is *associational*. This notebook tests whether the one plausible "
+            "**causal** design in reach - the 26 November 2019 M6.4 Durres earthquake as a natural "
+            "experiment - can upgrade a slice of the paper. PISA's sampling `STRATUM` encodes a "
+            "North / Center / South band; quake damage concentrated in the **Center** band (Durres + "
+            "Tirana). A difference-in-differences compares the change in the at-risk rate in Center "
+            "(treated) vs North+South (control) from pre-quake **2018** to post-quake **2022**.\n\n"
+            "The honest result: **the design fails its own diagnostics.** The naive DiD looks "
+            "significant, but the pre-quake placebo rejects parallel trends, the urbanicity "
+            "triple-difference is ~0, and the effect is null under school-clustered inference. We "
+            "therefore report a *well-identified null* - the 2022 collapse is national, not a "
+            "localised shock - which strengthens the paper's structural-crisis reading. Results are "
+            "pre-computed by `scripts/run_causal_did.py` (design-based BRR + Rubin SEs)."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "es = pd.read_csv('../outputs/results/causal_event_study_2015_2022.csv')\n"
+             "summ = json.load(open('../outputs/results/causal_did_summary.json'))\n"
+             "lookup = pd.read_csv('../outputs/results/stratum_region_lookup.csv')"),
+
+        md("## 0. Region encoding from the sampling stratum\n\n"
+           "Albania has no subnational `REGION` in the public file, but the explicit sampling "
+           "stratum labels every school `<Urbanicity> / <Region band> / <Sector>`. The band is "
+           "stable across 2015/2018/2022 even though the numeric codes change; we parse the label "
+           "text. Center = quake-affected treated group."),
+        code("lookup[lookup.region.notna()][['CYCLE','STRATUM','region','urbanicity','sector']]"
+             ".sort_values(['CYCLE','region']).head(12)"),
+
+        md("## 1. Event study: at-risk rate by region band\n\n"
+           "The parallel-trends assumption is visual here: do the bands move together *before* the "
+           "quake (2015 to 2018)? Bars are design-based 95% CIs (BRR + plausible values)."),
+        code("fig, ax = plt.subplots(figsize=(7.5,4.6))\n"
+             "cmap = {'Center':PALETTE['vermilion'],'North':PALETTE['blue'],'South':PALETTE['green']}\n"
+             "for band, s in es.groupby('region'):\n"
+             "    s = s.sort_values('CYCLE')\n"
+             "    lbl = band + (' (treated)' if band=='Center' else '')\n"
+             "    ax.errorbar(s.CYCLE, s.at_risk, yerr=1.96*s.se, marker='o', capsize=3,\n"
+             "                color=cmap[band], label=lbl, ls='--' if band=='Center' else '-')\n"
+             "ax.axvspan(2019.9, 2022, color='0.5', alpha=0.08)\n"
+             "ax.axvline(2019.9, color='0.5', ls=':', lw=1)\n"
+             "ax.text(2020.05, 0.44, 'Nov 2019\\nM6.4 quake', fontsize=8, color='0.4')\n"
+             "ax.set_xticks([2015,2018,2022]); ax.set_xlabel('PISA cycle')\n"
+             "ax.set_ylabel('Share below Level 2 (math)')\n"
+             "ax.set_title('Event study by region band (design-based 95% CI)')\n"
+             "ax.legend(frameon=False); plt.tight_layout(); plt.show()\n"
+             "es.round(3)"),
+        md("**Reading:** the bands do **not** move in parallel before the quake. From 2015 to 2018 "
+           "the Center band improved faster (fell ~15 pp) than North (~7 pp) or South (~8 pp) - it "
+           "was already on a steeper trajectory. Then from 2018 to 2022 *every* band explodes "
+           "upward by ~30-40 pp. The pre-quake divergence is the first warning that a DiD here will "
+           "not cleanly isolate the earthquake."),
+
+        md("## 2. Difference-in-differences and its placebo\n\n"
+           "$\\text{DiD} = (Y^{\\text{Center}}_{\\text{post}}-Y^{\\text{Center}}_{\\text{pre}}) - "
+           "(Y^{\\text{Control}}_{\\text{post}}-Y^{\\text{Control}}_{\\text{pre}})$. The placebo runs "
+           "the identical estimator on the pre-quake window 2015 to 2018, where the true effect is "
+           "zero by construction - a non-zero placebo means parallel trends is violated."),
+        code("d, pl = summ['did_main_2018_2022'], summ['did_placebo_2015_2018']\n"
+             "tab = pd.DataFrame({\n"
+             "  'window':['main 2018->2022','placebo 2015->2018'],\n"
+             "  'treated_change':[d['treated_change'], pl['treated_change']],\n"
+             "  'control_change':[d['control_change'], pl['control_change']],\n"
+             "  'DiD':[d['did'], pl['did']], 'se':[d['se'], pl['se']],\n"
+             "  '95%CI':[f\"[{d['ci95_low']:.3f}, {d['ci95_high']:.3f}]\",\n"
+             "           f\"[{pl['ci95_low']:.3f}, {pl['ci95_high']:.3f}]\"],\n"
+             "  'p':[d['p_value'], pl['p_value']]})\n"
+             "tab.round(4)"),
+        md("**Reading:** the naive DiD is **+4.7 pp** (p < 0.001, design-based) - superficially a "
+           "localised quake effect. But the **placebo is -7.0 pp (p < 0.001)**: in the pre-quake "
+           "window the Center band was already diverging from control by *more* than the main "
+           "estimate, in the opposite direction. Parallel trends is decisively rejected, so the "
+           "main DiD is not a credible causal estimate - it is mostly the continuation of a "
+           "pre-existing capital-region trend."),
+
+        md("## 3. Triple-difference: netting out the capital-region trend\n\n"
+           "The quake damage was concentrated in the **urban** cores of the Center band (Durres and "
+           "Tirana cities). A real quake effect should widen the urban-minus-rural at-risk gap in "
+           "Center more than in control. Differencing on urbanicity removes any Center-wide secular "
+           "trend - the confound that broke the placebo."),
+        code("ddd, dpl = summ['ddd_main_2018_2022'], summ['ddd_placebo_2015_2018']\n"
+             "reg = summ['did_regression_clustered_2018_2022']\n"
+             "pd.DataFrame({\n"
+             "  'estimate':['DDD main 2018->2022','DDD placebo 2015->2018','DiD school-clustered'],\n"
+             "  'value':[ddd['ddd'], dpl['ddd'], reg['did']],\n"
+             "  'se':[ddd['se'], dpl['se'], reg['se']],\n"
+             "  'p':[ddd['p_value'], dpl['p_value'], reg['p_value']]}).round(4)"),
+        md("**Reading:** the triple-difference is **~-3 pp and not significant (p ~ 0.37)** - and "
+           "the wrong sign for a quake story (urban Center did not worsen *more* than its rural "
+           "counterpart). Once the capital-wide trend is differenced out, the apparent effect "
+           "disappears. The school-clustered regression agrees: **+5 pp but p ~ 0.22**, null. The "
+           "tight design-based SE on the naive DiD was an artefact of ignoring school-level "
+           "clustering and the pre-trend."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The natural experiment does not identify a causal earthquake effect.** A plausible "
+            "DiD is rejected by its own placebo (parallel trends fail), collapses under an "
+            "urbanicity triple-difference, and is null under school-clustered inference.\n"
+            "- **The 2022 collapse is national, not localised.** At-risk jumps ~30-40 pp in *every* "
+            "band and urbanicity cell - consistent with a country-wide COVID-plus-sample-coverage "
+            "shock, not a Durres-region disaster signal.\n"
+            "- **Why report a null?** It is the honest, well-identified answer, and it forecloses "
+            "the natural over-claim that the earthquake caused the crisis. It reinforces the "
+            "paper's thesis that the 2022 crisis is structural and national.\n"
+            "- **Data ceiling.** The public file cannot separate Durres (epicentre) from Tirana, and "
+            "only two pre-periods (2015, 2018) carry a decodable band - so no estimator can rescue "
+            "identification here. Reported for transparency, not buried."
+        ),
+    ]
+
+
+def nb_18_coverage_bounds() -> list:
+    return [
+        md(
+            "# 18 - How Robust Is the Crisis to Coverage? (Manski bounds, 2022)\n\n"
+            "Every rate in this project is computed among the students PISA *sampled* - but PISA "
+            "2022 covered only about **79%** of Albania's 15-year-olds (Coverage Index 3 ~ 0.79; "
+            "6 129 students representing ~28 400 of ~36 000, OECD Country Note). The ~21% uncovered "
+            "- disproportionately out-of-school, disadvantaged youth - are unobserved. Rather than "
+            "assume they resemble the sample, this notebook reports the **range of population "
+            "at-risk rates consistent with the data** (Manski partial identification, "
+            "`src/coverage/manski.py`, `scripts/run_coverage_bounds.py`)."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "S = json.load(open('../outputs/results/coverage_bounds_2022.json'))\n"
+             "sens = pd.read_csv('../outputs/results/coverage_sensitivity_2022.csv')\n"
+             "S"),
+
+        md("## 1. The bounds\n\n"
+           "With coverage $c$, observed covered rate $p$, and unknown uncovered rate $u\\in[0,1]$, "
+           "the population rate is $P=cp+(1-c)u$. Worst-case takes $u\\in[0,1]$; the monotone bound "
+           "uses $u\\ge p$ (out-of-school youth are, if anything, more at risk)."),
+        code("p=S['observed_at_risk_covered']; se=S['observed_se_design_based']\n"
+             "wc=S['worst_case_bounds']; mono=S['monotone_bounds_uncovered_worse']; sc=S['scenarios']\n"
+             "fig, ax = plt.subplots(figsize=(8,4.2))\n"
+             "ax.axvspan(wc['lower'], wc['upper'], color=PALETTE['blue'], alpha=0.12, label='worst-case range')\n"
+             "ax.axvspan(mono['lower'], mono['upper'], color=PALETTE['blue'], alpha=0.28, label='monotone (uncovered >= covered)')\n"
+             "ax.errorbar([p],[1.0], xerr=[[1.96*se],[1.96*se]], fmt='o', color=PALETTE['black'], capsize=4, label='observed (covered) +/-95% CI')\n"
+             "ax.scatter([sc['uncovered_like_poorest_quintile']],[1.0], marker='D', s=55, color=PALETTE['vermilion'], zorder=5)\n"
+             "ax.annotate('uncovered ~ poorest quintile', (sc['uncovered_like_poorest_quintile'],1.0), xytext=(0,12), textcoords='offset points', ha='center', fontsize=8)\n"
+             "ax.axvline(0.419, ls=':', color='0.5'); ax.annotate('2018 rate 0.42', (0.419,1.0), xytext=(0,-20), textcoords='offset points', ha='center', fontsize=8, color='0.4')\n"
+             "ax.set_yticks([]); ax.set_ylim(0.8,1.35); ax.set_xlim(0.38,0.85)\n"
+             "ax.set_xlabel('population at-risk rate (below Level 2, math)')\n"
+             "ax.set_title('Manski coverage bounds: Albania 2022 (79% coverage)')\n"
+             "ax.legend(loc='lower left', fontsize=8); plt.tight_layout(); plt.show()"),
+        md("**Reading:** the observed covered rate is **0.74** (design-based SE 0.004 - sampling "
+           "noise is tiny next to the coverage gap). Without any assumption the population rate is "
+           "only pinned to **[0.58, 0.79]**. But the credible direction is one-sided: out-of-school "
+           "15-year-olds are not *less* at risk than enrolled ones, so under the **monotone** "
+           "assumption the rate is **[0.74, 0.79]** - coverage, if anything, means the headline "
+           "*understates* the crisis. Anchoring the uncovered to the poorest covered quintile "
+           "(reweighting) puts it at **~0.76**."),
+
+        md("## 2. The crisis conclusion survives any coverage assumption\n\n"
+           "The important robustness check: is 'Albania deteriorated sharply from 2018' an artefact "
+           "of who got sampled?"),
+        code("print(f\"Worst-case LOWER bound on 2022 rate: {wc['lower']:.3f}\")\n"
+             "print(f\"Albania 2018 at-risk rate         : 0.419\")\n"
+             "print(f\"Gap even in the most optimistic case: {wc['lower']-0.419:+.3f}\")\n"
+             "fig, ax = plt.subplots(figsize=(7,4))\n"
+             "ax.fill_between(sens.coverage, sens.wc_lower, sens.wc_upper, alpha=0.15, color=PALETTE['blue'], label='worst-case')\n"
+             "ax.plot(sens.coverage, sens.mono_lower, color=PALETTE['vermilion'], label='monotone lower = observed')\n"
+             "ax.axhline(0.419, ls=':', color='0.5'); ax.text(0.71,0.43,'2018 rate', fontsize=8, color='0.4')\n"
+             "ax.set_xlabel('assumed coverage share'); ax.set_ylabel('bound on 2022 at-risk rate')\n"
+             "ax.set_title('Bounds vs coverage assumption'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()"),
+        md("**Reading:** even the **worst-case lower bound (0.58)** sits ~16 pp above Albania's 2018 "
+           "rate of 0.42, and stays above it across every plausible coverage share. No coverage "
+           "assumption - however adversarial - can explain away the 2018->2022 deterioration. The "
+           "*level* is uncertain by ~21 pp in the worst case; the *conclusion* is not."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The reported rate is a covered-population rate.** At 79% coverage the sampling SE "
+            "(0.004) badly understates total uncertainty; the coverage gap is the real one.\n"
+            "- **Partial identification, honestly stated:** worst-case [0.58, 0.79]; under the "
+            "credible monotone assumption [0.74, 0.79], i.e. the headline likely *understates* the "
+            "crisis rather than overstating it.\n"
+            "- **The comparative claim is robust.** The 2022 rate exceeds the 2018 rate under every "
+            "coverage assumption, so the deterioration is not a sampling artefact - it is the one "
+            "conclusion coverage cannot touch.\n"
+            "- **Method, not hand-wringing:** bounds + a reweighting scenario turn a data-quality "
+            "caveat into a quantified robustness result, the honest complement to the point "
+            "estimates elsewhere in the project."
+        ),
+    ]
+
+
+def nb_17_fairness_mitigation() -> list:
+    return [
+        md(
+            "# 17 - Fairness Mitigation, Not Just Diagnosis (Albania 2022)\n\n"
+            "The audit (Part A) found the screener **over-flags the poorest students**: at a "
+            "single 0.5 threshold the bottom SES quintile carries a far higher false-positive rate "
+            "than the top. Diagnosis is not enough - this notebook *fixes* it, post-hoc, with **no "
+            "retraining** (`scripts/run_fairness_mitigation.py`): group-specific decision thresholds "
+            "(Hardt et al. 2016) applied to frozen out-of-fold predictions, equalising the weighted "
+            "FPR across quintiles, and the fairness-utility trade-off that buys."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "S = json.load(open('../outputs/results/fairness_mitigation_summary.json'))\n"
+             "fr = pd.read_csv('../outputs/results/fairness_mitigation_frontier_ses.csv')\n"
+             "print('target FPR', S['target_fpr'], '| per-group thresholds', S['group_thresholds'])"),
+
+        md("## 1. The harm: a single threshold over-flags the poorest\n\n"
+           "Weighted false-positive rate by SES quintile (1 = poorest) at the 0.5 threshold, and "
+           "after equalising FPR with group-specific thresholds."),
+        code("b = S['baseline_fpr_by_group']; m = S['mitigated_fpr_by_group']\n"
+             "q = sorted(b, key=float); x = np.arange(len(q))\n"
+             "fig, ax = plt.subplots(figsize=(7.5,4.3))\n"
+             "ax.bar(x-0.2, [b[k] for k in q], 0.4, label='single 0.5 threshold', color=PALETTE['vermilion'])\n"
+             "ax.bar(x+0.2, [m[k] for k in q], 0.4, label='group-specific thresholds', color=PALETTE['blue'])\n"
+             "ax.set_xticks(x); ax.set_xticklabels([f'Q{int(float(k))}' for k in q])\n"
+             "ax.set_xlabel('SES quintile (1 = poorest)'); ax.set_ylabel('weighted false-positive rate')\n"
+             "ax.set_title('FPR by SES quintile: before vs after mitigation'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()\n"
+             "print(f\"FPR gap {S['baseline']['fpr_gap']:.3f} -> {S['mitigated']['fpr_gap']:.3f}\")"),
+        md("**Reading:** at a single 0.5 threshold the poorest quintile is flagged with an FPR of "
+           "~0.83 versus ~0.20 for the richest - an equalized-odds gap of **0.63**. Because the "
+           "model reads socioeconomic composition, a blanket threshold turns *being poor* into "
+           "*being flagged*. Group-specific thresholds flatten every quintile's FPR to ~0.42, "
+           "collapsing the gap to **0.003** - the disparity was an artefact of the operating point, "
+           "and it is removable without touching the model."),
+
+        md("## 2. What it costs: the fairness-utility trade-off\n\n"
+           "Equalising FPR is not free - it changes who gets caught. The frontier sweeps the common "
+           "target FPR; each point compares group-specific thresholds against a single global "
+           "threshold matched to the same overall selection rate."),
+        code("fig, ax = plt.subplots(figsize=(7,5))\n"
+             "ax.plot(fr.grp_recall, fr.grp_fpr_gap, '-o', color=PALETTE['blue'], label='group-specific')\n"
+             "ax.plot(fr.single_recall, fr.single_fpr_gap, '-s', color=PALETTE['vermilion'], label='single threshold')\n"
+             "ax.set_xlabel('overall weighted recall (at-risk students caught)')\n"
+             "ax.set_ylabel('FPR gap across SES quintiles')\n"
+             "ax.set_title('Fairness-utility trade-off (2022)'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()\n"
+             "print(f\"At the equal-FPR operating point: recall {S['baseline']['overall_recall']:.3f} \"\n"
+             "      f\"-> {S['mitigated']['overall_recall']:.3f}, accuracy \"\n"
+             "      f\"{S['baseline']['overall_accuracy']:.3f} -> {S['mitigated']['overall_accuracy']:.3f}\")"),
+        md("**Reading:** at matched utility the group-specific curve sits **far below** the single-"
+           "threshold curve - for any given recall it delivers a much smaller FPR gap, so "
+           "per-group thresholds dominate a blanket one. The equity is not free: equalising FPR "
+           "moves overall recall from ~0.81 to ~0.75 (about 6 pp fewer at-risk students caught), "
+           "because much of the poorest quintile's high FPR came bundled with genuinely catching "
+           "its at-risk students. That trade - a small recall cost for near-zero disparity - is a "
+           "policy choice the frontier makes explicit rather than hiding in a default 0.5."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The disparity is fixable post-hoc.** Group-specific thresholds cut the SES "
+            "false-positive gap from **0.63 to ~0.00** with no retraining, operating only on frozen "
+            "out-of-fold predictions.\n"
+            "- **Per-group thresholds dominate a single threshold** on the fairness-utility "
+            "frontier - a strictly better operating curve for equalized odds.\n"
+            "- **Equity has a price, and we name it:** ~6 pp of overall recall. Whether that trade "
+            "is worth it is a policy decision, now explicit.\n"
+            "- **Caveat:** applying different thresholds by socioeconomic group is itself an ethical "
+            "and legal choice (disparate treatment to reduce disparate impact). We present it as a "
+            "quantified option, not a default - the honest counterpart to the audit's diagnosis."
+        ),
+    ]
+
+
+def nb_16_process_modality() -> list:
+    return [
+        md(
+            "# 16 - Can a New Data Modality Move the 0.78 Ceiling? (CBA process data)\n\n"
+            "Notebooks 11-15 argue the ~0.78 ceiling is a property of the *data*, not the feature "
+            "set - but every feature so far comes from the same questionnaire modality. This "
+            "notebook links a genuinely **new data source** the project has never used: PISA's "
+            "computer-based-assessment **process data** (`scripts/run_process_modality.py`), joined "
+            "1:1 to the student file by `CNTSTUID`:\n\n"
+            "* **cognitive process** (2022 `STU_COG`, 2018 `STU_TTM`) - per-item response *time* and "
+            "*visit* counts across 443 timed items;\n"
+            "* **questionnaire timing** (2022 `STU_TIM`) - response latency per background-question "
+            "screen.\n\n"
+            "**Leakage discipline:** item *correctness* mechanically determines the plausible-value "
+            "target, so it is never used. Only *behavioural* features enter - how long a student "
+            "spent and how they navigated, not whether they were right (see "
+            "`src/features/process.py`)."
+        ),
+        code(HEADER),
+        code("from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "abl = pd.read_csv('../outputs/results/process_modality_ablation.csv')\n"
+             "imp = pd.read_csv('../outputs/results/process_feature_importance_2022.csv', index_col=0)\n"
+             "abl"),
+
+        md("## 1. The ceiling moves - a new modality lifts AUC where features could not\n\n"
+           "Weighted 5x2 CV AUC, student and student+school baselines, +process features "
+           "(Nadeau-Bengio corrected test)."),
+        code("comb = abl[abl.modality=='cognitive+questionnaire']\n"
+             "fig, axes = plt.subplots(1,2, figsize=(10,4.3), sharey=True)\n"
+             "for ax, cyc in zip(axes,(2022,2018)):\n"
+             "    t = comb[comb.cycle==cyc]; x=np.arange(len(t))\n"
+             "    ax.bar(x-0.2, t.base_auc, 0.4, label='base', color=PALETTE['blue'])\n"
+             "    ax.bar(x+0.2, t.process_auc, 0.4, label='+ process', color=PALETTE['vermilion'])\n"
+             "    for i,r in enumerate(t.itertuples()):\n"
+             "        ax.text(i, max(r.base_auc,r.process_auc)+0.006, f'{r.lift:+.3f}', ha='center', fontsize=8)\n"
+             "    ax.set_xticks(x); ax.set_xticklabels(t.baseline, fontsize=8); ax.set_title(str(cyc)); ax.set_ylim(0.6,0.88)\n"
+             "    if cyc==2022: ax.axhline(0.78, ls=':', color='0.5', lw=1)\n"
+             "axes[0].set_ylabel('weighted 5x2 CV AUC'); axes[0].legend(frameon=False)\n"
+             "plt.tight_layout(); plt.show()"),
+        md("**Reading:** adding process features lifts the AUC at every baseline. At the headline "
+           "student+school ceiling the 2022 AUC rises **0.773 -> 0.858 (+8.5 pp, p < 0.001)**, and "
+           "0.696 -> 0.773 in 2018. So the ceiling that a decade of questionnaire features could not "
+           "break is *not* an absolute limit - a different data modality carries real extra signal. "
+           "The next section asks whether that signal is one we could ever actually screen with."),
+
+        md("## 2. Decomposition: is the lift deployable, or an artefact of taking the test?\n\n"
+           "The lift splits into two very different modalities. Cognitive process is measured *from "
+           "the math test itself* - it is endogenous to the ability being predicted and only exists "
+           "*after* a student sits the CBA. Questionnaire timing is a separate instrument, available "
+           "without the cognitive test."),
+        code("dec = abl[(abl.cycle==2022)&(abl.baseline=='student+school')]\n"
+             "dec[['modality','base_auc','process_auc','lift','lift_p','n_proc_feats']].round(4)"),
+        md("**Reading:** the +8.5 pp is almost entirely **cognitive process** (+7.8 pp on its own). "
+           "The **questionnaire-timing** modality - the only slice usable *before* the test, i.e. "
+           "the only one a real screener could deploy - adds just **+1.1 pp** (p = 0.019). So a new "
+           "modality moves the *number*, but the movement is post-hoc process data that (a) is "
+           "endogenous to proficiency and (b) cannot flag a student early. The **deployable "
+           "screening ceiling essentially holds at ~0.78**."),
+
+        md("## 3. What the model uses: pure timing\n\n"
+           "LightGBM importance over the process features (explanatory fit, 2022 student+school)."),
+        code("ip = imp[imp.index.str.startswith(('PROC_','QTIM_'))].head(10)\n"
+             "fig, ax = plt.subplots(figsize=(7,3.8))\n"
+             "ax.barh(ip.index[::-1], ip['gain'].values[::-1], color=PALETTE['blue'])\n"
+             "ax.set_xlabel('LightGBM gain'); ax.set_title('Top process features (2022)')\n"
+             "plt.tight_layout(); plt.show()"),
+        md("**Reading:** total and median time-on-task, rapid-response fraction and pacing "
+           "variability dominate - the model reads *how* a student worked through the test. These "
+           "are exactly the endogenous, post-hoc signals from section 2: informative about ability, "
+           "useless as an early-warning screen."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **A new modality does move the ceiling** - CBA process data lifts the 2022 AUC to "
+            "**0.86**, the first thing in the project to break 0.78. The ceiling is not an absolute "
+            "information limit.\n"
+            "- **But the movement is not deployable.** ~90% of the lift is cognitive-test process "
+            "data, which is endogenous to the proficiency it predicts and only observable after the "
+            "assessment. It cannot screen a student in advance.\n"
+            "- **The screening ceiling holds.** The only pre-test modality (questionnaire response "
+            "latency) adds +1.1 pp - real but marginal. For the paper's actual use case - flagging "
+            "at-risk students from background data - ~0.78 stands.\n"
+            "- **This sharpens, not contradicts, the data-ceiling thesis.** The ceiling is about "
+            "*what is knowable before the test*. Rich behavioural signal exists inside the test, but "
+            "harvesting it requires administering the very assessment a screener is meant to "
+            "anticipate. Reported honestly, including the large cognitive-process lift we cannot "
+            "use."
+        ),
+    ]
+
+
+def nb_15_ceiling_generalization() -> list:
+    return [
+        md(
+            "# 15 - Does the Data-Ceiling Claim Generalise? (9 countries, PISA 2022)\n\n"
+            "Albania's headline is that its ~0.78 predictive ceiling is a **property of the data, "
+            "not a feature shortfall**: school socioeconomic *composition* gives a large lift, then "
+            "accuracy plateaus, and a big share of the outcome variance sits *between* schools "
+            "(notebook 06). This part asks whether that mechanism is Albanian or universal, "
+            "by running the two data-only legs on all nine comparison countries "
+            "(`scripts/run_ceiling_generalization.py`, survey-weighted 5x2 CV):\n\n"
+            "1. **Composition lift** - CV AUC with student background features, then with "
+            "leave-one-out school-mean composition added; is the lift real (Nadeau-Bengio "
+            "corrected-resampled t-test)?\n"
+            "2. **Between-school ICC** - a null multilevel model's share of variance between "
+            "schools.\n\n"
+            "The third Albanian leg (the linked school *questionnaire* adds nothing beyond "
+            "composition) needs data only Albania has, so it stays a single-country result."
+        ),
+        code(HEADER),
+        code("from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "t = pd.read_csv('../outputs/results/ceiling_generalization_2022.csv')\n"
+             "t.sort_values('icc')"),
+
+        md("## 1. Composition lift is nearly universal - the ceiling regime differs\n\n"
+           "Bars: student-only vs +school-composition CV AUC, countries ordered by between-school "
+           "ICC. The dotted line is Albania's 0.78."),
+        code("d = t.sort_values('icc'); x = np.arange(len(d))\n"
+             "fig, ax = plt.subplots(figsize=(9,4.5))\n"
+             "ax.bar(x-0.2, d.base_auc, 0.4, label='student features', color=PALETTE['blue'])\n"
+             "ax.bar(x+0.2, d.school_auc, 0.4, label='+ school composition', color=PALETTE['vermilion'])\n"
+             "ax.set_xticks(x); ax.set_xticklabels(d.country)\n"
+             "ax.set_ylim(0.5,0.9); ax.axhline(0.78, ls=':', color='0.5', lw=1)\n"
+             "ax.text(0,0.785,'Albania ceiling 0.78', fontsize=8, color='0.4')\n"
+             "ax.set_ylabel('weighted 5x2 CV AUC')\n"
+             "ax.set_title('Predictive ceiling: student vs +school composition (2022)')\n"
+             "ax.legend(frameon=False); plt.tight_layout(); plt.show()"),
+        md("**Reading:** school composition gives a **significant lift in 8 of 9 countries** - the "
+           "Albanian mechanism (composition matters, then plateau) is not idiosyncratic. It repeats "
+           "across the Balkans (+6 to +8 pp) and the GDP-matched pair (Colombia +3, Mexico +4 pp). "
+           "The exception is the **equitable top performers**: Estonia's lift is +2.2 pp and *not "
+           "significant* (p = 0.09), Finland's is +0.8 pp. Where schools are socially mixed, "
+           "composition carries almost no extra signal."),
+
+        md("## 2. The ceiling tracks between-school segregation (ICC)\n\n"
+           "If the ceiling is really a data property, the achievable AUC should rise with how "
+           "segregated the school system is - the ICC."),
+        code("fig, ax = plt.subplots(figsize=(6.5,5))\n"
+             "colors = {'Albania':PALETTE['vermilion'],'Balkan':PALETTE['blue'],\n"
+             "          'Top performer':PALETTE['green'],'GDP-matched':PALETTE['orange']}\n"
+             "for grp, s in t.groupby('group'):\n"
+             "    ax.scatter(s.icc, s.school_auc, s=80, color=colors[grp], label=grp, zorder=3)\n"
+             "for _, r in t.iterrows():\n"
+             "    ax.annotate(r.country, (r.icc, r.school_auc), fontsize=8, xytext=(4,4), textcoords='offset points')\n"
+             "corr = np.corrcoef(t.icc, t.school_auc)[0,1]\n"
+             "ax.set_xlabel('between-school ICC (null multilevel model)')\n"
+             "ax.set_ylabel('achievable CV AUC (+school composition)')\n"
+             "ax.set_title(f'More between-school segregation -> higher ceiling (r={corr:.2f})')\n"
+             "ax.legend(frameon=False, fontsize=8); plt.tight_layout(); plt.show()"),
+        md("**Reading:** across the nine systems the achievable AUC and the ICC correlate at "
+           "**r = 0.80**. High-segregation systems (Bulgaria ICC 0.56, Colombia 0.45) are the most "
+           "predictable; **Finland (ICC 0.10) is the least** - its schools are so socially uniform "
+           "that between-school composition, the feature doing the heavy lifting everywhere else, "
+           "has little to grip. The ceiling is not a modelling artefact; it is set by how much of "
+           "the risk lives between schools versus within them."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The data-ceiling mechanism generalises.** School socioeconomic composition lifts "
+            "AUC significantly in 8 of 9 countries, and the achievable ceiling scales with the "
+            "between-school ICC (r = 0.80). Albania's 0.78 is one point on a cross-national "
+            "relationship, not a one-off.\n"
+            "- **Finland is the boundary condition.** In an equitable, low-segregation system "
+            "(ICC 0.10) composition adds almost nothing and the ceiling story weakens - the claim "
+            "is about *segregated* education systems, and we say so rather than overreach.\n"
+            "- **It is a data property, not a feature shortfall.** The lever that moves the ceiling "
+            "is structural (how segregated schools are), not a cleverer feature set - consistent "
+            "with the Albanian school-questionnaire null (Part B), which stays single-country "
+            "because only Albania has the linked questionnaire.\n"
+            "- **Policy read:** where risk is concentrated between schools, a screener rides that "
+            "segregation to higher apparent accuracy; the equitable-system ceiling is lower because "
+            "there is less between-school structure to exploit - a feature of fairness, not a bug."
+        ),
+    ]
+
+
+# ===========================================================================
+# Merged-notebook intros (18 short notebooks consolidated into 10 coherent ones)
+# ===========================================================================
+INTRO_CRISIS = (
+    "# 02 - The 2022 Crisis in Context: Peers and Covariate Shift (PISA 2022)\n\n"
+    "Notebook 01 established Albania's own V-shaped trajectory. This notebook places the 2022 "
+    "collapse in context two ways: **Part A** benchmarks Albania against Balkan peers, top "
+    "performers and GDP-matched economies (low-proficiency ranking and the SES gradient), and "
+    "**Part B** characterises *how* the 2022 cohort differs from 2018 - a structural covariate "
+    "shift, not merely lower scores. Together they frame the crisis the rest of the project models."
+)
+INTRO_MODELING = (
+    "# 03 - Predictive Modeling: Comparison, Out-of-Sample, and Stacking (Albania 2022)\n\n"
+    "**Part A** compares twelve models under weighted repeated-CV, runs the out-of-sample "
+    "2009-2018 -> 2022 test and the rigorous per-plausible-value (Rubin's rules) evaluation. "
+    "**Part B** asks whether a stacking ensemble beats the single best model - a model-selection "
+    "coda that motivates keeping one interpretable headline model."
+)
+INTRO_EXPLAIN = (
+    "# 04 - Explainability: Global, Local, and Partial Dependence (Albania 2022)\n\n"
+    "How the headline model decides. **Part A** is the global view (SHAP importance, beeswarm, a "
+    "dependence interaction); **Part B** drills into individual students (representative "
+    "confusion-matrix cases, local SHAP waterfalls) and the shape of each effect (partial "
+    "dependence + centered ICE)."
+)
+INTRO_XCOUNTRY = (
+    "# 05 - Cross-Country: Risk Drivers and the Generalisable Ceiling (PISA 2022)\n\n"
+    "Are Albania's risk drivers and its predictive ceiling idiosyncratic or universal? **Part A** "
+    "fits the model per country and compares predictability, prevalence, the SES gradient and a "
+    "SHAP importance rank matrix. **Part B** tests whether the 'data-ceiling' mechanism "
+    "generalises across nine countries and where it breaks (the equitable-system boundary)."
+)
+INTRO_CEILING = (
+    "# 06 - The 0.78 Ceiling: Real, Data-vs-Features, and Whether a New Modality Moves It "
+    "(Albania 2022)\n\n"
+    "The project's central methodological claim, in one place. **Part A** asks whether the screener "
+    "is even useful (decision-curve + calibration) and how much risk is a *school* effect "
+    "(multilevel ICC). **Part B** tests whether the ceiling is features or data by linking the "
+    "school questionnaire. **Part C** links a genuinely new modality - CBA process data - and asks "
+    "whether it can move the ceiling, and whether that movement is deployable."
+)
+INTRO_FAIR = (
+    "# 07 - Fairness: Audit and Mitigation (Albania 2022)\n\n"
+    "**Part A** audits the survey-weighted screener across gender, SES quintile and immigrant "
+    "status, finding it over-flags the poorest students. **Part B** *fixes* that post-hoc with "
+    "group-specific thresholds and traces the fairness-utility trade-off - diagnosis, then remedy."
+)
+INTRO_ROBUST = (
+    "# 09 - How Robust Is the Crisis? Causal Test and Coverage Bounds (Albania)\n\n"
+    "Two honesty checks on the crisis claim. **Part A** tests the 2019 Durres earthquake as a "
+    "natural experiment (difference-in-differences, placebo, triple-difference) - a candidate "
+    "causal story that does not survive its diagnostics. **Part B** puts partial-identification "
+    "(Manski) bounds on the at-risk rate under PISA's ~79% coverage, showing the 2018->2022 "
+    "deterioration is robust to any coverage assumption."
+)
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
-    build_notebook(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
-    build_notebook(_with_formulas(nb_02_comparative(), "02"), NB_DIR / "02_eda_comparative.ipynb", force)
-    build_notebook(_with_formulas(nb_03_covariate_shift(), "03"), NB_DIR / "03_covariate_shift.ipynb", force)
-    build_notebook(_with_formulas(nb_04_modeling(), "04"), NB_DIR / "04_modeling.ipynb", force)
-    build_notebook(_with_formulas(nb_05_explainability(), "05"), NB_DIR / "05_explainability.ipynb", force)
-    build_notebook(_with_formulas(nb_06_explainability_cases(), "06"), NB_DIR / "06_explainability_cases.ipynb", force)
-    build_notebook(_with_formulas(nb_07_fairness(), "07"), NB_DIR / "07_fairness.ipynb", force)
-    build_notebook(_with_formulas(nb_08_comparative(), "08"), NB_DIR / "08_comparative.ipynb", force)
-    build_notebook(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "09_forecast_2026.ipynb", force)
-    build_notebook(nb_10_stacking(), NB_DIR / "10_stacking_ensemble.ipynb", force)
-    build_notebook(_with_formulas(nb_11_screener_multilevel(), "11"),
-                   NB_DIR / "11_screener_multilevel.ipynb", force)
-    build_notebook(nb_12_school_questionnaire(), NB_DIR / "12_school_questionnaire.ipynb", force)
-    build_notebook(nb_13_decision_support(), NB_DIR / "13_decision_support.ipynb", force)
+    B = build_notebook
+    B(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
+    B(_assemble(INTRO_CRISIS, HEADER, ["02", "03"],
+                [("A", "Albania vs. peer countries", nb_02_comparative),
+                 ("B", "The 2022 covariate shift", nb_03_covariate_shift)]),
+      NB_DIR / "02_crisis_in_context.ipynb", force)
+    B(_assemble(INTRO_MODELING, MODEL_HEADER, ["04"],
+                [("A", "Model comparison, out-of-sample & Rubin's rules", nb_04_modeling),
+                 ("B", "Stacking ensemble", nb_10_stacking)]),
+      NB_DIR / "03_modeling.ipynb", force)
+    B(_assemble(INTRO_EXPLAIN, MODEL_HEADER, ["05", "06"],
+                [("A", "Global SHAP", nb_05_explainability),
+                 ("B", "Local cases + partial dependence", nb_06_explainability_cases)]),
+      NB_DIR / "04_explainability.ipynb", force)
+    B(_assemble(INTRO_XCOUNTRY, HEADER, ["08"],
+                [("A", "Per-country predictability & drivers", nb_08_comparative),
+                 ("B", "Does the data-ceiling claim generalise?", nb_15_ceiling_generalization)]),
+      NB_DIR / "05_cross_country.ipynb", force)
+    B(_assemble(INTRO_CEILING, HEADER, ["11"],
+                [("A", "Is the screener useful, and is the ceiling real?", nb_11_screener_multilevel),
+                 ("B", "Features or data? The school questionnaire", nb_12_school_questionnaire),
+                 ("C", "Can a new modality move it? CBA process data", nb_16_process_modality)]),
+      NB_DIR / "06_the_ceiling.ipynb", force)
+    B(_assemble(INTRO_FAIR, MODEL_HEADER, ["07"],
+                [("A", "Fairness audit", nb_07_fairness),
+                 ("B", "Mitigation", nb_17_fairness_mitigation)]),
+      NB_DIR / "07_fairness.ipynb", force)
+    B(nb_13_decision_support(), NB_DIR / "08_decision_support.ipynb", force)
+    B(_assemble(INTRO_ROBUST, HEADER, [],
+                [("A", "A natural experiment: the 2019 earthquake", nb_14_causal_earthquake),
+                 ("B", "Coverage bounds (Manski)", nb_18_coverage_bounds)]),
+      NB_DIR / "09_crisis_robustness.ipynb", force)
+    B(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "10_forecast_2026.ipynb", force)

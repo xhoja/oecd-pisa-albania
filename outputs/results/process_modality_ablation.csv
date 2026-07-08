@@ -1,0 +1,7 @@
+cycle,baseline,modality,base_auc,process_auc,lift,lift_p,n,n_proc_feats
+2022,student,cognitive+questionnaire,0.7139,0.8473,0.1334,0.0,6129,15
+2022,student+school,cognitive+questionnaire,0.7728,0.8579,0.0851,0.0,6129,15
+2022,student+school,cognitive-only,0.7728,0.8508,0.078,0.0,6129,10
+2022,student+school,questionnaire-only,0.7728,0.7842,0.0114,0.019,6129,5
+2018,student,cognitive+questionnaire,0.6764,0.7649,0.0885,0.0,6359,10
+2018,student+school,cognitive+questionnaire,0.6957,0.7728,0.0771,0.0,6359,10
