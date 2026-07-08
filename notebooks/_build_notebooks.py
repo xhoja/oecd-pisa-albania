@@ -43,6 +43,60 @@ def _with_formulas(cells: list, key: str) -> list:
     return cells
 
 
+# --------------------------------------------------------------------------- #
+# Notebook merging: several short notebooks are installments of one topic.     #
+# `_assemble` stitches their bodies into a single coherent notebook - one      #
+# intro + one header, each former notebook a "Part", its `##` sections demoted #
+# to `###` so the merged notebook keeps a clean two-level outline.             #
+# --------------------------------------------------------------------------- #
+def _demote(cells: list) -> list:
+    """Copy cells, demoting markdown `## ` headers to `### ` (keeps one H2 per
+    Part in the merged notebook). Code cells pass through unchanged."""
+    out = []
+    for c in cells:
+        if c.cell_type == "markdown":
+            src = "\n".join(("#" + ln) if ln.startswith("## ") else ln
+                            for ln in c.source.splitlines())
+            out.append(md(src))
+        else:
+            out.append(c)
+    return out
+
+
+def _part(letter: str, title: str) -> nbf.NotebookNode:
+    return md(f"---\n\n## Part {letter} — {title}")
+
+
+def _combined_formulas(keys: list[str]) -> nbf.NotebookNode:
+    """One Methods-&-formulas cell built from several notebooks' blocks; keeps a
+    single header, concatenates the rest."""
+    blocks = []
+    for i, k in enumerate(keys):
+        txt = FORMULAS[k]
+        if i > 0:
+            lines = txt.splitlines()
+            if lines and lines[0].startswith("## Methods"):
+                txt = "\n".join(lines[1:])
+        blocks.append(txt.rstrip())
+    return md("\n\n".join(blocks))
+
+
+def _assemble(intro: str, header_src: str, formula_keys: list[str],
+              parts: list[tuple[str, str, "callable"]]) -> list:
+    """Build a merged notebook: intro, combined formulas, one header, then each
+    part (former notebook) as a demoted section. Each ``fn`` is an existing
+    ``nb_*`` builder; its intro (cell 0) and header (cell 1) are dropped."""
+    cells = [md(intro)]
+    fk = [k for k in formula_keys if k in FORMULAS]
+    if fk:
+        cells.append(_combined_formulas(fk))
+    cells.append(code(header_src))
+    for letter, title, fn in parts:
+        cells.append(_part(letter, title))
+        cells += _demote(fn()[2:])
+    return cells
+
+
 def _has_outputs(path: Path) -> bool:
     """True if an existing notebook already has executed cell outputs."""
     if not path.exists():
@@ -217,7 +271,7 @@ def nb_01_eda_albania() -> list:
            "**P(low proficiency | ESCS)** - as a descriptive weighted-logistic curve, overlaid with the "
            "weighted at-risk rate in each SES decile (markers). Comparing **2018 vs 2022** asks whether the "
            "crisis merely lifted the whole curve or *steepened* it (hit the disadvantaged harder). This is a "
-           "single-predictor descriptive gradient, not the multivariable models of notebooks 04/11."),
+           "single-predictor descriptive gradient, not the multivariable models of notebooks 03/06."),
         code(
             "from src.visualization.eda import plot_ses_logistic_curve\n"
             "fig = plot_ses_logistic_curve(df, cycles=(2018, 2022)); plt.show()"
@@ -266,7 +320,7 @@ def nb_01_eda_albania() -> list:
            "(p ≈ 0.16), unusual internationally and worth a sentence in the write-up."),
         md("## 6. The 2022 crisis - feature drift (2018 → 2022)\n\n"
            "Standardized mean difference (Cohen's d) of each feature between the 2018 baseline and the 2022 "
-           "crisis cohort. This previews the covariate-shift analysis in notebook 03."),
+           "crisis cohort. This previews the covariate-shift analysis in notebook 02 (Part B)."),
         code(
             "from src.visualization.eda import plot_feature_drift\n"
             "fig = plot_feature_drift(df, ['ESCS','HOMEPOS','BELONG','TEACHSUP','ANXMAT','GRADE','REPEAT','IMMIG'])\n"
@@ -286,7 +340,7 @@ def nb_01_eda_albania() -> list:
             "(Cramér's V ≈ 0.07).\n"
             "- **Data-availability caveat.** Albania genuinely lacks ESCS in 2012 & 2015 (an OECD gap, "
             "not a bug) - longitudinal SES comparisons must skip those cycles.\n"
-            "- **Next:** notebook 03 formalises the 2018→2022 change as *covariate shift*."
+            "- **Next:** notebook 02 (Part B) formalises the 2018→2022 change as *covariate shift*."
         ),
     ]
 
@@ -406,7 +460,7 @@ def nb_02_comparative() -> list:
             "- **Shared but uneven regression.** Several peers dipped in 2022, none as sharply as "
             "Albania - its spike is structurally distinct, not a common regional shock.\n"
             "- **Next:** is Albania's shift merely lower scores, or a change in *who* is at risk? "
-            "→ notebook 03."
+            "→ Part B below."
         ),
     ]
 
@@ -468,7 +522,7 @@ def nb_03_covariate_shift() -> list:
         md("## 4. Interpretation\n\n"
            "If shift-AUC is high and TEACHSUP/HOMEPOS dominate the drift, the 2022 regression reflects a "
            "*structural* change in students' learning environment - not just lower scores. This is the "
-           "mechanism we test against the predictive models in notebooks 05–07 (where tree models trained "
+           "mechanism we test against the predictive models in notebooks 03–04 (where tree models trained "
            "on 2009–2018 collapse out-of-sample on 2022)."),
         md(
             "## Conclusions & Interpretation\n\n"
@@ -479,7 +533,7 @@ def nb_03_covariate_shift() -> list:
             "the 2022 cohort differs most in reported teacher support and material resources - not in "
             "immigration or grade.\n"
             "- **Why it matters.** Covariate shift predicts that a model trained on the improving "
-            "2009–2018 era should transfer *worse* to 2022 - tested directly in notebook 04.\n"
+            "2009–2018 era should transfer *worse* to 2022 - tested directly in notebook 03.\n"
             "- **Caveat.** Detection AUC depends on imputation/subsampling; we report a **weighted** "
             "subsample with a 95% CI and median-imputed missing indicators to avoid inflating it."
         ),
@@ -597,7 +651,7 @@ def nb_04_modeling() -> list:
            "modest uncertainty, captured by FMI). This confirms the model ranking is not an artefact of "
            "collapsing the plausible values."),
         md("**Takeaway:** out-of-sample AUC falls to ~0.62–0.67 for every model. The covariate shift "
-           "(notebook 03, detection AUC 0.98) is real and degrades transfer, but no model fully "
+           "(notebook 02, detection AUC 0.98) is real and degrades transfer, but no model fully "
            "collapses - the 2022 risk structure shifted yet remains partly predictable from history."),
         md(
             "## Conclusions & Interpretation\n\n"
@@ -812,7 +866,7 @@ def nb_06_explainability_cases() -> list:
         md(
             "## Conclusions & Interpretation\n\n"
             "- **Local confirms global.** The confidently-correct (TP/TN) waterfalls are dominated by the "
-            "same drivers notebook 05 flagged globally - **school-context** features (school-mean "
+            "same drivers notebook 04 flagged globally - **school-context** features (school-mean "
             "HOMEPOS/TEACHSUP/ESCS) plus individual math anxiety - so the compositional story isn't an "
             "averaging artefact.\n"
             "- **Where the model fails.** FP/FN cases show the failure mode: the model leans on school "
@@ -1067,7 +1121,7 @@ def nb_08_comparative() -> list:
 def nb_09_forecast() -> list:
     return [
         md(
-            "# 09 - Forecast: Albania's Low-Proficiency Rate for the Next Cycle (2026)\n\n"
+            "# 10 - Forecast: Albania's Low-Proficiency Rate for the Next Cycle (2026)\n\n"
             "After COVID delayed PISA 2021 to 2022, the assessment moved to a **4-year** cadence, so the "
             "next cycle is **2026**. Can we anticipate Albania's weighted "
             "low-proficiency (math < Level 2) rate? With only **five** cycles and a structural break in "
@@ -1147,7 +1201,7 @@ def nb_09_forecast() -> list:
             "- **Plausible 2026 range is wide: ~21% (full recovery) to ~74% (persistence).** With five "
             "cycles and a COVID break, that width is the honest message - not a single number.\n"
             "- **Central expectation leans high.** The 2022 spike (74%) reflects durable disruptions "
-            "(learning loss, teacher-support drop seen in notebook 03's covariate shift) unlikely to fully "
+            "(learning loss, teacher-support drop seen in notebook 02's covariate shift) unlikely to fully "
             "reverse by 2026, so the **partial-reversion (~47%) to persistence (~74%)** band is the more "
             "defensible zone; the ~21% *recovery* scenario assumes the pre-COVID trend resumes untouched "
             "and is best read as an optimistic floor.\n"
@@ -1158,7 +1212,7 @@ def nb_09_forecast() -> list:
             "its precision with suspicion. Forecast is of the **aggregate** rate (no 2026 microdata exists); "
             "it is a planning aid, not a prediction of a break.\n"
             "- **Policy read:** absent a strong, targeted recovery in school resources and teacher support "
-            "(the notebook 03 drivers), Albania should plan for a 2026 low-proficiency rate still well "
+            "(the notebook 02 drivers), Albania should plan for a 2026 low-proficiency rate still well "
             "above its 2018 low of 42%."
         ),
     ]
@@ -1541,15 +1595,15 @@ def nb_12_school_questionnaire() -> list:
         md(
             "## Conclusions & Interpretation\n\n"
             "- **The 0.78 ceiling is a genuine data limit, not a feature-set limit.** Linking the "
-            "full PISA school questionnaire - the exact 'missing school-level information' notebook "
-            "11 pointed to - adds **no significant predictive signal** beyond the compositional "
+            "full PISA school questionnaire - the exact 'missing school-level information' Part A "
+            "pointed to - adds **no significant predictive signal** beyond the compositional "
             "school-mean features (best incremental +0.004 AUC, all *p* > 0.24). The deferred "
             "data-linkage lever is now **tested and closed**.\n"
             "- **Composition subsumes inputs.** School-mean ESCS is correlated with staffing, "
             "resources and student-teacher ratio, so the compositional features already carry the "
             "school-level signal that matters for predicting individual low-proficiency risk.\n"
             "- **This strengthens the headline story rather than weakening it.** Three independent "
-            "routes - a school-mean booster, a random-intercept multilevel model (notebook 11), and "
+            "routes - a school-mean booster, a random-intercept multilevel model (Part A), and "
             "now a direct school-questionnaire linkage - converge on the same ~0.78 ceiling. The "
             "limit is the information questionnaire data carries about a 15-year-old's math risk, "
             "not the model or an un-linked file.\n"
@@ -1568,9 +1622,9 @@ def nb_12_school_questionnaire() -> list:
 def nb_13_decision_support() -> list:
     return [
         md(
-            "# 13 - Decision Support: Uncertainty, Recourse, and Policy What-Ifs (Albania 2022)\n\n"
-            "The screener is deployable (notebook 11) and its ceiling is understood (notebooks "
-            "11-12). This notebook adds three tools that turn a probability into something a "
+            "# 08 - Decision Support: Uncertainty, Recourse, and Policy What-Ifs (Albania 2022)\n\n"
+            "The screener is deployable and its ceiling is understood (notebook 06). "
+            "This notebook adds three tools that turn a probability into something a "
             "policymaker can act on, each loading a pre-computed script result:\n\n"
             "1. **Conformal prediction** (`scripts/run_conformal.py`) - prediction *sets* with a "
             "finite-sample coverage guarantee: when is the model confident vs abstaining?\n"
@@ -1888,7 +1942,7 @@ def nb_17_fairness_mitigation() -> list:
     return [
         md(
             "# 17 - Fairness Mitigation, Not Just Diagnosis (Albania 2022)\n\n"
-            "The audit (notebook 07) found the screener **over-flags the poorest students**: at a "
+            "The audit (Part A) found the screener **over-flags the poorest students**: at a "
             "single 0.5 threshold the bottom SES quintile carries a far higher false-positive rate "
             "than the top. Diagnosis is not enough - this notebook *fixes* it, post-hoc, with **no "
             "retraining** (`scripts/run_fairness_mitigation.py`): group-specific decision thresholds "
@@ -2060,7 +2114,7 @@ def nb_15_ceiling_generalization() -> list:
             "Albania's headline is that its ~0.78 predictive ceiling is a **property of the data, "
             "not a feature shortfall**: school socioeconomic *composition* gives a large lift, then "
             "accuracy plateaus, and a big share of the outcome variance sits *between* schools "
-            "(notebooks 11-12). This notebook asks whether that mechanism is Albanian or universal, "
+            "(notebook 06). This part asks whether that mechanism is Albanian or universal, "
             "by running the two data-only legs on all nine comparison countries "
             "(`scripts/run_ceiling_generalization.py`, survey-weighted 5x2 CV):\n\n"
             "1. **Composition lift** - CV AUC with student background features, then with "
@@ -2130,7 +2184,7 @@ def nb_15_ceiling_generalization() -> list:
             "is about *segregated* education systems, and we say so rather than overreach.\n"
             "- **It is a data property, not a feature shortfall.** The lever that moves the ceiling "
             "is structural (how segregated schools are), not a cleverer feature set - consistent "
-            "with the Albanian school-questionnaire null (notebook 12), which stays single-country "
+            "with the Albanian school-questionnaire null (Part B), which stays single-country "
             "because only Albania has the linked questionnaire.\n"
             "- **Policy read:** where risk is concentrated between schools, a screener rides that "
             "segregation to higher apparent accuracy; the equitable-system ceiling is lower because "
@@ -2139,25 +2193,96 @@ def nb_15_ceiling_generalization() -> list:
     ]
 
 
+# ===========================================================================
+# Merged-notebook intros (18 short notebooks consolidated into 10 coherent ones)
+# ===========================================================================
+INTRO_CRISIS = (
+    "# 02 - The 2022 Crisis in Context: Peers and Covariate Shift (PISA 2022)\n\n"
+    "Notebook 01 established Albania's own V-shaped trajectory. This notebook places the 2022 "
+    "collapse in context two ways: **Part A** benchmarks Albania against Balkan peers, top "
+    "performers and GDP-matched economies (low-proficiency ranking and the SES gradient), and "
+    "**Part B** characterises *how* the 2022 cohort differs from 2018 - a structural covariate "
+    "shift, not merely lower scores. Together they frame the crisis the rest of the project models."
+)
+INTRO_MODELING = (
+    "# 03 - Predictive Modeling: Comparison, Out-of-Sample, and Stacking (Albania 2022)\n\n"
+    "**Part A** compares twelve models under weighted repeated-CV, runs the out-of-sample "
+    "2009-2018 -> 2022 test and the rigorous per-plausible-value (Rubin's rules) evaluation. "
+    "**Part B** asks whether a stacking ensemble beats the single best model - a model-selection "
+    "coda that motivates keeping one interpretable headline model."
+)
+INTRO_EXPLAIN = (
+    "# 04 - Explainability: Global, Local, and Partial Dependence (Albania 2022)\n\n"
+    "How the headline model decides. **Part A** is the global view (SHAP importance, beeswarm, a "
+    "dependence interaction); **Part B** drills into individual students (representative "
+    "confusion-matrix cases, local SHAP waterfalls) and the shape of each effect (partial "
+    "dependence + centered ICE)."
+)
+INTRO_XCOUNTRY = (
+    "# 05 - Cross-Country: Risk Drivers and the Generalisable Ceiling (PISA 2022)\n\n"
+    "Are Albania's risk drivers and its predictive ceiling idiosyncratic or universal? **Part A** "
+    "fits the model per country and compares predictability, prevalence, the SES gradient and a "
+    "SHAP importance rank matrix. **Part B** tests whether the 'data-ceiling' mechanism "
+    "generalises across nine countries and where it breaks (the equitable-system boundary)."
+)
+INTRO_CEILING = (
+    "# 06 - The 0.78 Ceiling: Real, Data-vs-Features, and Whether a New Modality Moves It "
+    "(Albania 2022)\n\n"
+    "The project's central methodological claim, in one place. **Part A** asks whether the screener "
+    "is even useful (decision-curve + calibration) and how much risk is a *school* effect "
+    "(multilevel ICC). **Part B** tests whether the ceiling is features or data by linking the "
+    "school questionnaire. **Part C** links a genuinely new modality - CBA process data - and asks "
+    "whether it can move the ceiling, and whether that movement is deployable."
+)
+INTRO_FAIR = (
+    "# 07 - Fairness: Audit and Mitigation (Albania 2022)\n\n"
+    "**Part A** audits the survey-weighted screener across gender, SES quintile and immigrant "
+    "status, finding it over-flags the poorest students. **Part B** *fixes* that post-hoc with "
+    "group-specific thresholds and traces the fairness-utility trade-off - diagnosis, then remedy."
+)
+INTRO_ROBUST = (
+    "# 09 - How Robust Is the Crisis? Causal Test and Coverage Bounds (Albania)\n\n"
+    "Two honesty checks on the crisis claim. **Part A** tests the 2019 Durres earthquake as a "
+    "natural experiment (difference-in-differences, placebo, triple-difference) - a candidate "
+    "causal story that does not survive its diagnostics. **Part B** puts partial-identification "
+    "(Manski) bounds on the at-risk rate under PISA's ~79% coverage, showing the 2018->2022 "
+    "deterioration is robust to any coverage assumption."
+)
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
-    build_notebook(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
-    build_notebook(_with_formulas(nb_02_comparative(), "02"), NB_DIR / "02_eda_comparative.ipynb", force)
-    build_notebook(_with_formulas(nb_03_covariate_shift(), "03"), NB_DIR / "03_covariate_shift.ipynb", force)
-    build_notebook(_with_formulas(nb_04_modeling(), "04"), NB_DIR / "04_modeling.ipynb", force)
-    build_notebook(_with_formulas(nb_05_explainability(), "05"), NB_DIR / "05_explainability.ipynb", force)
-    build_notebook(_with_formulas(nb_06_explainability_cases(), "06"), NB_DIR / "06_explainability_cases.ipynb", force)
-    build_notebook(_with_formulas(nb_07_fairness(), "07"), NB_DIR / "07_fairness.ipynb", force)
-    build_notebook(_with_formulas(nb_08_comparative(), "08"), NB_DIR / "08_comparative.ipynb", force)
-    build_notebook(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "09_forecast_2026.ipynb", force)
-    build_notebook(nb_10_stacking(), NB_DIR / "10_stacking_ensemble.ipynb", force)
-    build_notebook(_with_formulas(nb_11_screener_multilevel(), "11"),
-                   NB_DIR / "11_screener_multilevel.ipynb", force)
-    build_notebook(nb_12_school_questionnaire(), NB_DIR / "12_school_questionnaire.ipynb", force)
-    build_notebook(nb_13_decision_support(), NB_DIR / "13_decision_support.ipynb", force)
-    build_notebook(nb_14_causal_earthquake(), NB_DIR / "14_causal_earthquake.ipynb", force)
-    build_notebook(nb_15_ceiling_generalization(), NB_DIR / "15_ceiling_generalization.ipynb", force)
-    build_notebook(nb_16_process_modality(), NB_DIR / "16_process_modality.ipynb", force)
-    build_notebook(nb_17_fairness_mitigation(), NB_DIR / "17_fairness_mitigation.ipynb", force)
-    build_notebook(nb_18_coverage_bounds(), NB_DIR / "18_coverage_bounds.ipynb", force)
+    B = build_notebook
+    B(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
+    B(_assemble(INTRO_CRISIS, HEADER, ["02", "03"],
+                [("A", "Albania vs. peer countries", nb_02_comparative),
+                 ("B", "The 2022 covariate shift", nb_03_covariate_shift)]),
+      NB_DIR / "02_crisis_in_context.ipynb", force)
+    B(_assemble(INTRO_MODELING, MODEL_HEADER, ["04"],
+                [("A", "Model comparison, out-of-sample & Rubin's rules", nb_04_modeling),
+                 ("B", "Stacking ensemble", nb_10_stacking)]),
+      NB_DIR / "03_modeling.ipynb", force)
+    B(_assemble(INTRO_EXPLAIN, MODEL_HEADER, ["05", "06"],
+                [("A", "Global SHAP", nb_05_explainability),
+                 ("B", "Local cases + partial dependence", nb_06_explainability_cases)]),
+      NB_DIR / "04_explainability.ipynb", force)
+    B(_assemble(INTRO_XCOUNTRY, HEADER, ["08"],
+                [("A", "Per-country predictability & drivers", nb_08_comparative),
+                 ("B", "Does the data-ceiling claim generalise?", nb_15_ceiling_generalization)]),
+      NB_DIR / "05_cross_country.ipynb", force)
+    B(_assemble(INTRO_CEILING, HEADER, ["11"],
+                [("A", "Is the screener useful, and is the ceiling real?", nb_11_screener_multilevel),
+                 ("B", "Features or data? The school questionnaire", nb_12_school_questionnaire),
+                 ("C", "Can a new modality move it? CBA process data", nb_16_process_modality)]),
+      NB_DIR / "06_the_ceiling.ipynb", force)
+    B(_assemble(INTRO_FAIR, MODEL_HEADER, ["07"],
+                [("A", "Fairness audit", nb_07_fairness),
+                 ("B", "Mitigation", nb_17_fairness_mitigation)]),
+      NB_DIR / "07_fairness.ipynb", force)
+    B(nb_13_decision_support(), NB_DIR / "08_decision_support.ipynb", force)
+    B(_assemble(INTRO_ROBUST, HEADER, [],
+                [("A", "A natural experiment: the 2019 earthquake", nb_14_causal_earthquake),
+                 ("B", "Coverage bounds (Manski)", nb_18_coverage_bounds)]),
+      NB_DIR / "09_crisis_robustness.ipynb", force)
+    B(_with_formulas(nb_09_forecast(), "09"), NB_DIR / "10_forecast_2026.ipynb", force)

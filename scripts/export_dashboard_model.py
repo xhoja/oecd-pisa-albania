@@ -6,7 +6,7 @@ school socioeconomic composition - on the *full* Albania-2022 cohort, then adds
 the two things a deployable screener needs on top of the CV evidence:
 
   1. **Post-hoc isotonic calibration.** Raw CatBoost probabilities are sharp but
-     mis-calibrated (weighted ECE ~0.15, see notebook 11); a screener reports a
+     mis-calibrated (weighted ECE ~0.15, see notebook 06); a screener reports a
      *probability of risk*, so we fit an out-of-fold isotonic map that pulls the
      weighted ECE to ~0.03. The map is learned on OUT-OF-FOLD predictions so it
      is not fit on the same rows it corrects.

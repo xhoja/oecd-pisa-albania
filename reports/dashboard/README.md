@@ -53,5 +53,5 @@ for a real student — math anxiety, for instance, is partly a *consequence* of 
 achievement, not only a cause. Use scores to widen support, never to ration it.
 
 Provenance: the same pipeline scored ~0.78 weighted CV AUC in
-`notebooks/04_modeling.ipynb`; the export script reuses the project's leakage-safe,
+`notebooks/03_modeling.ipynb`; the export script reuses the project's leakage-safe,
 survey-weighted training path (`src/models/`).

@@ -65,7 +65,7 @@ statistic in this README is backed by a unit-tested function.
    directly onto students adds **no significant signal beyond school composition** (best +0.004
    AUC, all *p* > 0.24): school-mean SES already proxies school inputs. Three independent routes:
    composition booster, multilevel ICC ≈ 0.31, and the direct questionnaire linkage, converge on
-   the same ceiling (notebooks 11–12).
+   the same ceiling (notebook 06).
 
 ---
 
@@ -222,7 +222,7 @@ was `ANXMAT` > `HISCED` > `HOMEPOS` …; adding school context reorders the whol
 SHAP waterfalls for one confidently-correct TP (P = 0.997) and TN (P = 0.012) and one
 confidently-*wrong* FP (P = 0.88) and FN (P = 0.07), the cases worth inspecting, plus PDP +
 centered-ICE curves for the top raw drivers (`ANXMAT`, `HISCED`, `HOMEPOS`, `BELONG`). Figures:
-`outputs/figures/shap/D3_shap_local_cases`, `D4_pdp_ice`. Notebook 06.
+`outputs/figures/shap/D3_shap_local_cases`, `D4_pdp_ice`. Notebook 04.
 
 ### Fairness audit (Albania 2022, survey-weighted, out-of-fold @ 0.5, school-context model)
 
@@ -253,7 +253,7 @@ GDP-matched economies (Colombia 73%, Mexico 67%); Estonia lowest at 14%.
 ### Comparative modeling (Phase 8), Albania vs. peers
 
 Per-country school-context LightGBM (nine countries, 2022), weighted 5-fold CV
-(`scripts/run_comparative_modeling.py`, notebook 08):
+(`scripts/run_comparative_modeling.py`, notebook 05):
 
 - **Albania: high prevalence, low separability, flat gradient.** Highest at-risk rate (0.75),
   one of the *lowest* model AUCs (**0.77**, with 3-in-4 at-risk there's little contrast to
@@ -278,7 +278,7 @@ Per-country school-context LightGBM (nine countries, 2022), weighted 5-fold CV
 PISA moved to a **4-year** cadence after COVID delayed 2021 → 2022, so the next assessment is
 **2026**. With only five cycles and a 2022 structural break, a point forecast is indefensible, so
 we report **scenarios** and propagate each cycle's design-based (BRR + PV) SE through a
-Monte-Carlo (`src/forecast/scenarios.py`, notebook 09):
+Monte-Carlo (`src/forecast/scenarios.py`, notebook 10):
 
 | Scenario | 2026 median | 90% PI |
 |---|---|---|
@@ -300,7 +300,7 @@ The whole framework is associational, so we test the one natural experiment in r
 26 Nov 2019 M6.4 Durrës earthquake. PISA's sampling `STRATUM` encodes a North/Center/South band;
 quake damage concentrated in the **Center** band (Durrës + Tirana). A difference-in-differences
 (Center = treated vs North+South, **2018 → 2022**) with design-based BRR + PV standard errors
-(`src/causal/`, `scripts/run_causal_did.py`, notebook 14):
+(`src/causal/`, `scripts/run_causal_did.py`, notebook 09):
 
 | Estimator | Effect on at-risk rate | p |
 |---|---|---|
@@ -321,7 +321,7 @@ from Tirana and only 2015/2018 carry a decodable band, so no estimator can rescu
 
 Albania's thesis — its ~0.78 ceiling is a **data property, not a feature shortfall** — is tested
 on all nine countries by running its two data-only legs (`src/models/multilevel.py`,
-`scripts/run_ceiling_generalization.py`, notebook 15): the **school-composition lift** (weighted 5×2
+`scripts/run_ceiling_generalization.py`, notebook 05): the **school-composition lift** (weighted 5×2
 CV AUC, student features vs + leave-one-out school-mean composition, Nadeau-Bengio corrected test)
 and the **between-school ICC** (null multilevel model).
 
@@ -345,7 +345,7 @@ single-country.)
 
 Every feature so far is one questionnaire modality. We link a genuinely new source — PISA's
 **computer-based-assessment process data** (`src/features/process.py`,
-`scripts/run_process_modality.py`, notebook 16), joined 1:1 by `CNTSTUID`: per-item response
+`scripts/run_process_modality.py`, notebook 06), joined 1:1 by `CNTSTUID`: per-item response
 **time + visits** (2022 `STU_COG`, 2018 `STU_TTM`) and questionnaire **response latency** (2022
 `STU_TIM`). Only *behavioural* features are used — item correctness mechanically defines the target,
 so it is never a feature.
@@ -368,7 +368,7 @@ both ruled out at source.)
 
 The audit found the screener over-flags the poorest students. We *fix* it post-hoc — no retraining —
 with **group-specific decision thresholds** on frozen out-of-fold predictions
-(`src/fairness/mitigation.py`, `scripts/run_fairness_mitigation.py`, notebook 17):
+(`src/fairness/mitigation.py`, `scripts/run_fairness_mitigation.py`, notebook 07):
 
 | SES-quintile FPR | single 0.5 threshold | equal-FPR group thresholds |
 |---|---|---|
@@ -388,7 +388,7 @@ PISA 2022 covered only ~**79%** of Albania's 15-year-olds (Coverage Index 3 ≈ 
 representing ~28,400 of ~36,000 — OECD Country Note). The reported ~74% at-risk rate is a rate
 *among the covered*; the ~21% uncovered (out-of-school, disadvantaged) are unobserved. We report
 partial-identification bounds instead of assuming they resemble the sample (`src/coverage/manski.py`,
-`scripts/run_coverage_bounds.py`, notebook 18):
+`scripts/run_coverage_bounds.py`, notebook 09):
 
 | | population at-risk rate |
 |---|---|
@@ -466,14 +466,11 @@ OECD_PISA_Project/
 │   │                     #   feature_effect_sizes)
 │   ├── visualization/    # style, eda (incl. plot_ses_logistic_curve), model_plots
 │   └── utils/            # config, logging, reproducibility
-├── notebooks/            # 01_eda_albania, 02_eda_comparative, 03_covariate_shift,
-│                         #   04_modeling, 05_explainability, 06_explainability_cases,
-│                         #   07_fairness, 08_comparative, 09_forecast_2026,
-│                         #   10_stacking_ensemble, 11_screener_multilevel,
-│                         #   12_school_questionnaire, 13_decision_support,
-│                         #   14_causal_earthquake, 15_ceiling_generalization,
-│                         #   16_process_modality, 17_fairness_mitigation,
-│                         #   18_coverage_bounds  (all executed)
+├── notebooks/            # 01_eda_albania, 02_crisis_in_context, 03_modeling,
+│                         #   04_explainability, 05_cross_country, 06_the_ceiling,
+│                         #   07_fairness, 08_decision_support, 09_crisis_robustness,
+│                         #   10_forecast_2026  (all executed; each a multi-Part notebook
+│                         #   consolidating the earlier analyses)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
@@ -680,7 +677,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
 - **Phase 6, Explainability (local + PDP/ICE):** SHAP local case studies for one
   representative TP/TN/FP/FN each (`scripts/run_explainability_cases.py` → waterfalls +
   `shap_local_cases_2022.csv`) and PDP + centered-ICE for the top drivers, narrated in
-  notebook 06.
+  notebook 04.
 - **Phase 7, Fairness audit (survey-weighted):** demographic parity, equal opportunity (TPR),
   FPR and calibration across gender, SES quintile and immigrant status, plus a threshold sweep,
   all **weighted** (`scripts/run_fairness_audit.py` → `fairness_audit_2022.json`,
@@ -688,10 +685,10 @@ items. Everything else (analysis, paper, dashboard) is complete.
   *shrinks* the gender gap but leaves the SES gap intact and enlarges the immigrant FPR gap.
 - **Phase 8, Comparative modeling:** per-country school-context LightGBM (nine countries),
   weighted CV AUC, SHAP feature × country rank matrix, and SES-gradient comparison
-  (`scripts/run_comparative_modeling.py`, notebook 08). Headline: Albania is high-prevalence /
+  (`scripts/run_comparative_modeling.py`, notebook 05). Headline: Albania is high-prevalence /
   low-separability / flat-gradient (broad-based crisis); drivers (math anxiety, school
   composition) are shared with peers, not unique.
-- **Forecast, next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 09)
+- **Forecast, next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 10)
   propagating design-based SEs: plausible 2026 low-proficiency range ~21–74%, defensible zone
   partial-reversion (~47%) to persistence (~74%). Honest about the five-cycle / structural-break
   limits.
@@ -699,7 +696,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   the four bare tree/booster base learners (CatBoost + LightGBM + GBM + RF) with a
   class-balanced Logistic-Regression meta-learner on their out-of-fold probabilities, scored in
   the school-context regime through the identical weighted / leakage-safe / OpenMP-isolated CV
-  path (`scripts/run_stacking_experiment.py`, registry `"stacking"`, notebook 10). Stacking AUC
+  path (`scripts/run_stacking_experiment.py`, registry `"stacking"`, notebook 03). Stacking AUC
   **0.786** vs single CatBoost **0.783**, a paired Nadeau-Bengio gain of **+0.003 (p=0.030)**:
   significant but practically nil, and it *regresses* the decision-point metrics (MCC 0.386 vs
   0.393, F1 0.683 vs 0.693) at ~19× the compute. The ~0.78 ceiling holds; **single CatBoost
@@ -710,7 +707,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
   (`visualization/style`: SEQUENTIAL / SEQUENTIAL_RANK / DIVERGING; dark = more-important),
   and an internal performance / submission-readiness review.
-- **Screener evaluation + multilevel model (pre-submission strengthening, notebook 11):**
+- **Screener evaluation + multilevel model (pre-submission strengthening, notebook 06):**
   **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
   figure `G1`) reframes the ~75%-prevalence problem around *net benefit*, the model beats
   screen-everyone/screen-no-one over the selective threshold band **0.51–0.95**, and weighted
@@ -723,7 +720,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   Rabe-Hesketh & Skrondal, `multilevel.fit_weighted_random_intercept`) gives design-consistent
   fixed effects: odds ratios shift by ≤0.05 and the ICC stays in the **0.22–0.31** band, so the
   variance-partition story is robust to how sampling weights are handled.
-- **School-questionnaire linkage, ceiling is data, not features (notebook 12):** the ICC ≈ 0.31
+- **School-questionnaire linkage, ceiling is data, not features (notebook 06):** the ICC ≈ 0.31
   motivated linking the PISA 2022 **school questionnaire** (`CY08MSP_SCH_QQQ`: resources, staff
   shortage, class size, leadership, climate), joined onto students on `CNTSCHID`
   (`src/features/engineer.py:add_school_questionnaire`, `scripts/run_school_questionnaire_experiment.py`).
@@ -733,7 +730,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   not a feature-set limit**, a third independent route (composition booster, multilevel ICC,
   direct questionnaire linkage) converging on the same conclusion.
 
-- **Decision support, uncertainty, recourse, policy (notebook 13):** three tools that turn the
+- **Decision support, uncertainty, recourse, policy (notebook 08):** three tools that turn the
   screener into something actionable. **Conformal prediction** (`src/models/conformal.py`,
   `scripts/run_conformal.py`) gives distribution-free prediction sets, the coverage guarantee
   holds under survey weighting, ~60% confident singletons / ~40% honest abstentions at 90%
