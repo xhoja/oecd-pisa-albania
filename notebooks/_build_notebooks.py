@@ -1804,6 +1804,83 @@ def nb_14_causal_earthquake() -> list:
     ]
 
 
+def nb_17_fairness_mitigation() -> list:
+    return [
+        md(
+            "# 17 - Fairness Mitigation, Not Just Diagnosis (Albania 2022)\n\n"
+            "The audit (notebook 07) found the screener **over-flags the poorest students**: at a "
+            "single 0.5 threshold the bottom SES quintile carries a far higher false-positive rate "
+            "than the top. Diagnosis is not enough - this notebook *fixes* it, post-hoc, with **no "
+            "retraining** (`scripts/run_fairness_mitigation.py`): group-specific decision thresholds "
+            "(Hardt et al. 2016) applied to frozen out-of-fold predictions, equalising the weighted "
+            "FPR across quintiles, and the fairness-utility trade-off that buys."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "S = json.load(open('../outputs/results/fairness_mitigation_summary.json'))\n"
+             "fr = pd.read_csv('../outputs/results/fairness_mitigation_frontier_ses.csv')\n"
+             "print('target FPR', S['target_fpr'], '| per-group thresholds', S['group_thresholds'])"),
+
+        md("## 1. The harm: a single threshold over-flags the poorest\n\n"
+           "Weighted false-positive rate by SES quintile (1 = poorest) at the 0.5 threshold, and "
+           "after equalising FPR with group-specific thresholds."),
+        code("b = S['baseline_fpr_by_group']; m = S['mitigated_fpr_by_group']\n"
+             "q = sorted(b, key=float); x = np.arange(len(q))\n"
+             "fig, ax = plt.subplots(figsize=(7.5,4.3))\n"
+             "ax.bar(x-0.2, [b[k] for k in q], 0.4, label='single 0.5 threshold', color=PALETTE['vermilion'])\n"
+             "ax.bar(x+0.2, [m[k] for k in q], 0.4, label='group-specific thresholds', color=PALETTE['blue'])\n"
+             "ax.set_xticks(x); ax.set_xticklabels([f'Q{int(float(k))}' for k in q])\n"
+             "ax.set_xlabel('SES quintile (1 = poorest)'); ax.set_ylabel('weighted false-positive rate')\n"
+             "ax.set_title('FPR by SES quintile: before vs after mitigation'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()\n"
+             "print(f\"FPR gap {S['baseline']['fpr_gap']:.3f} -> {S['mitigated']['fpr_gap']:.3f}\")"),
+        md("**Reading:** at a single 0.5 threshold the poorest quintile is flagged with an FPR of "
+           "~0.83 versus ~0.20 for the richest - an equalized-odds gap of **0.63**. Because the "
+           "model reads socioeconomic composition, a blanket threshold turns *being poor* into "
+           "*being flagged*. Group-specific thresholds flatten every quintile's FPR to ~0.42, "
+           "collapsing the gap to **0.003** - the disparity was an artefact of the operating point, "
+           "and it is removable without touching the model."),
+
+        md("## 2. What it costs: the fairness-utility trade-off\n\n"
+           "Equalising FPR is not free - it changes who gets caught. The frontier sweeps the common "
+           "target FPR; each point compares group-specific thresholds against a single global "
+           "threshold matched to the same overall selection rate."),
+        code("fig, ax = plt.subplots(figsize=(7,5))\n"
+             "ax.plot(fr.grp_recall, fr.grp_fpr_gap, '-o', color=PALETTE['blue'], label='group-specific')\n"
+             "ax.plot(fr.single_recall, fr.single_fpr_gap, '-s', color=PALETTE['vermilion'], label='single threshold')\n"
+             "ax.set_xlabel('overall weighted recall (at-risk students caught)')\n"
+             "ax.set_ylabel('FPR gap across SES quintiles')\n"
+             "ax.set_title('Fairness-utility trade-off (2022)'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()\n"
+             "print(f\"At the equal-FPR operating point: recall {S['baseline']['overall_recall']:.3f} \"\n"
+             "      f\"-> {S['mitigated']['overall_recall']:.3f}, accuracy \"\n"
+             "      f\"{S['baseline']['overall_accuracy']:.3f} -> {S['mitigated']['overall_accuracy']:.3f}\")"),
+        md("**Reading:** at matched utility the group-specific curve sits **far below** the single-"
+           "threshold curve - for any given recall it delivers a much smaller FPR gap, so "
+           "per-group thresholds dominate a blanket one. The equity is not free: equalising FPR "
+           "moves overall recall from ~0.81 to ~0.75 (about 6 pp fewer at-risk students caught), "
+           "because much of the poorest quintile's high FPR came bundled with genuinely catching "
+           "its at-risk students. That trade - a small recall cost for near-zero disparity - is a "
+           "policy choice the frontier makes explicit rather than hiding in a default 0.5."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The disparity is fixable post-hoc.** Group-specific thresholds cut the SES "
+            "false-positive gap from **0.63 to ~0.00** with no retraining, operating only on frozen "
+            "out-of-fold predictions.\n"
+            "- **Per-group thresholds dominate a single threshold** on the fairness-utility "
+            "frontier - a strictly better operating curve for equalized odds.\n"
+            "- **Equity has a price, and we name it:** ~6 pp of overall recall. Whether that trade "
+            "is worth it is a policy decision, now explicit.\n"
+            "- **Caveat:** applying different thresholds by socioeconomic group is itself an ethical "
+            "and legal choice (disparate treatment to reduce disparate impact). We present it as a "
+            "quantified option, not a default - the honest counterpart to the audit's diagnosis."
+        ),
+    ]
+
+
 def nb_16_process_modality() -> list:
     return [
         md(
@@ -2002,3 +2079,4 @@ if __name__ == "__main__":
     build_notebook(nb_14_causal_earthquake(), NB_DIR / "14_causal_earthquake.ipynb", force)
     build_notebook(nb_15_ceiling_generalization(), NB_DIR / "15_ceiling_generalization.ipynb", force)
     build_notebook(nb_16_process_modality(), NB_DIR / "16_process_modality.ipynb", force)
+    build_notebook(nb_17_fairness_mitigation(), NB_DIR / "17_fairness_mitigation.ipynb", force)

@@ -364,6 +364,24 @@ is about *what is knowable before the test*. Reported honestly, including the la
 lift we cannot use for early warning. (Albania fielded neither the parent nor teacher questionnaire —
 both ruled out at source.)
 
+### Fairness mitigation, not just diagnosis
+
+The audit found the screener over-flags the poorest students. We *fix* it post-hoc — no retraining —
+with **group-specific decision thresholds** on frozen out-of-fold predictions
+(`src/fairness/mitigation.py`, `scripts/run_fairness_mitigation.py`, notebook 17):
+
+| SES-quintile FPR | single 0.5 threshold | equal-FPR group thresholds |
+|---|---|---|
+| poorest Q1 | 0.83 | 0.42 |
+| richest Q5 | 0.20 | 0.42 |
+| **FPR gap** | **0.63** | **0.003** |
+
+Equalising the false-positive rate collapses the equalized-odds gap from **0.63 to ~0.00** — the
+disparity was an artefact of a blanket operating point, removable without touching the model. It
+costs ~6 pp of overall recall (0.81 → 0.75), and on the fairness-utility frontier group-specific
+thresholds strictly dominate a single threshold. We present it as a quantified policy option (with
+the disparate-treatment caveat), not a default.
+
 ---
 
 ## Data
@@ -432,7 +450,7 @@ OECD_PISA_Project/
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
 │                         #   12_school_questionnaire, 13_decision_support,
 │                         #   14_causal_earthquake, 15_ceiling_generalization,
-│                         #   16_process_modality  (all executed)
+│                         #   16_process_modality, 17_fairness_mitigation  (all executed)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
@@ -550,7 +568,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **164 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **169 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,

@@ -1,0 +1,44 @@
+{
+  "attribute": "SES_QUINTILE",
+  "n": 5575,
+  "target_fpr": 0.421,
+  "group_thresholds": {
+    "1.0": 0.803,
+    "2.0": 0.581,
+    "3.0": 0.576,
+    "4.0": 0.493,
+    "5.0": 0.266
+  },
+  "baseline": {
+    "overall_recall": 0.8083,
+    "overall_fpr": 0.4206,
+    "overall_accuracy": 0.7509,
+    "overall_selection": 0.7111,
+    "fpr_gap": 0.6256,
+    "tpr_gap": 0.326,
+    "selection_gap": 0.4805
+  },
+  "mitigated": {
+    "overall_recall": 0.7461,
+    "overall_fpr": 0.4197,
+    "overall_accuracy": 0.7046,
+    "overall_selection": 0.6643,
+    "fpr_gap": 0.0026,
+    "tpr_gap": 0.1876,
+    "selection_gap": 0.1067
+  },
+  "baseline_fpr_by_group": {
+    "1.0": 0.8258,
+    "2.0": 0.5034,
+    "3.0": 0.5023,
+    "4.0": 0.4167,
+    "5.0": 0.2002
+  },
+  "mitigated_fpr_by_group": {
+    "1.0": 0.4196,
+    "2.0": 0.4206,
+    "3.0": 0.418,
+    "4.0": 0.4201,
+    "5.0": 0.42
+  }
+}
