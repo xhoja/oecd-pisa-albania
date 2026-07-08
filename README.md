@@ -26,7 +26,7 @@ analysis of Albania's dramatic 2022 regression.
 ![matplotlib](https://img.shields.io/badge/matplotlib-figures-11557C)
 ![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
 ![LaTeX](https://img.shields.io/badge/LaTeX-article%20report-008080?logo=latex&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-149%20passing-0A9EDC?logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-177%20passing-0A9EDC?logo=pytest&logoColor=white)
 
 | Area | Tools |
 |---|---|
@@ -35,7 +35,7 @@ analysis of Albania's dramatic 2022 regression.
 | **PISA methodology** | pyreadstat (SPSS `.sav`) + custom fixed-width parser; survey weights, plausible values with Rubin's rules, BRR (80 Fay replicates) |
 | **Explainability & fairness** | SHAP (TreeSHAP), partial dependence / ICE, weighted fairness metrics, conformal prediction, counterfactual recourse |
 | **Visualisation** | matplotlib, seaborn, Altair; colorblind-safe palette |
-| **Testing & quality** | pytest (149 tests on synthetic fixtures), structlog, ruff, mypy |
+| **Testing & quality** | pytest (177 tests on synthetic fixtures), structlog, ruff, mypy |
 | **Paper** | LaTeX `article` (single-column report: title page, table of contents, running headers), BibTeX |
 | **Interactive dashboard (UI)** | Streamlit (app), Altair (charts), fpdf2 (PDF report), joblib (model bundle) |
 
@@ -382,6 +382,27 @@ costs ~6 pp of overall recall (0.81 → 0.75), and on the fairness-utility front
 thresholds strictly dominate a single threshold. We present it as a quantified policy option (with
 the disparate-treatment caveat), not a default.
 
+### Coverage robustness — Manski bounds
+
+PISA 2022 covered only ~**79%** of Albania's 15-year-olds (Coverage Index 3 ≈ 0.79; 6,129 students
+representing ~28,400 of ~36,000 — OECD Country Note). The reported ~74% at-risk rate is a rate
+*among the covered*; the ~21% uncovered (out-of-school, disadvantaged) are unobserved. We report
+partial-identification bounds instead of assuming they resemble the sample (`src/coverage/manski.py`,
+`scripts/run_coverage_bounds.py`, notebook 18):
+
+| | population at-risk rate |
+|---|---|
+| observed (covered), design-based ±95% CI | 0.739 ± 0.008 |
+| worst-case Manski bounds | **[0.58, 0.79]** |
+| monotone (uncovered ≥ covered) | **[0.74, 0.79]** |
+| scenario: uncovered ~ poorest quintile | ~0.76 |
+
+The sampling SE (0.004) badly understates total uncertainty — the coverage gap does. But the credible
+(monotone) bound is one-sided: out-of-school youth are not *less* at risk, so coverage most likely
+means the headline **understates** the crisis. Crucially, even the worst-case lower bound (0.58) sits
+~16 pp above Albania's 2018 rate (0.42) across every plausible coverage share — **the 2018→2022
+deterioration is robust to any coverage assumption**; only the level is uncertain, not the conclusion.
+
 ---
 
 ## Data
@@ -438,6 +459,7 @@ OECD_PISA_Project/
 │   │                     #   conformal, decision_curve, multilevel, policy
 │   ├── explainability/   # SHAP analysis, partial dependence (PDP/ICE), counterfactuals
 │   ├── causal/           # earthquake DiD / triple-difference (design-based SE)
+│   ├── coverage/         # Manski partial-identification bounds (coverage robustness)
 │   ├── fairness/         # group-fairness metrics
 │   ├── forecast/         # scenario forecast (WLS trend + Monte-Carlo, BRR-aware)
 │   ├── statistics/       # tests (chi², MMD, covariate shift, effect sizes,
@@ -450,7 +472,8 @@ OECD_PISA_Project/
 │                         #   10_stacking_ensemble, 11_screener_multilevel,
 │                         #   12_school_questionnaire, 13_decision_support,
 │                         #   14_causal_earthquake, 15_ceiling_generalization,
-│                         #   16_process_modality, 17_fairness_mitigation  (all executed)
+│                         #   16_process_modality, 17_fairness_mitigation,
+│                         #   18_coverage_bounds  (all executed)
 │                         #   built by _build_notebooks.py (+ _formulas.py)
 ├── scripts/              # run_model_comparison (--school), run_oos_experiment, run_hpo,
 │                         #   run_shap_analysis, run_explainability_cases, run_fairness_audit,
@@ -463,7 +486,7 @@ OECD_PISA_Project/
 │                         #   export_dashboard_model
 ├── reports/              # paper/ (LaTeX article report → main.pdf; sections/, figures/),
 │                         #   dashboard/ (Streamlit risk-screener app.py), presentation/
-├── tests/                # 149 pytest unit tests (weights, impute, target, transformers,
+├── tests/                # 177 pytest unit tests (weights, impute, target, transformers,
 │                         #   validate, evaluate, engineer/school, forecast, statistics,
 │                         #   eda_viz, dashboard), no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
@@ -480,7 +503,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required, 149 tests on synthetic fixtures)
+# 2. Run the test suite (no data required, 177 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -568,7 +591,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **169 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **177 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,

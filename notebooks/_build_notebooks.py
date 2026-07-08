@@ -1804,6 +1804,86 @@ def nb_14_causal_earthquake() -> list:
     ]
 
 
+def nb_18_coverage_bounds() -> list:
+    return [
+        md(
+            "# 18 - How Robust Is the Crisis to Coverage? (Manski bounds, 2022)\n\n"
+            "Every rate in this project is computed among the students PISA *sampled* - but PISA "
+            "2022 covered only about **79%** of Albania's 15-year-olds (Coverage Index 3 ~ 0.79; "
+            "6 129 students representing ~28 400 of ~36 000, OECD Country Note). The ~21% uncovered "
+            "- disproportionately out-of-school, disadvantaged youth - are unobserved. Rather than "
+            "assume they resemble the sample, this notebook reports the **range of population "
+            "at-risk rates consistent with the data** (Manski partial identification, "
+            "`src/coverage/manski.py`, `scripts/run_coverage_bounds.py`)."
+        ),
+        code(HEADER),
+        code("import json\n"
+             "from src.visualization.style import apply_publication_style, PALETTE\n"
+             "apply_publication_style()\n"
+             "S = json.load(open('../outputs/results/coverage_bounds_2022.json'))\n"
+             "sens = pd.read_csv('../outputs/results/coverage_sensitivity_2022.csv')\n"
+             "S"),
+
+        md("## 1. The bounds\n\n"
+           "With coverage $c$, observed covered rate $p$, and unknown uncovered rate $u\\in[0,1]$, "
+           "the population rate is $P=cp+(1-c)u$. Worst-case takes $u\\in[0,1]$; the monotone bound "
+           "uses $u\\ge p$ (out-of-school youth are, if anything, more at risk)."),
+        code("p=S['observed_at_risk_covered']; se=S['observed_se_design_based']\n"
+             "wc=S['worst_case_bounds']; mono=S['monotone_bounds_uncovered_worse']; sc=S['scenarios']\n"
+             "fig, ax = plt.subplots(figsize=(8,4.2))\n"
+             "ax.axvspan(wc['lower'], wc['upper'], color=PALETTE['blue'], alpha=0.12, label='worst-case range')\n"
+             "ax.axvspan(mono['lower'], mono['upper'], color=PALETTE['blue'], alpha=0.28, label='monotone (uncovered >= covered)')\n"
+             "ax.errorbar([p],[1.0], xerr=[[1.96*se],[1.96*se]], fmt='o', color=PALETTE['black'], capsize=4, label='observed (covered) +/-95% CI')\n"
+             "ax.scatter([sc['uncovered_like_poorest_quintile']],[1.0], marker='D', s=55, color=PALETTE['vermilion'], zorder=5)\n"
+             "ax.annotate('uncovered ~ poorest quintile', (sc['uncovered_like_poorest_quintile'],1.0), xytext=(0,12), textcoords='offset points', ha='center', fontsize=8)\n"
+             "ax.axvline(0.419, ls=':', color='0.5'); ax.annotate('2018 rate 0.42', (0.419,1.0), xytext=(0,-20), textcoords='offset points', ha='center', fontsize=8, color='0.4')\n"
+             "ax.set_yticks([]); ax.set_ylim(0.8,1.35); ax.set_xlim(0.38,0.85)\n"
+             "ax.set_xlabel('population at-risk rate (below Level 2, math)')\n"
+             "ax.set_title('Manski coverage bounds: Albania 2022 (79% coverage)')\n"
+             "ax.legend(loc='lower left', fontsize=8); plt.tight_layout(); plt.show()"),
+        md("**Reading:** the observed covered rate is **0.74** (design-based SE 0.004 - sampling "
+           "noise is tiny next to the coverage gap). Without any assumption the population rate is "
+           "only pinned to **[0.58, 0.79]**. But the credible direction is one-sided: out-of-school "
+           "15-year-olds are not *less* at risk than enrolled ones, so under the **monotone** "
+           "assumption the rate is **[0.74, 0.79]** - coverage, if anything, means the headline "
+           "*understates* the crisis. Anchoring the uncovered to the poorest covered quintile "
+           "(reweighting) puts it at **~0.76**."),
+
+        md("## 2. The crisis conclusion survives any coverage assumption\n\n"
+           "The important robustness check: is 'Albania deteriorated sharply from 2018' an artefact "
+           "of who got sampled?"),
+        code("print(f\"Worst-case LOWER bound on 2022 rate: {wc['lower']:.3f}\")\n"
+             "print(f\"Albania 2018 at-risk rate         : 0.419\")\n"
+             "print(f\"Gap even in the most optimistic case: {wc['lower']-0.419:+.3f}\")\n"
+             "fig, ax = plt.subplots(figsize=(7,4))\n"
+             "ax.fill_between(sens.coverage, sens.wc_lower, sens.wc_upper, alpha=0.15, color=PALETTE['blue'], label='worst-case')\n"
+             "ax.plot(sens.coverage, sens.mono_lower, color=PALETTE['vermilion'], label='monotone lower = observed')\n"
+             "ax.axhline(0.419, ls=':', color='0.5'); ax.text(0.71,0.43,'2018 rate', fontsize=8, color='0.4')\n"
+             "ax.set_xlabel('assumed coverage share'); ax.set_ylabel('bound on 2022 at-risk rate')\n"
+             "ax.set_title('Bounds vs coverage assumption'); ax.legend(fontsize=8)\n"
+             "plt.tight_layout(); plt.show()"),
+        md("**Reading:** even the **worst-case lower bound (0.58)** sits ~16 pp above Albania's 2018 "
+           "rate of 0.42, and stays above it across every plausible coverage share. No coverage "
+           "assumption - however adversarial - can explain away the 2018->2022 deterioration. The "
+           "*level* is uncertain by ~21 pp in the worst case; the *conclusion* is not."),
+
+        md(
+            "## Conclusions & Interpretation\n\n"
+            "- **The reported rate is a covered-population rate.** At 79% coverage the sampling SE "
+            "(0.004) badly understates total uncertainty; the coverage gap is the real one.\n"
+            "- **Partial identification, honestly stated:** worst-case [0.58, 0.79]; under the "
+            "credible monotone assumption [0.74, 0.79], i.e. the headline likely *understates* the "
+            "crisis rather than overstating it.\n"
+            "- **The comparative claim is robust.** The 2022 rate exceeds the 2018 rate under every "
+            "coverage assumption, so the deterioration is not a sampling artefact - it is the one "
+            "conclusion coverage cannot touch.\n"
+            "- **Method, not hand-wringing:** bounds + a reweighting scenario turn a data-quality "
+            "caveat into a quantified robustness result, the honest complement to the point "
+            "estimates elsewhere in the project."
+        ),
+    ]
+
+
 def nb_17_fairness_mitigation() -> list:
     return [
         md(
@@ -2080,3 +2160,4 @@ if __name__ == "__main__":
     build_notebook(nb_15_ceiling_generalization(), NB_DIR / "15_ceiling_generalization.ipynb", force)
     build_notebook(nb_16_process_modality(), NB_DIR / "16_process_modality.ipynb", force)
     build_notebook(nb_17_fairness_mitigation(), NB_DIR / "17_fairness_mitigation.ipynb", force)
+    build_notebook(nb_18_coverage_bounds(), NB_DIR / "18_coverage_bounds.ipynb", force)

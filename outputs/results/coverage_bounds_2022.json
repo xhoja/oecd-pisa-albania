@@ -1,0 +1,29 @@
+{
+  "cycle": 2022,
+  "coverage_index3": 0.79,
+  "observed_at_risk_covered": 0.7394,
+  "observed_se_design_based": 0.0041,
+  "observed_ci95": [
+    0.7314,
+    0.7474
+  ],
+  "poorest_quintile_rate": 0.8547,
+  "richest_quintile_rate": 0.5783,
+  "worst_case_bounds": {
+    "lower": 0.5842,
+    "upper": 0.7942,
+    "width": 0.21,
+    "assumption": "worst-case (u in [0,1])"
+  },
+  "monotone_bounds_uncovered_worse": {
+    "lower": 0.7394,
+    "upper": 0.7942,
+    "width": 0.0547,
+    "assumption": "monotone: uncovered >= covered (u >= p)"
+  },
+  "scenarios": {
+    "uncovered_like_poorest_quintile": 0.7636,
+    "uncovered_like_overall_sample": 0.7394,
+    "uncovered_like_richest_quintile": 0.7056
+  }
+}
