@@ -527,9 +527,16 @@ python scripts/run_model_comparison.py --school    # headline table WITH school 
 python scripts/run_school_features_experiment.py   # school-context ablation (+ _foldsafe.py)
 python scripts/run_pv_stacking_experiment.py       # PV-stacking vs PV-mean target
 python scripts/run_threshold_calibration.py        # threshold tuning + isotonic calibration
+
+# Publication-gap extensions (feed notebooks 05/06/07/09)
+python scripts/run_ceiling_generalization.py       # data-ceiling claim across 9 countries
+python scripts/run_process_modality.py             # CBA process-data modality ablation
+python scripts/run_fairness_mitigation.py          # group-specific thresholds (fairness fix)
+python scripts/run_causal_did.py                   # earthquake difference-in-differences
+python scripts/run_coverage_bounds.py              # Manski coverage bounds
 ```
 
-Notebooks 06 (local explainability) and 07 (fairness) narrate these last two scripts;
+Notebook 04 (explainability) and notebook 07 (fairness) narrate the audit scripts;
 `_build_notebooks.py` refuses to overwrite an executed notebook unless `--force`, so
 re-running it only (re)builds missing notebooks and leaves existing outputs intact.
 
@@ -650,14 +657,14 @@ items. Everything else (analysis, paper, dashboard) is complete.
 ### Done
 - **Phase 1, Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
   harmonization, weights/PV handling, full pipeline. 5 cycles × 9 countries processed.
-- **Phase 2, EDA & statistics:** 8 publication figures, executed notebooks (01–03),
+- **Phase 2, EDA & statistics:** 8 publication figures, executed notebooks (01–02),
   covariate-shift analysis (AUC 0.98), weighted stats, effect sizes.
 - **Phase 3, Feature engineering:** SES composites, digital indices, interaction terms,
   country-normalized features, selection (VIF / correlation / missingness).
 - **Phase 4, Modeling:** 9-model weighted comparison (repeated stratified CV) with
   Nadeau-Bengio CIs and pairwise significance testing (corrected resampled t-test in CV,
   DeLong out-of-sample); weighted OOS 2022 experiment with Rubin's-rules per-PV evaluation
-  and train-only threshold tuning; SHAP global + importance. Notebooks 04–05.
+  and train-only threshold tuning; SHAP global + importance. Notebooks 03–04.
 - **Rigor hardening (Phases 1–4):** test suite, dependency-free data contracts, BRR+Rubin
   design-based standard errors wired into the EDA notebooks, Nadeau-Bengio CIs and
   DeLong/corrected-resampled significance tests. Fixed a weighting bug (scaler-wrapped models
@@ -672,7 +679,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   (CatBoost 0.73→**0.78**), fold-safe and significant, breaking the ceiling HPO could not, and
   flipping the podium so boosters beat LR. **Threshold tuning + isotonic calibration** lift
   MCC/F1 and cut ECE ~5–7×. `build_model_data(..., add_school_context=True)`; scripts
-  `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb05/06) and
+  `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb04) and
   the fairness audit (nb07) were then re-run on the school-augmented model.
 - **Phase 6, Explainability (local + PDP/ICE):** SHAP local case studies for one
   representative TP/TN/FP/FN each (`scripts/run_explainability_cases.py` → waterfalls +
@@ -749,11 +756,24 @@ items. Everything else (analysis, paper, dashboard) is complete.
   fixed (`l1_ratio` replaces the l1/l2/elasticnet categorical); proper multilevel
   pseudo-likelihood with scaled survey weights (`fit_weighted_random_intercept`, see above).
 
+- **Publication-gap extensions (five):** closing the gaps a careful reviewer would attack.
+  **(1)** A *causal* test of the 2019 Durrës earthquake (difference-in-differences + placebo +
+  triple-difference, `src/causal/`) — a well-identified **null**: the 2022 collapse is national,
+  not a localised shock. **(2)** The data-ceiling claim **generalises** across nine countries
+  (composition lift significant in 8/9, achievable AUC tracks between-school ICC at *r* = 0.80),
+  with an equitable-system boundary (Finland). **(3)** A genuinely new **modality** (CBA process
+  data, `src/features/process.py`) moves the AUC to 0.86, but ~90% of that is endogenous
+  cognitive-test process — the *screening* ceiling holds ~0.78. **(4)** Fairness **mitigation**
+  (`src/fairness/mitigation.py`): group-specific thresholds collapse the SES false-positive gap
+  0.63 → 0.003. **(5)** **Manski coverage bounds** (`src/coverage/`): under ~79% coverage the
+  crisis is robust to any coverage assumption. See the Key Results sections above.
+- **Notebook consolidation:** the 18 topic-installment notebooks were merged into **10 coherent
+  multi-Part notebooks** (01–10), built by `_build_notebooks.py`.
+
 ### Remaining
-- **Phase 10, Deliverables:** the **written paper** (`reports/paper/`, LaTeX `article` report) and the
-  **interactive bilingual risk-screener dashboard** (`reports/dashboard/`, Streamlit + Altair +
-  fpdf2) are complete, see [Deliverables](#deliverables-phase-10) above. The **slides** and
-  **poster** are the only outstanding items.
+- **Report & deliverables:** the **written paper** (`reports/paper/`) and **dashboard**
+  (`reports/dashboard/`) exist but do **not yet incorporate the five publication-gap extensions
+  above** — that write-up is the next work. The **slides** and **poster** remain outstanding.
 
 ---
 
