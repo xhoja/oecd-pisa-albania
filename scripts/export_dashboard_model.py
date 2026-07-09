@@ -184,6 +184,47 @@ def main() -> None:
 
     escs_edges = wquantiles(X["ESCS"], w_series, [0.2, 0.4, 0.6, 0.8]) if "ESCS" in X else []
 
+    # Cohort risk distribution for the dashboard's percentile marker. Uses the
+    # LEAK-FREE out-of-fold calibrated probabilities (a generalisation distribution,
+    # not the optimistic in-sample fit) so "higher risk than X% of the cohort" is
+    # honest. 101 survey-weighted quantile edges; the app interpolates a percentile.
+    risk_series = pd.Series(oof_cal, index=w_series.index)
+    risk_percentile_edges = [
+        round(v, 4) for v in wquantiles(risk_series, w_series, [i / 100 for i in range(101)])
+    ]
+
+    # SES-risk gradient: survey-weighted mean calibrated risk within each ESCS
+    # quintile (Q1 poorest -> Q5 richest). This is the project's headline finding -
+    # Albania's gradient is among the FLATTEST in PISA - so the dashboard shows it.
+    ses_risk_gradient: list[float] = []
+    if len(escs_edges) == 4 and "ESCS" in X:
+        escs_vals = X["ESCS"].to_numpy(float)
+        wv = w_series.to_numpy(float)
+        q = np.digitize(escs_vals, escs_edges)  # 0..4, NaN -> 5 (excluded below)
+        for k in range(5):
+            m = (q == k) & np.isfinite(escs_vals)
+            ses_risk_gradient.append(
+                round(float(np.average(oof_cal[m], weights=wv[m])), 4) if m.any() else None
+            )
+
+    # Reliability curve for the calibration panel: survey-weighted predicted-vs-
+    # observed on the LEAK-FREE held-out calibrated probs (held_cal - the SAME series
+    # ECE_cal is measured on; never the deployed calibrator's own in-sample fit, which
+    # would draw a fake-perfect diagonal). 10 equal-width bins; diagonal = ideal.
+    wv_all = w_series.to_numpy(float)
+    bin_edges = np.linspace(0.0, 1.0, 11)
+    bin_idx = np.clip(np.digitize(held_cal, bin_edges) - 1, 0, 9)
+    reliability_curve = []
+    for b in range(10):
+        m = bin_idx == b
+        if not m.any():
+            continue
+        reliability_curve.append({
+            "pred": round(float(np.average(held_cal[m], weights=wv_all[m])), 4),
+            "obs": round(float(np.average(y[m], weights=wv_all[m])), 4),
+            "frac": round(float(wv_all[m].sum() / wv_all.sum()), 4),
+        })
+
     bundle = {
         "pipeline": final,
         "isotonic": iso,
@@ -205,6 +246,9 @@ def main() -> None:
         "ece_calibrated": round(ece_cal, 4),
         "weighted_mcc_at_threshold": round(max(mccs), 4),
         "escs_quintile_edges": [round(e, 3) for e in escs_edges],
+        "risk_percentile_edges": risk_percentile_edges,
+        "ses_risk_gradient": ses_risk_gradient,
+        "reliability_curve": reliability_curve,
         "feature_names": list(X.columns),
         "sliders": sliders,
     }

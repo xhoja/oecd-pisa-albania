@@ -1,0 +1,6 @@
+# Dashboard theming. `base` is intentionally NOT set so the app follows the
+# viewer's operating-system / browser light-dark preference (Streamlit 1.58 has no
+# in-app theme switch). app.py reads st.context.theme.type and matches its own
+# chart / card palette to whatever Streamlit resolves, so both stay in sync.
+[theme]
+primaryColor = "#2a78d6"          # accent (theme-agnostic): buttons, focus, active widgets
