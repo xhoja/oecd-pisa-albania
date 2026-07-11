@@ -528,7 +528,7 @@ python scripts/run_school_features_experiment.py   # school-context ablation (+ 
 python scripts/run_pv_stacking_experiment.py       # PV-stacking vs PV-mean target
 python scripts/run_threshold_calibration.py        # threshold tuning + isotonic calibration
 
-# Publication-gap extensions (feed notebooks 05/06/07/09)
+# Robustness extensions (feed notebooks 05/06/07/09)
 python scripts/run_ceiling_generalization.py       # data-ceiling claim across 9 countries
 python scripts/run_process_modality.py             # CBA process-data modality ablation
 python scripts/run_fairness_mitigation.py          # group-specific thresholds (fairness fix)
@@ -725,8 +725,8 @@ items. Everything else (analysis, paper, dashboard) is complete.
 - **Documentation & rigor pass:** per-notebook *Methods & formulas* reference cells
   (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
   (`visualization/style`: SEQUENTIAL / SEQUENTIAL_RANK / DIVERGING; dark = more-important),
-  and an internal performance / submission-readiness review.
-- **Screener evaluation + multilevel model (pre-submission strengthening, notebook 06):**
+  and an internal performance / quality review.
+- **Screener evaluation + multilevel model (robustness strengthening, notebook 06):**
   **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
   figure `G1`) reframes the ~75%-prevalence problem around *net benefit*, the model beats
   screen-everyone/screen-no-one over the selective threshold band **0.51–0.95**, and weighted
@@ -768,24 +768,26 @@ items. Everything else (analysis, paper, dashboard) is complete.
   fixed (`l1_ratio` replaces the l1/l2/elasticnet categorical); proper multilevel
   pseudo-likelihood with scaled survey weights (`fit_weighted_random_intercept`, see above).
 
-- **Publication-gap extensions (five):** closing the gaps a careful reviewer would attack.
+- **Robustness extensions (five):** hardening the analysis against the strongest methodological counter-arguments.
   **(1)** A *causal* test of the 2019 Durrës earthquake (difference-in-differences + placebo +
   triple-difference, `src/causal/`) — a well-identified **null**: the 2022 collapse is national,
   not a localised shock. **(2)** The data-ceiling claim **generalises** across nine countries
   (composition lift significant in 8/9, achievable AUC tracks between-school ICC at *r* = 0.80),
   with an equitable-system boundary (Finland). **(3)** A genuinely new **modality** (CBA process
-  data, `src/features/process.py`) moves the AUC to 0.86, but ~90% of that is endogenous
+  data, `src/features/process.py`) moves the AUC to 0.86, but ~90% of that **gain** is endogenous
   cognitive-test process — the *screening* ceiling holds ~0.78. **(4)** Fairness **mitigation**
   (`src/fairness/mitigation.py`): group-specific thresholds collapse the SES false-positive gap
-  0.63 → 0.003. **(5)** **Manski coverage bounds** (`src/coverage/`): under ~79% coverage the
-  crisis is robust to any coverage assumption. See the Key Results sections above.
+  0.63 → 0.003. **(5)** **Manski coverage bounds** (`src/coverage/`): at Albania's ~79% PISA
+  coverage, the crisis conclusion is robust to *any* assumption about the excluded ~21%. See
+  the Key Results sections above.
+
 - **Notebook consolidation:** the 18 topic-installment notebooks were merged into **10 coherent
   multi-Part notebooks** (01–10), built by `_build_notebooks.py`.
 
 ### Remaining
-- **Report & deliverables:** the **written paper** (`reports/paper/`) and **dashboard**
-  (`reports/dashboard/`) exist but do **not yet incorporate the five publication-gap extensions
-  above** — that write-up is the next work. The **slides** and **poster** remain outstanding.
+- **Report & deliverables:** the **written paper** (`reports/paper/`, compiles to `main.pdf`)
+  now **incorporates all five robustness extensions above** (methods + results), and the
+  **dashboard** (`reports/dashboard/`) is built. The **slides** and **poster** remain outstanding.
 
 ---
 
