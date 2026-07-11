@@ -619,16 +619,22 @@ University of Tirana**. The Data section carries a full exploratory pass, a data
 dictionary, survey-weighted descriptives, an effect-size ranking, a cross-country
 comparability table, and the descriptive SES-gradient probability curve. It follows the
 Harvard hourglass structure (hook, explicit thesis + roadmap, topic-sentence body,
-hook-returning conclusion) and frames the work around the *science*, the structural-shift
+hook-returning conclusion) and frames the work around the *science*: the structural-shift
 thesis (AUC 0.98), the feature-vs-data ceiling (~0.78, three convergent routes), the
-broad-based flat-gradient crisis, and an honest fairness account. A dedicated
+broad-based flat-gradient crisis, and an honest fairness account. It integrates the five
+robustness and extension analyses in full, the ceiling generalising across nine systems
+(ICC-tracked, r~0.80), the CBA process-modality test (0.86 but endogenous, so the
+deployable ceiling holds), the group-threshold fairness mitigation (FPR gap 0.63 to
+0.003), the Manski coverage bounds ([0.74, 0.79]), and the earthquake
+difference-in-differences (a well-identified null: the collapse is national). A dedicated
 **economic-context section** ties the collapse to Albania's 2019 Durrës earthquake and
-COVID-19 school closures (the OECD country note makes the same attribution), with
-web-verified macro facts (remittances, GDP, education spending, the 2023 census) and real
-citations. No em-dashes anywhere (prose and figure titles). Build:
+COVID-19 school closures (the OECD country note makes the same attribution; the DiD then
+shows the loss was national, not localised to the quake), with web-verified macro facts
+(remittances, GDP, education spending, the 2023 census) and real citations. No em-dashes
+anywhere (prose and figure titles). Build:
 
 ```bash
-cd reports/paper && make          # pdflatex + bibtex -> main.pdf (20 pp)
+cd reports/paper && make          # pdflatex + bibtex -> main.pdf (24 pp)
 ```
 
 ### Interactive risk-screener dashboard, `reports/dashboard/` (done)
@@ -637,11 +643,17 @@ A **bilingual (English / Albanian) Streamlit** web app over the headline model
 **13 plain-language questions** (books at home, parents' education and work, feelings about
 maths, school resources), no PISA jargon, and each answer is mapped onto the model's OECD
 indices using the real Albania-2022 weighted quantiles. The UI returns a **calibrated risk
-probability**, a **stable Altair diverging chart** of the factor groups pushing risk up (red)
-or down (blue), prominent caveats, and a **downloadable PDF report card** (`fpdf2`) in the
-chosen language. The model bundle is exported by `scripts/export_dashboard_model.py`.
+probability** with a **cohort-percentile marker**, a **stable Altair diverging chart** of the
+factor groups pushing risk up (red) or down (blue) with a per-factor drill-down, a
+**SES-risk gradient** card (the student's own fifth highlighted), a leak-free **calibration
+reliability curve**, one-click **preset profiles**, prominent caveats plus a
+provenance/license footer, and a **downloadable PDF report card** (`fpdf2`) in the chosen
+language. Header KPI tiles surface the cohort at-risk rate, the ~0.78 ceiling, and the
+sample size. The model bundle and three precomputed leak-free context series are exported
+by `scripts/export_dashboard_model.py`.
 
-- **UI framework:** Streamlit (`reports/dashboard/app.py`); light card layout, language toggle.
+- **UI framework:** Streamlit (`reports/dashboard/app.py`); card layout, language toggle;
+  theme follows the viewer's system light/dark (via `st.context.theme`, matched in the charts).
 - **Charts:** Altair (rounded diverging bars, fixed order + colours so they never reshuffle).
 - **Report export:** fpdf2 (native single-page PDF, EN/SQ).
 - **Run:** `pip install -e ".[dashboard]"` then `streamlit run reports/dashboard/app.py`.

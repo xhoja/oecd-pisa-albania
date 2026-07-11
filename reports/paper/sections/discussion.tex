@@ -21,7 +21,14 @@ by a multilevel ICC of $\approx$0.31 and by a direct school-questionnaire linkag
 adds nothing. The lesson for educational data mining is methodological: distinguish a
 \emph{feature} ceiling (movable, and diagnosable by what a richer feature family buys)
 from a \emph{data} ceiling (a property of the measurement instrument), and use
-convergent evidence rather than a single learning curve to tell them apart.
+convergent evidence rather than a single learning curve to tell them apart. The
+distinction travels: the same feature ceiling appears in all nine systems and the amount
+each can move it scales with its between-school inequality ($r\approx0.80$ with the
+ICC), and the data ceiling survives the obvious escape route, adding PISA's
+within-test process data lifts AUC to $\sim$0.86 but almost entirely through a
+cognitive-process signal endogenous to the score, leaving the deployable ceiling at
+$\sim$0.78. A plateau, then, can be moved by a new \emph{feature family} or by a new
+\emph{modality}, but only by data that a school could actually hold before the test.
 
 \paragraph{Shared drivers, distinctive breadth.}
 Albania's risk mechanism is not exotic. Math anxiety and school composition drive risk
@@ -38,7 +45,13 @@ anxiety'' in the model is not a defensible intervention estimate. We therefore s
 risk screener, calibrated probabilities, per-student SHAP drivers, and the fairness
 audit, as a \emph{triage and communication} aid, not a lever simulator. The fairness
 result reinforces the point: a naive threshold over-flags the poorest quintile, so the
-tool is only defensible as a way to widen support.
+tool is only defensible as a way to widen support; where equal false-positive treatment
+across SES is required, group-specific thresholds close the gap from 0.63 to 0.003 at a
+measured recall cost, an equity choice we surface rather than bury. The one causal
+question we could pose from observational data, whether the 2019 earthquake localised
+the collapse, we tested and answered in the negative: a difference-in-differences whose
+placebo fails identifies the loss as national, a well-identified null that guards
+against reading a convenient single-region story into a country-wide shock.
 
 \paragraph{Limitations.}
 The student questionnaire is the only instrument here; we have no teacher or parent
@@ -49,5 +62,10 @@ standard errors are available only for the 2015--2022 cycles; the fixed-width 20
 cycles fall back to an imputation-only SE. The forecast rests on five cycles and one
 structural break, which is why we report scenarios rather than a number. Finally, the
 $\sim$0.78 ceiling is specific to background-questionnaire prediction of a binary
-Level-2 target; richer process data (attendance, formative assessment, longitudinal
-records) could move it, and testing that is the natural next step.
+Level-2 target; we tested one richer modality, PISA's within-test computer-based
+process data, and found it moves the plateau only through a signal endogenous to the
+score, so genuinely exogenous process data that a school holds before the assessment
+(attendance, formative assessment, longitudinal records) remains the untested route and
+the natural next step. The difference-in-differences likewise licenses only a negative
+causal claim; a design that could license a positive policy lever still requires data we
+do not have.

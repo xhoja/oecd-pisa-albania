@@ -46,19 +46,22 @@
 \setlength{\parskip}{0.4em}
 \setlength{\parindent}{0pt}
 
+% Table of contents lists sections only, so it fits on one page.
+\setcounter{tocdepth}{1}
+
 \begin{document}
 
 % =========================== TITLE PAGE ===========================
 \begin{titlepage}
 \centering
-\vspace*{1.6cm}
+\vspace*{0.9cm}
 
 {\LARGE\bfseries A Structural Break, Not a Weaker Cohort\par}
 \vspace{0.5cm}
 {\large Explaining Albania's 2022 PISA Collapse with\\Survey-Weighted Machine Learning\par}
-\vspace{1.0cm}
+\vspace{0.8cm}
 {\large PISA 2009--2022 Data Science Project\par}
-\vspace{1.4cm}
+\vspace{0.9cm}
 
 {\large Xhoi Ikonomi\par}
 \vspace{0.35cm}
@@ -66,7 +69,7 @@
 Metropolitan University of Tirana\\[2pt]
 \texttt{ikonomixhoja@gmail.com}\par}
 
-\vspace{1.1cm}
+\vspace{0.8cm}
 \rule{0.42\linewidth}{0.4pt}\par
 \vspace{0.4cm}
 {\bfseries Abstract\par}
@@ -90,16 +93,21 @@ cross-validated AUC~0.73, unmoved by hyperparameter tuning) is a \emph{feature} 
 not a data ceiling: adding survey-weighted \emph{school socioeconomic composition} lifts
 every model by $\sim$0.05 AUC to $\sim$0.78 and makes gradient boosters significantly
 outperform logistic regression. Third, the new $\sim$0.78 ceiling is then a genuine
-\emph{data} ceiling, and we establish the difference by convergent evidence: a
-multilevel model (school ICC~$\approx$~0.31) and a direct school-questionnaire linkage
-(no significant gain, all $p>0.24$) independently converge on it. Fourth, the crisis is
-\emph{broad-based}: Albania has the flattest SES gradient of the nine countries, its
-risk drivers (math anxiety, school composition) are shared with peers, and a fairness
-audit shows a naive threshold over-flags the poorest quintile. We release a calibrated,
-interpretable risk screener but frame it as associational, not a policy lever.
+\emph{data} ceiling: a multilevel model (school ICC~$\approx$~0.31) and a direct
+school-questionnaire linkage (no significant gain, all $p>0.24$) converge on it, it
+recurs across all nine systems with its size tracking each system's between-school ICC
+($r\approx0.80$), and richer within-test process data lifts AUC to $\sim$0.86 only
+through a signal endogenous to the score, so the deployable ceiling holds. Fourth, the
+crisis is \emph{broad-based}: Albania has the flattest SES gradient of the nine
+countries, its risk drivers (math anxiety, school composition) are shared with peers,
+and a difference-in-differences with a failed placebo shows the collapse is national
+rather than local to the 2019 earthquake. We release a calibrated, interpretable risk
+screener, framed as associational, not a policy lever; a naive threshold over-flags the
+poorest quintile (FPR gap~0.63), which group-specific thresholds close to~0.003 at a
+recall cost, and Manski bounds under 79\% coverage leave the crisis far above 2018.
 \end{minipage}
 
-\vfill
+\vspace{0.9cm}
 {\large July 2026\par}
 \end{titlepage}
 
@@ -119,7 +127,6 @@ interpretable risk screener but frame it as associational, not a policy lever.
 \input{sections/discussion}
 \input{sections/conclusion}
 
-\newpage
 \bibliographystyle{plainnat}
 \bibliography{refs}
 

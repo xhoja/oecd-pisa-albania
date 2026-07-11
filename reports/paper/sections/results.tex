@@ -92,6 +92,58 @@ CatBoost 0.783 ($+0.003$, $p=0.03$): statistically significant, practically nil,
 and it \emph{regresses} MCC and F1 at $\sim$19$\times$ the compute. Single CatBoost
 stays the deployable headline.
 
+The ceiling is not an Albanian idiosyncrasy. Replaying the identical student-only
+versus school-context comparison across all nine systems
+(Table~\ref{tab:generalization}) reproduces the pattern almost everywhere: the
+composition lift is significant in eight of nine countries (the exception is
+low-inequality Estonia, $p=0.09$), and its \emph{size} tracks how much risk variance
+sits between schools. The correlation between a system's school intraclass correlation
+and its school-context AUC is $r\approx0.80$; where schools are socioeconomically
+segregated (Bulgaria ICC~0.56, North Macedonia 0.40) composition buys the most, and
+where they are equitable (Finland ICC~0.10) it buys almost nothing ($+0.008$ AUC).
+The feature-versus-data ceiling is thus a general property of background-questionnaire
+prediction, and the amount a system can move it is set by its own between-school
+structure rather than by the learner.
+
+\begin{table}[t]
+\centering
+\caption{Student-only vs.\ school-context AUC across the nine 2022 systems. The
+composition lift is significant everywhere but Estonia and scales with the
+between-school ICC ($r\approx0.80$ between ICC and school-context AUC).}
+\label{tab:generalization}
+\begin{tabular}{llcccc}
+\toprule
+Country & Group & Base & School & Lift & ICC \\
+\midrule
+Albania (ALB)        & Balkan        & 0.714 & 0.773 & $+0.059$ & 0.31 \\
+North Macedonia (MKD)& Balkan        & 0.769 & 0.835 & $+0.066$ & 0.40 \\
+Montenegro (MNE)     & Balkan        & 0.734 & 0.817 & $+0.083$ & 0.34 \\
+Serbia (SRB)         & Balkan        & 0.745 & 0.805 & $+0.060$ & 0.36 \\
+Bulgaria (BGR)       & Balkan        & 0.791 & 0.857 & $+0.066$ & 0.56 \\
+Colombia (COL)       & GDP-matched   & 0.834 & 0.863 & $+0.028$ & 0.45 \\
+Mexico (MEX)         & GDP-matched   & 0.749 & 0.794 & $+0.045$ & 0.31 \\
+Estonia (EST)        & Top performer & 0.729 & 0.752 & $+0.022$ & 0.21 \\
+Finland (FIN)        & Top performer & 0.781 & 0.790 & $+0.008$ & 0.10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The ceiling is a measurement limit, not a modelling one}
+If the $\sim$0.78 plateau is a property of what the \emph{background} questionnaire can
+see, then a genuinely richer modality should move it, whereas more of the same
+questionnaire should not. Both hold. Adding PISA's computer-based cognitive-process
+data (the 15 timing-, action-, and effort-derived indicators from the assessment
+delivery itself) lifts the school-context model from AUC~0.773 to
+\textbf{0.858} ($+0.085$, $p<0.001$). But almost all of that gain is the
+cognitive-process block: cognitive features alone reproduce it ($+0.078$), while the
+non-cognitive \emph{questionnaire}-process features add only $+0.011$ ($p=0.02$). The
+cognitive-process signal is endogenous to the outcome, it is measured \emph{during} the
+same test whose result we predict, so it inflates apparent accuracy without being
+available at screening time. The deployable ceiling, over data a school could hold
+\emph{before} a student sits the assessment, therefore stays at $\sim$0.78. Richer data
+can move the plateau, but only data that is not a downstream trace of the score itself,
+which confirms the $\sim$0.78 figure as a measurement limit rather than a modelling one.
+
 \subsection{Drivers: anxiety and school composition, shared with peers}
 On the school-context model, four of the top seven SHAP drivers are school-level
 (Figure~\ref{fig:shap}): school-mean home possessions leads, followed by individual
@@ -150,8 +202,17 @@ test at 75\% prevalence. The fairness audit is less comfortable
 SES quintile (false-positive rate $\approx$~0.86 vs $\approx$~0.24 for the richest;
 parity gap 0.48, FPR gap 0.63). Because school-mean SES \emph{is} SES, making it a top
 feature doubly encodes the gradient; adding school context shrinks the gender gap but
-leaves the SES gap intact. This is an equalized-odds concern, and it is why we frame
-the screener as a tool to \emph{widen} support, never to ration it.
+leaves the SES gap intact. This is an equalized-odds concern.
+
+The gap is, however, fixable at the operating point. Post-processing the calibrated
+scores with \emph{group-specific} thresholds (a per-quintile cut chosen to equalise the
+false-positive rate, the equalized-odds remedy) collapses the SES FPR gap from
+$0.63$ to \textbf{0.003} while holding the overall false-positive rate fixed. It is not
+free: matching the poorest quintile's threshold to the rest trades recall (overall
+$0.81\rightarrow0.75$) and accuracy ($0.75\rightarrow0.70$) for equity, the familiar
+fairness--accuracy tension made explicit rather than hidden. We therefore ship the
+single-threshold screener as the default but expose the group-threshold frontier, and
+frame either as a tool to \emph{widen} support, never to ration it.
 
 \begin{figure}[t]
 \centering
@@ -168,6 +229,39 @@ ECE falls from $\approx$~0.12 to $\approx$~0.01.}
 the operating point rather than vanishing, mitigation needs constraints, not a knob.}
 \label{fig:fairness}
 \end{figure}
+
+\subsection{Is the 75\% an artefact of coverage? Partial-identification bounds}
+Albania met only part of PISA's sampling standards in 2022, and its Coverage Index~3 is
+$0.79$: roughly a fifth of the 15-year-old population is out of frame, mostly
+adolescents who have left or never entered school. Because that missing fifth is
+plausibly \emph{worse} off, the headline rate could in principle be an underestimate, so
+we ask what the data alone can guarantee without assuming anything about the uncovered.
+The assessed sample's weighted at-risk rate is $0.739$ (design-based 95\% CI
+$0.731$--$0.747$). Worst-case Manski bounds, letting every uncovered student take any
+value, give $[0.584,\,0.794]$; the more defensible monotone bound, assuming the
+out-of-frame group is at least as at-risk as those assessed, gives
+$[\mathbf{0.739},\,\mathbf{0.794}]$. Under either identifying assumption the 2026-relevant
+crisis level stays far above Albania's 2018 rate of $0.42$: coverage counsels caution on
+the exact percentage but cannot explain the collapse away, and if anything the true
+breadth is wider than the measured $\sim$0.75.
+
+\subsection{Is the collapse local to the earthquake? A difference-in-differences}
+The 2019 Durr\"es--Tirana earthquake is the one shock Albania did not share with its
+peers, so it is tempting to credit the collapse to it. A design-based
+difference-in-differences tests this directly, comparing the earthquake-affected central
+region against the rest of the country across the 2018 and 2022 cycles (final weights,
+plausible values by Rubin's rules, 80 replicate weights). The affected region's at-risk
+rate did rise $4.7$ points more than the control's ($\mathrm{DiD}=+0.047$,
+$p<0.001$), which in isolation looks like a local earthquake effect. It is not
+identified: a \emph{placebo} DiD on the pre-earthquake 2015$\rightarrow$2018 window is
+itself large and significant with the opposite sign ($-0.070$, $p<0.001$), so the two
+regions were already on diverging trajectories and the parallel-trends assumption fails.
+The credible reading is the one the magnitudes give directly, that both regions
+collapsed by roughly the same enormous amount (treated $+0.34$, control $+0.30$): the
+crisis is \emph{national}, not concentrated at the epicentre. This is a well-identified
+\emph{null} for a local causal story and independent corroboration of the broad-based,
+system-wide account, the pandemic-era disruption to schooling reached every region, and
+no single-region natural experiment can carry the explanation.
 
 \subsection{Forecast for 2026}
 With only five cycles and a 2022 structural break, a point forecast is indefensible, so

@@ -52,10 +52,30 @@ each cycle's design-based standard error through a weighted trend fit; with only
 cycles and a structural break we report scenarios and their intervals, not a point
 prediction.
 
+\subsection{Robustness and extension analyses}
+Five further analyses probe the main claims. (i) \emph{Cross-country ceiling
+replication}: the student-only versus school-context comparison is re-run identically in
+all nine systems, and each system's between-school ICC is read from its random-intercept
+model, to test whether the feature ceiling and its size generalise. (ii) \emph{Modality
+ablation}: PISA's computer-based cognitive-process indicators are added to the
+school-context model and split into cognitive-process and questionnaire-process blocks,
+so an endogenous within-test signal can be separated from data available at screening
+time. (iii) \emph{Fairness mitigation}: group-specific decision thresholds are fit on
+calibrated out-of-fold scores to equalise the per-quintile false-positive rate
+(equalized-odds post-processing), tracing the accuracy--equity frontier. (iv)
+\emph{Partial identification}: given the 79\% coverage index, worst-case and monotone
+Manski bounds on the population at-risk rate are computed, the monotone bound assuming
+the out-of-frame group is no better off than the assessed. (v) \emph{Difference-in-differences}:
+a design-based DiD contrasts the earthquake-affected central region with the rest of the
+country across 2018 and 2022, with a 2015$\rightarrow$2018 placebo to test parallel
+trends; weights, plausible values, and replicate-weight standard errors are carried
+throughout.
+
 \subsection{Reproducibility and engineering}
-Logic lives in unit-tested modules ($>$130 tests on synthetic fixtures, covering the
+Logic lives in unit-tested modules (177 tests on synthetic fixtures, covering the
 weighted statistics, Rubin's rules, the leakage-safe transformer, the BRR+PV variance,
-and the Nadeau--Bengio / DeLong maths); notebooks are narrative layers over them. On
+the Manski bounds and group-threshold mitigation, and the Nadeau--Bengio / DeLong
+maths); notebooks are narrative layers over them. On
 macOS the boosters (Homebrew \texttt{libomp}) and scikit-learn (bundled OpenMP) can
 abort a process if their runtimes collide; we isolate each model fit in a fresh
 subprocess that imports the boosters before scikit-learn, which resolved an
