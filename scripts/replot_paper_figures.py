@@ -135,17 +135,25 @@ def main() -> None:
     save_figure(fig, str(PAPER_FIG / "GEO_heatmap"))
     plt.close(fig)
 
-    # L1  malleable-lever ranking (paper dir)
+    # L1  malleable-lever ranking with population-bootstrap 95% CIs (paper dir)
     lev = pd.read_csv(RES / "lever_ranking_2022.csv").sort_values("delta_at_risk_rate")
     lev["reduction_pp"] = -lev["delta_at_risk_rate"] * 100
     fig, ax = plt.subplots(figsize=(8, 4.2))
-    ax.barh(lev["description"], lev["reduction_pp"], color=PALETTE["blue"], edgecolor="white")
-    for y, v in enumerate(lev["reduction_pp"]):
-        ax.annotate(f"{v:+.1f} pp", xy=(max(v, 0.0), y), xytext=(6, 0),
+    xerr = None
+    if "ci_low" in lev.columns:
+        lo = -lev["ci_high"] * 100
+        hi = -lev["ci_low"] * 100
+        xerr = [(lev["reduction_pp"] - lo).values, (hi - lev["reduction_pp"]).values]
+    ax.barh(lev["description"], lev["reduction_pp"], color=PALETTE["blue"],
+            edgecolor="white", xerr=xerr, error_kw=dict(ecolor="0.35", capsize=3, lw=1.2))
+    hi_red = (-lev["ci_low"] * 100).values if "ci_low" in lev.columns else lev["reduction_pp"].values
+    for y, (v, h) in enumerate(zip(lev["reduction_pp"], hi_red)):
+        ax.annotate(f"{v:+.1f} pp", xy=(max(v, h, 0.0), y), xytext=(7, 0),
                     textcoords="offset points", va="center", ha="left", fontsize=9)
     ax.axvline(0, color="0.6", lw=1)
-    ax.set_xlim(min(lev["reduction_pp"].min() - 0.3, -0.5), lev["reduction_pp"].max() + 0.8)
-    ax.set_xlabel("Reduction in predicted at-risk rate (pp) from a 0.5-SD nudge")
+    _lo = (-lev["ci_high"] * 100).min() if "ci_high" in lev.columns else lev["reduction_pp"].min()
+    ax.set_xlim(min(_lo - 0.3, -0.5), lev["reduction_pp"].max() + 1.2)
+    ax.set_xlabel("Reduction in predicted at-risk rate (pp), 0.5-SD nudge (95% bootstrap CI)")
     ax.set_title("Actionable levers, ranked by reach: Albania 2022")
     fig.tight_layout()
     save_figure(fig, str(PAPER_FIG / "L1_lever_ranking"))

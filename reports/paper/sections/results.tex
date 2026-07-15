@@ -237,10 +237,14 @@ grade-repetition exposure and ICT access, are the things a school system can act
 change. We split the two and rank only the actionable levers by the reduction in the
 population predicted at-risk rate from a standardised half-SD nudge in the beneficial
 direction, with the direction discovered on the smooth mean predicted probability rather
-than the noisy thresholded count. Among the levers, \textbf{math anxiety is the one with
-real reach} (Figure~\ref{fig:levers}): a half-SD reduction cuts the predicted at-risk
-rate by $\sim$5.1 points, teacher support gives $\sim$1.0, and belonging, ICT and
-grade-repetition are essentially flat.
+than the noisy thresholded count, and each lever's effect carries a population-bootstrap
+95\% confidence interval (400 resamples of the students, the fitted model held fixed).
+Among the levers, \textbf{math anxiety is the one with real reach}
+(Figure~\ref{fig:levers}): a half-SD reduction cuts the predicted at-risk rate by
+$5.1$ points (95\% CI $[4.5,\,5.7]$) and teacher support by $1.0$ ($[0.6,\,1.5]$), the
+only two intervals that exclude zero; belonging, ICT and grade-repetition are essentially
+flat. The interval reflects sampling uncertainty in the finite cohort and, by design, not
+model-fit uncertainty, which the frozen model does not propagate.
 
 The exercise also makes the structural floor explicit. Moving \emph{every} actionable
 lever half an SD at once takes the predicted at-risk rate from $\sim$0.72 to $\sim$0.66

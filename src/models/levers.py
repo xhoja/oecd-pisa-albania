@@ -163,6 +163,68 @@ def rank_levers(
     return out
 
 
+def bootstrap_lever_effects(
+    model,
+    X: pd.DataFrame,
+    weights: np.ndarray,
+    threshold: float,
+    ranking: pd.DataFrame,
+    magnitude: float = 0.5,
+    n_boot: int = 300,
+    seed: int = 0,
+    stats: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Percentile confidence intervals on each lever's at-risk reduction.
+
+    Takes a ``ranking`` from :func:`rank_levers` (for the columns and the
+    beneficial direction of each lever, so the sign is fixed rather than
+    re-discovered per resample) and runs a **population bootstrap**: the fitted
+    model and the standardization ``stats`` are held fixed, students (rows) are
+    resampled with replacement ``n_boot`` times, and each lever's signed shift is
+    re-applied on every resample to recompute the change in the weighted
+    predicted at-risk rate. The 2.5/97.5 percentiles of that distribution are the
+    interval.
+
+    This quantifies the *sampling* uncertainty of the projected effect for a
+    finite cohort; it deliberately does **not** propagate model-fit uncertainty
+    (the model is frozen), a limitation stated in the paper. Returns the ranking
+    with added ``ci_low`` / ``ci_high`` / ``boot_se`` columns.
+    """
+    if stats is None:
+        stats = pd.DataFrame({"std": X.std(), "min": X.min(), "max": X.max()})
+    w = np.asarray(weights, dtype=float)
+    n = len(X)
+    rng = np.random.default_rng(seed)
+    # fixed signed interventions per lever, read off the ranking
+    interventions = {}
+    for row in ranking.itertuples():
+        sign = -1.0 if row.direction == "↓" else 1.0
+        cols = str(row.cols).split("+")
+        interventions[row.lever] = {c: ("sd", sign * magnitude) for c in cols}
+
+    boot = {lever: [] for lever in interventions}
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        Xb = X.iloc[idx]
+        wb = w[idx]
+        for lever, interv in interventions.items():
+            r = simulate_policy(model, Xb, wb, threshold, interv, stats)
+            boot[lever].append(r["delta_at_risk_rate"])
+
+    out = ranking.copy()
+    lo, hi, se = [], [], []
+    for lever in out["lever"]:
+        arr = np.asarray(boot[lever], dtype=float)
+        lo.append(round(float(np.percentile(arr, 2.5)), 4))
+        hi.append(round(float(np.percentile(arr, 97.5)), 4))
+        se.append(round(float(arr.std(ddof=1)), 4))
+    out["ci_low"] = lo
+    out["ci_high"] = hi
+    out["boot_se"] = se
+    out.attrs["n_boot"] = n_boot
+    return out
+
+
 def lever_ceiling(
     model,
     X: pd.DataFrame,

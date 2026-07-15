@@ -26,7 +26,7 @@ analysis of Albania's dramatic 2022 regression.
 ![matplotlib](https://img.shields.io/badge/matplotlib-figures-11557C)
 ![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
 ![LaTeX](https://img.shields.io/badge/LaTeX-article%20report-008080?logo=latex&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-188%20passing-0A9EDC?logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-189%20passing-0A9EDC?logo=pytest&logoColor=white)
 
 | Area | Tools |
 |---|---|
@@ -35,7 +35,7 @@ analysis of Albania's dramatic 2022 regression.
 | **PISA methodology** | pyreadstat (SPSS `.sav`) + custom fixed-width parser; survey weights, plausible values with Rubin's rules, BRR (80 Fay replicates) |
 | **Explainability & fairness** | SHAP (TreeSHAP), partial dependence / ICE, weighted fairness metrics, conformal prediction, counterfactual recourse |
 | **Visualisation** | matplotlib, seaborn, Altair; colorblind-safe palette |
-| **Testing & quality** | pytest (188 tests on synthetic fixtures), structlog, ruff, mypy |
+| **Testing & quality** | pytest (189 tests on synthetic fixtures), structlog, ruff, mypy |
 | **Paper** | LaTeX `article` (single-column report: title page, table of contents, running headers), BibTeX |
 | **Interactive dashboard (UI)** | Streamlit (app), Altair (charts), fpdf2 (PDF report), joblib (model bundle) |
 
@@ -544,7 +544,7 @@ OECD_PISA_Project/
 │                         #   export_dashboard_model
 ├── reports/              # paper/ (LaTeX article report → main.pdf; sections/, figures/),
 │                         #   dashboard/ (Streamlit risk-screener app.py), presentation/
-├── tests/                # 188 pytest unit tests (weights, impute, target, transformers,
+├── tests/                # 189 pytest unit tests (weights, impute, target, transformers,
 │                         #   validate, evaluate, engineer/school, forecast, statistics,
 │                         #   eda_viz, dashboard), no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
@@ -561,7 +561,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required, 188 tests on synthetic fixtures)
+# 2. Run the test suite (no data required, 189 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -656,7 +656,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **188 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **189 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,

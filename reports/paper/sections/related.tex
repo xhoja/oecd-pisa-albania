@@ -64,6 +64,22 @@ school-questionnaire linkage) all plateau at the same value. We are not aware of
 PISA study that draws this line explicitly, which is why the field's shared $\sim0.8$
 has gone largely uninterrogated.
 
+\paragraph{Within-country geographic disparities.}
+Cross-national PISA work reports one figure per country, and the country-level literature
+on Albania documents an urban-rural achievement gap in broadly qualitative
+terms~\cite{worldbank_albania_education}: rural students trail urban ones, and the gap is
+attributed to socioeconomic development. What is missing, for Albania and for its Balkan
+peers, is a \emph{design-based} decomposition of low-proficiency risk \emph{within} the
+country. The public-use file carries no subnational region variable, which is likely why
+such a decomposition has not been reported; the geographic signal is instead encoded in
+the explicit sampling stratum, which labels every school by an urbanicity, region-band and
+sector cell. To our knowledge, this paper is the first to recover those cells and report
+the survey-weighted below-Level-2 rate for each, with design-based standard errors and a
+significance test on every between-group gap, turning a qualitatively known disparity into
+a quantified, targetable map. The multilevel literature above establishes that much PISA
+risk variance is between schools~\cite{masci2018student,goldstein2011multilevel}; we
+locate \emph{which} schools, geographically.
+
 \paragraph{Dataset shift.}
 When the input distribution changes between two populations, a classifier trained to
 tell them apart quantifies the change, and a high domain-classifier AUC is direct

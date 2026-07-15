@@ -83,12 +83,14 @@ features are partitioned into fixed endowments and malleable levers; each lever 
 half a training-standard-deviation in the direction that lowers the smooth mean predicted
 probability (its engineered interactions and school-mean aggregate moving with it), and
 levers are ranked by the resulting change in the weighted population predicted at-risk
-rate. A fixed-versus-malleable bundle contrast sizes how far actionable levers reach
-before the structural floor. Like the policy simulations these are model-associational
-contrasts, not causal effects.
+rate. Each lever effect carries a population-bootstrap 95\% confidence interval (400
+resamples of the students with the fitted model held fixed, so the interval captures
+finite-cohort sampling uncertainty but not model-fit uncertainty). A fixed-versus-malleable
+bundle contrast sizes how far actionable levers reach before the structural floor. Like the
+policy simulations these are model-associational contrasts, not causal effects.
 
 \subsection{Reproducibility and engineering}
-Logic lives in unit-tested modules (188 tests on synthetic fixtures, covering the
+Logic lives in unit-tested modules (189 tests on synthetic fixtures, covering the
 weighted statistics, Rubin's rules, the leakage-safe transformer, the BRR+PV variance,
 the Manski bounds and group-threshold mitigation, and the Nadeau--Bengio / DeLong
 maths); notebooks are narrative layers over them. On

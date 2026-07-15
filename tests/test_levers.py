@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from src.models.levers import (
+    bootstrap_lever_effects,
     classify_features,
     lever_ceiling,
     rank_levers,
@@ -83,6 +84,26 @@ def test_rank_levers_moves_school_mean_twin_together():
     row = rank[rank.lever == "ANXMAT"].iloc[0]
     assert "SCH_MEAN_ANXMAT" in row["cols"]
     assert row["delta_at_risk_rate"] < 0.0  # the twin shift reduces risk
+
+
+def test_bootstrap_brackets_point_estimate_and_is_deterministic():
+    X = _frame()
+    w = np.ones(len(X))
+    model = _LinearProbModel({"ANXMAT": 2.0, "TEACHSUP": -0.5})
+    rank = rank_levers(model, X, w, threshold=0.5, magnitude=0.5)
+    boot = bootstrap_lever_effects(model, X, w, threshold=0.5, ranking=rank,
+                                   magnitude=0.5, n_boot=50, seed=1)
+    assert {"ci_low", "ci_high", "boot_se"} <= set(boot.columns)
+    # the CI must bracket the point estimate for every lever
+    for row in boot.itertuples():
+        assert row.ci_low <= row.delta_at_risk_rate <= row.ci_high
+        assert row.boot_se >= 0.0
+    # a real lever's interval has positive width; same seed -> identical result
+    anx = boot[boot.lever == "ANXMAT"].iloc[0]
+    assert anx.ci_high > anx.ci_low
+    boot2 = bootstrap_lever_effects(model, X, w, threshold=0.5, ranking=rank,
+                                    magnitude=0.5, n_boot=50, seed=1)
+    assert boot2[boot2.lever == "ANXMAT"].iloc[0].ci_low == anx.ci_low
 
 
 def test_lever_ceiling_reports_both_bundles():
