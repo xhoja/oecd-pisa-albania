@@ -55,12 +55,12 @@ statistic in this README is backed by a unit-tested function.
    background features alone, the 2022 collapse is a *structural* distributional shift, not
    merely lower scores.
 2. **School socioeconomic composition is the missing lever.** Adding survey-weighted
-   school-mean features lifts every model's weighted CV AUC ~**+0.05** (CatBoost 0.73→**0.78**,
+   school-mean features lifts every model's weighted CV AUC ≈**+0.05** (CatBoost 0.73→**0.78**,
    significant, fold-safe), and once school context is in, the **gradient boosters pull
    significantly ahead of logistic regression** (GBM vs LR *p* = 0.001). The earlier "LR ties
    the boosters / data-limited ceiling" result was an artefact of an impoverished,
    student-only feature set, the ceiling was the *features*, not the data or the model.
-3. **...but the ~0.78 ceiling above school composition is a genuine data limit.** Linking the
+3. **...but the ≈0.78 ceiling above school composition is a genuine data limit.** Linking the
    PISA **school questionnaire** (principal-reported resources, staff, class size, leadership)
    directly onto students adds **no significant signal beyond school composition** (best +0.004
    AUC, all *p* > 0.24): school-mean SES already proxies school inputs. Three independent routes:
@@ -98,7 +98,7 @@ baseline gains least from school context (+0.027) because the boosters exploit t
 student × school-composition interaction a linear model cannot. **SVM and MLP (added in the
 Phase 5b completeness pass) land mid-table, below LR and well below the boosters**, confirming
 the podium is a booster story, not an artefact of omitting kernel/neural learners; neither
-non-linear margin nor a small dense net beats gradient boosting on this tabular, ~6k-row,
+non-linear margin nor a small dense net beats gradient boosting on this tabular, ≈6k-row,
 weighted problem. MLP is fit unweighted (`MLPClassifier` takes no `sample_weight`). See
 `outputs/results/albania_2022_model_comparison_school.csv` and `..._pairwise_nb_school.csv`.
 
@@ -165,7 +165,7 @@ Two levers were tested against the student-only ceiling; both are leakage-safe a
 **1. School context, breaks the AUC ceiling.** HPO gave no significant gain, suggesting a
 data ceiling; the real cause was a missing feature family. Adding survey-weighted,
 leave-one-out **school-mean** ESCS/HOMEPOS/ANXMAT/TEACHSUP + cohort size lifts weighted CV
-AUC ~**+0.05** for every model (table above), all *p* < 0.001 by the paired corrected
+AUC ≈**+0.05** for every model (table above), all *p* < 0.001 by the paired corrected
 resampled t-test. A **fold-safe** rerun (school means recomputed from the training fold only)
 reproduces an identical delta (`school_features_foldsafe_2022.csv`), so the lift is a genuine
 compositional effect, not leakage. `scripts/run_school_features_experiment.py` (+ `_foldsafe`).
@@ -179,8 +179,8 @@ AUC gain is small (≪ school context). Kept as an ablation, not folded into the
 
 **3. Operating point, threshold tuning + isotonic calibration.** The comparison scores
 F1/MCC at a fixed 0.5, but `class_weight='balanced'` recenters the scores. Tuning the
-threshold on out-of-fold train predictions lifts MCC ~+0.02–0.03 and F1-macro ~+0.03–0.05;
-weighted **isotonic calibration** cuts ECE ~5–7× (CatBoost 0.147→0.027, LR 0.209→0.029) and
+threshold on out-of-fold train predictions lifts MCC ≈+0.02–0.03 and F1-macro ≈+0.03–0.05;
+weighted **isotonic calibration** cuts ECE ≈5–7× (CatBoost 0.147→0.027, LR 0.209→0.029) and
 improves Brier, directly strengthening the fairness/calibration story. AUC is unchanged (a
 ranking metric). `scripts/run_threshold_calibration.py` → `threshold_calibration_2022.csv`,
 figure `M1`.
@@ -206,7 +206,7 @@ resampled t-test (`outputs/results/hpo_summary.csv`):
 
 **Tuning yields no statistically significant gain** for any model, the registry defaults are
 already at the ceiling *for the student-only feature set*. This looked like a data ceiling, but
-it was a **feature** ceiling: adding school context (below) lifts AUC ~+0.05 where tuning could
+it was a **feature** ceiling: adding school context (below) lifts AUC ≈+0.05 where tuning could
 not. The lesson holds in reverse, capacity/tuning were maxed; the missing signal was a feature.
 
 ### SHAP global importance (Albania 2022, LightGBM, school-context model)
@@ -257,11 +257,11 @@ Per-country school-context LightGBM (nine countries, 2022), weighted 5-fold CV
 
 - **Albania: high prevalence, low separability, flat gradient.** Highest at-risk rate (0.75),
   one of the *lowest* model AUCs (**0.77**, with 3-in-4 at-risk there's little contrast to
-  separate), and the **flattest SES gradient (~17 pts/SD)** of all nine countries. The 2022
+  separate), and the **flattest SES gradient (≈17 pts/SD)** of all nine countries. The 2022
   crisis is **broad-based**, depressed across the whole SES distribution, not concentrated in
   the poor. *(This corrects an earlier narrative that misread the gradient plot as "steep";
-  Albania's slope is in fact the flattest, a floor effect, even advantaged students score ~369.)*
-- **Steep-but-high contrast.** Estonia/Finland have *steeper* gradients (~38–40) yet far higher
+  Albania's slope is in fact the flattest, a floor effect, even advantaged students score ≈369.)*
+- **Steep-but-high contrast.** Estonia/Finland have *steeper* gradients (≈38–40) yet far higher
   levels; SES predicts more there only because there is more score range to predict.
 - **Drivers are shared, not unique.** A SHAP feature × country **rank matrix**
   (`comparative_shap_rank_matrix.csv`, figure `F1`) shows **math anxiety universal** (top-3 almost
@@ -287,14 +287,14 @@ Monte-Carlo (`src/forecast/scenarios.py`, notebook 10):
 | Pre-COVID recovery (trend resumes) | 0.21 | 0.18–0.24 |
 | *naive all-cycles line (discarded)* | *0.73* | *0.72–0.74* |
 
-The honest message is the **width (~21–74%)**, not a single number. Because the 2022 spike
+The honest message is the **width (≈21–74%)**, not a single number. Because the 2022 spike
 reflects durable disruptions (the notebook-03 covariate shift), the defensible zone is
-**partial-reversion (~47%) to persistence (~74%)**; the ~21% recovery is an optimistic floor
+**partial-reversion (≈47%) to persistence (≈74%)**; the ≈21% recovery is an optimistic floor
 that assumes the pre-COVID trajectory resumes untouched. The naive line only *looks* confident
 because it ignores the break. Bottom line: absent a strong targeted recovery, plan for 2026 to
 sit well above Albania's 2018 low of 42%.
 
-### Causal probe — 2019 Durrës earthquake (a well-identified null)
+### Causal probe, 2019 Durrës earthquake (a well-identified null)
 
 The whole framework is associational, so we test the one natural experiment in reach: the
 26 Nov 2019 M6.4 Durrës earthquake. PISA's sampling `STRATUM` encodes a North/Center/South band;
@@ -310,16 +310,16 @@ quake damage concentrated in the **Center** band (Durrës + Tirana). A differenc
 | DiD, school-clustered SE | +5.2 pp | 0.22 |
 
 The naïve DiD **does not survive**: the pre-quake placebo rejects parallel trends (Center was
-already on a steeper improving trajectory), the urbanicity triple-difference is ~0 with the wrong
-sign, and the effect is null once inference clusters on schools. At-risk jumps ~30–40 pp in *every*
+already on a steeper improving trajectory), the urbanicity triple-difference is ≈0 with the wrong
+sign, and the effect is null once inference clusters on schools. At-risk jumps ≈30–40 pp in *every*
 band, so the 2022 collapse is **national** (COVID + sample-coverage shock), not a localised Durrës
-signal. We report the null for transparency — it forecloses the "earthquake caused the crisis"
+signal. We report the null for transparency, it forecloses the "earthquake caused the crisis"
 over-claim and reinforces the structural-crisis reading. The public file cannot separate Durrës
 from Tirana and only 2015/2018 carry a decodable band, so no estimator can rescue identification.
 
 ### Does the data-ceiling claim generalise? (9 countries)
 
-Albania's thesis — its ~0.78 ceiling is a **data property, not a feature shortfall** — is tested
+Albania's thesis, its ≈0.78 ceiling is a **data property, not a feature shortfall**, is tested
 on all nine countries by running its two data-only legs (`src/models/multilevel.py`,
 `scripts/run_ceiling_generalization.py`, notebook 05): the **school-composition lift** (weighted 5×2
 CV AUC, student features vs + leave-one-out school-mean composition, Nadeau-Bengio corrected test)
@@ -334,20 +334,20 @@ and the **between-school ICC** (null multilevel model).
 | Finland *(boundary)* | .10 | .78 → .79 | +.008 | weak |
 
 The composition lift is **significant in 8/9 countries** and the achievable AUC tracks the ICC at
-**r = 0.80** — the ceiling is set by how much risk lives *between* schools, not by the feature set.
+**r = 0.80**, the ceiling is set by how much risk lives *between* schools, not by the feature set.
 The boundary is the **equitable top performers**: in Finland (ICC 0.10) schools are socially mixed,
 composition adds almost nothing, and the mechanism weakens. So the claim generalises to segregated
-systems and self-limits in equitable ones — reported as a boundary, not buried. (The third Albanian
+systems and self-limits in equitable ones, reported as a boundary, not buried. (The third Albanian
 leg, the school-questionnaire null, needs the linked questionnaire only Albania has, so it stays
 single-country.)
 
 ### Can a new modality move the ceiling? (CBA process data)
 
-Every feature so far is one questionnaire modality. We link a genuinely new source — PISA's
+Every feature so far is one questionnaire modality. We link a genuinely new source, PISA's
 **computer-based-assessment process data** (`src/features/process.py`,
 `scripts/run_process_modality.py`, notebook 06), joined 1:1 by `CNTSTUID`: per-item response
 **time + visits** (2022 `STU_COG`, 2018 `STU_TTM`) and questionnaire **response latency** (2022
-`STU_TIM`). Only *behavioural* features are used — item correctness mechanically defines the target,
+`STU_TIM`). Only *behavioural* features are used, item correctness mechanically defines the target,
 so it is never a feature.
 
 | 2022, at the student+school ceiling | +process AUC | lift | p |
@@ -356,17 +356,17 @@ so it is never a feature.
 | cognitive-only | 0.851 | +0.078 | <.001 |
 | questionnaire-only *(deployable)* | 0.784 | **+0.011** | .019 |
 
-A new modality **does** move the number — 0.773 → **0.86**, the first thing to break 0.78. **But
-it is not deployable:** ~90% of the lift is cognitive-test process data, which is endogenous to the
+A new modality **does** move the number, 0.773 → **0.86**, the first thing to break 0.78. **But
+it is not deployable:** ≈90% of the lift is cognitive-test process data, which is endogenous to the
 proficiency it predicts and only exists *after* a student sits the CBA. The only pre-test modality
-(questionnaire latency) adds **+1.1 pp**. So the **screening** ceiling holds at ~0.78 — the ceiling
+(questionnaire latency) adds **+1.1 pp**. So the **screening** ceiling holds at ≈0.78, the ceiling
 is about *what is knowable before the test*. Reported honestly, including the large cognitive-process
-lift we cannot use for early warning. (Albania fielded neither the parent nor teacher questionnaire —
+lift we cannot use for early warning. (Albania fielded neither the parent nor teacher questionnaire, 
 both ruled out at source.)
 
 ### Fairness mitigation, not just diagnosis
 
-The audit found the screener over-flags the poorest students. We *fix* it post-hoc — no retraining —
+The audit found the screener over-flags the poorest students. We *fix* it post-hoc, no retraining, 
 with **group-specific decision thresholds** on frozen out-of-fold predictions
 (`src/fairness/mitigation.py`, `scripts/run_fairness_mitigation.py`, notebook 07):
 
@@ -376,17 +376,17 @@ with **group-specific decision thresholds** on frozen out-of-fold predictions
 | richest Q5 | 0.20 | 0.42 |
 | **FPR gap** | **0.63** | **0.003** |
 
-Equalising the false-positive rate collapses the equalized-odds gap from **0.63 to ~0.00** — the
+Equalising the false-positive rate collapses the equalized-odds gap from **0.63 to ≈0.00**, the
 disparity was an artefact of a blanket operating point, removable without touching the model. It
-costs ~6 pp of overall recall (0.81 → 0.75), and on the fairness-utility frontier group-specific
+costs ≈6 pp of overall recall (0.81 → 0.75), and on the fairness-utility frontier group-specific
 thresholds strictly dominate a single threshold. We present it as a quantified policy option (with
 the disparate-treatment caveat), not a default.
 
-### Coverage robustness — Manski bounds
+### Coverage robustness, Manski bounds
 
-PISA 2022 covered only ~**79%** of Albania's 15-year-olds (Coverage Index 3 ≈ 0.79; 6,129 students
-representing ~28,400 of ~36,000 — OECD Country Note). The reported ~74% at-risk rate is a rate
-*among the covered*; the ~21% uncovered (out-of-school, disadvantaged) are unobserved. We report
+PISA 2022 covered only ≈**79%** of Albania's 15-year-olds (Coverage Index 3 ≈ 0.79; 6,129 students
+representing ≈28,400 of ≈36,000, OECD Country Note). The reported ≈74% at-risk rate is a rate
+*among the covered*; the ≈21% uncovered (out-of-school, disadvantaged) are unobserved. We report
 partial-identification bounds instead of assuming they resemble the sample (`src/coverage/manski.py`,
 `scripts/run_coverage_bounds.py`, notebook 09):
 
@@ -395,17 +395,17 @@ partial-identification bounds instead of assuming they resemble the sample (`src
 | observed (covered), design-based ±95% CI | 0.739 ± 0.008 |
 | worst-case Manski bounds | **[0.58, 0.79]** |
 | monotone (uncovered ≥ covered) | **[0.74, 0.79]** |
-| scenario: uncovered ~ poorest quintile | ~0.76 |
+| scenario: uncovered ≈ poorest quintile | ≈0.76 |
 
-The sampling SE (0.004) badly understates total uncertainty — the coverage gap does. But the credible
+The sampling SE (0.004) badly understates total uncertainty, the coverage gap does. But the credible
 (monotone) bound is one-sided: out-of-school youth are not *less* at risk, so coverage most likely
 means the headline **understates** the crisis. Crucially, even the worst-case lower bound (0.58) sits
-~16 pp above Albania's 2018 rate (0.42) across every plausible coverage share — **the 2018→2022
+≈16 pp above Albania's 2018 rate (0.42) across every plausible coverage share, **the 2018→2022
 deterioration is robust to any coverage assumption**; only the level is uncertain, not the conclusion.
 
-### The geography of the crisis — where *inside* Albania it concentrates
+### The geography of the crisis, where *inside* Albania it concentrates
 
-The national ~74% at-risk rate hides *where* the crisis lives. Albania's public file has no
+The national ≈74% at-risk rate hides *where* the crisis lives. Albania's public file has no
 subnational `REGION`, but the sampling `STRATUM` decodes into **region band (North / Center / South)
 × urbanicity (Urban / Rural) × sector (Public / Private)** (`src/geography/equity.py`,
 `scripts/run_geographic_equity.py`, notebook 02 Part C). Every rate is survey-weighted with a PISA
@@ -419,27 +419,27 @@ significance test rather than being eyeballed from two marginal CIs.
 | **South** | 0.71 | 0.79 |
 
 - **The North is highest in every cycle** and the rural bands carry the heaviest load; rural North
-  (0.83) and rural Center (0.82) are the worst cells, while even urban Center — which contains the
-  capital — is the *lowest* cell at 0.69, still a majority at risk.
+  (0.83) and rural Center (0.82) are the worst cells, while even urban Center, which contains the
+  capital, is the *lowest* cell at 0.69, still a majority at risk.
 - **The gaps are real under design-based SEs (2022):** Rural − Urban **+9.9 pp** (*p* ≈ 1e-12),
-  North − South **+7.0 pp** (*p* ≈ 3e-10), and **Public − Private +25.5 pp** (*p* < 0.001) — the
+  North − South **+7.0 pp** (*p* ≈ 3e-10), and **Public − Private +25.5 pp** (*p* < 0.001), the
   public/private divide is the widest of the three and has *grown* (0.15 in 2018 → 0.26 in 2022),
-  though private schools are a small, self-selected ~13% of students (a composition signal, not a
+  though private schools are a small, self-selected ≈13% of students (a composition signal, not a
   like-for-like school effect).
-- **The 2018 → 2022 reversal is broad-based** (every cell jumped ~28–37 pp) but stacked *on top of*
+- **The 2018 → 2022 reversal is broad-based** (every cell jumped ≈28–37 pp) but stacked *on top of*
   pre-existing rural disadvantage, so the rural bands ended highest.
 - **Policy read:** because the SES gradient is flat (comparative section above), income-targeted
-  transfers alone miss most at-risk students — **geography is a sharper targeting axis than family
+  transfers alone miss most at-risk students, **geography is a sharper targeting axis than family
   SES.** The North, rural and public-school bands are where a fixed remediation budget buys the most
   reach. Figures `GEO1`–`GEO3` (trajectory, region × urbanicity heatmap, 2018→2022 dumbbell).
 
-### From prediction to prescription — malleable-lever ranking
+### From prediction to prescription, malleable-lever ranking
 
 SHAP ranks features by how much the model *reads* them, mixing **fixed endowments** (SES, parental
-education, home possessions, immigrant status, gender, grade — a screener reads them but no policy
+education, home possessions, immigrant status, gender, grade, a screener reads them but no policy
 moves them short-run) with **malleable levers** (math anxiety, teacher support, belonging,
 grade-repetition, ICT). We split the two and rank only the *actionable* levers by the population
-predicted at-risk reduction from a standardized half-SD nudge in the beneficial direction — the
+predicted at-risk reduction from a standardized half-SD nudge in the beneficial direction, the
 direction discovered on the smooth mean predicted probability, not the noisy thresholded count
 (`src/models/levers.py`, `scripts/run_levers.py`, notebook 08 Part D).
 
@@ -452,9 +452,9 @@ direction discovered on the smooth mean predicted probability, not the noisy thr
 - **Math anxiety is the one soft lever with real reach**, matching the counterfactual-recourse and
   multilevel evidence; everything else is essentially flat.
 - **The structural floor, made explicit:** moving *every* actionable lever half an SD at once takes
-  the predicted at-risk rate ~0.72 → ~0.66 (−6.9 pp), and a *hypothetical* that lifts every fixed
-  endowment by the same amount (which no short-run policy can deliver) buys only ~5 pp more. Both
-  bundles leave a large majority at risk — the crisis is **structural, not a tuning problem**, the
+  the predicted at-risk rate ≈0.72 → ≈0.66 (−6.9 pp), and a *hypothetical* that lifts every fixed
+  endowment by the same amount (which no short-run policy can deliver) buys only ≈5 pp more. Both
+  bundles leave a large majority at risk, the crisis is **structural, not a tuning problem**, the
   same conclusion the policy what-ifs, the covariate shift and the flat SES gradient reach from
   other directions.
 - **Levers and geography are complements:** the anxiety lever is *weaker where the crisis is
@@ -681,10 +681,10 @@ dictionary, survey-weighted descriptives, an effect-size ranking, a cross-countr
 comparability table, and the descriptive SES-gradient probability curve. It follows the
 Harvard hourglass structure (hook, explicit thesis + roadmap, topic-sentence body,
 hook-returning conclusion) and frames the work around the *science*: the structural-shift
-thesis (AUC 0.98), the feature-vs-data ceiling (~0.78, three convergent routes), the
+thesis (AUC 0.98), the feature-vs-data ceiling (≈0.78, three convergent routes), the
 broad-based flat-gradient crisis, and an honest fairness account. It integrates the five
 robustness and extension analyses in full, the ceiling generalising across nine systems
-(ICC-tracked, r~0.80), the CBA process-modality test (0.86 but endogenous, so the
+(ICC-tracked, r≈0.80), the CBA process-modality test (0.86 but endogenous, so the
 deployable ceiling holds), the group-threshold fairness mitigation (FPR gap 0.63 to
 0.003), the Manski coverage bounds ([0.74, 0.79]), and the earthquake
 difference-in-differences (a well-identified null: the collapse is national). A dedicated
@@ -709,7 +709,7 @@ factor groups pushing risk up (red) or down (blue) with a per-factor drill-down,
 **SES-risk gradient** card (the student's own fifth highlighted), a leak-free **calibration
 reliability curve**, one-click **preset profiles**, prominent caveats plus a
 provenance/license footer, and a **downloadable PDF report card** (`fpdf2`) in the chosen
-language. Header KPI tiles surface the cohort at-risk rate, the ~0.78 ceiling, and the
+language. Header KPI tiles surface the cohort at-risk rate, the ≈0.78 ceiling, and the
 sample size. The model bundle and three precomputed leak-free context series are exported
 by `scripts/export_dashboard_model.py`.
 
@@ -748,10 +748,10 @@ items. Everything else (analysis, paper, dashboard) is complete.
   default with the corrected resampled t-test. Result: **no significant gain from tuning**,
   defaults are already at the accuracy ceiling.
 - **Model-improvement pass:** two levers against the student-only ceiling. **School context**
-  (survey-weighted leave-one-out school-mean features) lifts every model ~+0.05 AUC
+  (survey-weighted leave-one-out school-mean features) lifts every model ≈+0.05 AUC
   (CatBoost 0.73→**0.78**), fold-safe and significant, breaking the ceiling HPO could not, and
   flipping the podium so boosters beat LR. **Threshold tuning + isotonic calibration** lift
-  MCC/F1 and cut ECE ~5–7×. `build_model_data(..., add_school_context=True)`; scripts
+  MCC/F1 and cut ECE ≈5–7×. `build_model_data(..., add_school_context=True)`; scripts
   `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb04) and
   the fairness audit (nb07) were then re-run on the school-augmented model.
 - **Phase 6, Explainability (local + PDP/ICE):** SHAP local case studies for one
@@ -769,8 +769,8 @@ items. Everything else (analysis, paper, dashboard) is complete.
   low-separability / flat-gradient (broad-based crisis); drivers (math anxiety, school
   composition) are shared with peers, not unique.
 - **Forecast, next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 10)
-  propagating design-based SEs: plausible 2026 low-proficiency range ~21–74%, defensible zone
-  partial-reversion (~47%) to persistence (~74%). Honest about the five-cycle / structural-break
+  propagating design-based SEs: plausible 2026 low-proficiency range ≈21–74%, defensible zone
+  partial-reversion (≈47%) to persistence (≈74%). Honest about the five-cycle / structural-break
   limits.
 - **Phase 9, Stacking ensemble (negligible, worse where it counts):** a StackingClassifier of
   the four bare tree/booster base learners (CatBoost + LightGBM + GBM + RF) with a
@@ -779,9 +779,9 @@ items. Everything else (analysis, paper, dashboard) is complete.
   path (`scripts/run_stacking_experiment.py`, registry `"stacking"`, notebook 03). Stacking AUC
   **0.786** vs single CatBoost **0.783**, a paired Nadeau-Bengio gain of **+0.003 (p=0.030)**:
   significant but practically nil, and it *regresses* the decision-point metrics (MCC 0.386 vs
-  0.393, F1 0.683 vs 0.693) at ~19× the compute. The ~0.78 ceiling holds; **single CatBoost
+  0.393, F1 0.683 vs 0.693) at ≈19× the compute. The ≈0.78 ceiling holds; **single CatBoost
   remains the deployable headline**. Kept as an ablation, alongside the earlier **PV-stacking**
-  result (all 10 PVs as training rows; ~+0.01 AUC for LightGBM/GBM only), both confirm
+  result (all 10 PVs as training rows; ≈+0.01 AUC for LightGBM/GBM only), both confirm
   diminishing returns (`stacking_ensemble_2022.csv`, `stacking_pairwise_nb_2022.csv`).
 - **Documentation & rigor pass:** per-notebook *Methods & formulas* reference cells
   (`notebooks/_formulas.py`), a unified colorblind-safe colormap schema across all figures
@@ -789,13 +789,13 @@ items. Everything else (analysis, paper, dashboard) is complete.
   and an internal performance / quality review.
 - **Screener evaluation + multilevel model (robustness strengthening, notebook 06):**
   **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
-  figure `G1`) reframes the ~75%-prevalence problem around *net benefit*, the model beats
+  figure `G1`) reframes the ≈75%-prevalence problem around *net benefit*, the model beats
   screen-everyone/screen-no-one over the selective threshold band **0.51–0.95**, and weighted
-  isotonic **calibration** cuts ECE **~0.10 → ~0.01** (`G2`). A **random-intercept logistic**
+  isotonic **calibration** cuts ECE **≈0.10 → ≈0.01** (`G2`). A **random-intercept logistic**
   model (`src/models/multilevel.py`, `scripts/run_multilevel.py`, figure `H1`), the correct
   spec for PISA's nested design, **matches** the hand-crafted school-mean booster on identical
-  folds (CV AUC ~0.78 either way, confirming the ceiling is real) and shows a school **ICC ≈ 0.31**:
-  ~a third of risk variance is *between schools* and barely touched by student features. A
+  folds (CV AUC ≈0.78 either way, confirming the ceiling is real) and shows a school **ICC ≈ 0.31**:
+  ≈a third of risk variance is *between schools* and barely touched by student features. A
   **survey-weighted pseudo-likelihood** refit (PQL with within-cluster scaled weights, Schall /
   Rabe-Hesketh & Skrondal, `multilevel.fit_weighted_random_intercept`) gives design-consistent
   fixed effects: odds ratios shift by ≤0.05 and the ICC stays in the **0.22–0.31** band, so the
@@ -806,20 +806,20 @@ items. Everything else (analysis, paper, dashboard) is complete.
   (`src/features/engineer.py:add_school_questionnaire`, `scripts/run_school_questionnaire_experiment.py`).
   A paired ablation on shared folds finds these *independent* school inputs add **no significant
   signal beyond school composition** (best incremental **+0.004** AUC, all *p* > 0.24). School-mean
-  ESCS already proxies school resources/staffing, so the **~0.78 ceiling is a genuine data limit,
+  ESCS already proxies school resources/staffing, so the **≈0.78 ceiling is a genuine data limit,
   not a feature-set limit**, a third independent route (composition booster, multilevel ICC,
   direct questionnaire linkage) converging on the same conclusion.
 
 - **Decision support, uncertainty, recourse, policy (notebook 08):** three tools that turn the
   screener into something actionable. **Conformal prediction** (`src/models/conformal.py`,
   `scripts/run_conformal.py`) gives distribution-free prediction sets, the coverage guarantee
-  holds under survey weighting, ~60% confident singletons / ~40% honest abstentions at 90%
+  holds under survey weighting, ≈60% confident singletons / ≈40% honest abstentions at 90%
   coverage. **Counterfactual recourse** (`src/explainability/counterfactuals.py`,
   `scripts/run_counterfactuals.py`) finds the minimal actionable change to un-flag a student;
   it succeeds for only a minority and is dominated by **math anxiety**, the individual echo of
   the structural thesis. **Policy simulation** (`src/models/policy.py`, `scripts/run_policy.py`)
-  shows even an everything-at-once population intervention only cuts predicted at-risk ~72%→60%
-  (anxiety the top single lever, ~-7 pp), no soft lever rescues a 75%-prevalence crisis. All
+  shows even an everything-at-once population intervention only cuts predicted at-risk ≈72%→60%
+  (anxiety the top single lever, ≈-7 pp), no soft lever rescues a 75%-prevalence crisis. All
   three are model-associational, not causal (stated, not hidden).
 
 - **Fold-safe transformer + Phase 5b completeness:** fold-safe per-fold school-means transformer
@@ -831,15 +831,15 @@ items. Everything else (analysis, paper, dashboard) is complete.
 
 - **Robustness extensions (five):** hardening the analysis against the strongest methodological counter-arguments.
   **(1)** A *causal* test of the 2019 Durrës earthquake (difference-in-differences + placebo +
-  triple-difference, `src/causal/`) — a well-identified **null**: the 2022 collapse is national,
+  triple-difference, `src/causal/`), a well-identified **null**: the 2022 collapse is national,
   not a localised shock. **(2)** The data-ceiling claim **generalises** across nine countries
   (composition lift significant in 8/9, achievable AUC tracks between-school ICC at *r* = 0.80),
   with an equitable-system boundary (Finland). **(3)** A genuinely new **modality** (CBA process
-  data, `src/features/process.py`) moves the AUC to 0.86, but ~90% of that **gain** is endogenous
-  cognitive-test process — the *screening* ceiling holds ~0.78. **(4)** Fairness **mitigation**
+  data, `src/features/process.py`) moves the AUC to 0.86, but ≈90% of that **gain** is endogenous
+  cognitive-test process, the *screening* ceiling holds ≈0.78. **(4)** Fairness **mitigation**
   (`src/fairness/mitigation.py`): group-specific thresholds collapse the SES false-positive gap
-  0.63 → 0.003. **(5)** **Manski coverage bounds** (`src/coverage/`): at Albania's ~79% PISA
-  coverage, the crisis conclusion is robust to *any* assumption about the excluded ~21%. See
+  0.63 → 0.003. **(5)** **Manski coverage bounds** (`src/coverage/`): at Albania's ≈79% PISA
+  coverage, the crisis conclusion is robust to *any* assumption about the excluded ≈21%. See
   the Key Results sections above.
 
 - **Notebook consolidation:** the 18 topic-installment notebooks were merged into **10 coherent
@@ -854,7 +854,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   **malleable-lever ranking** (`src/models/levers.py`, notebook 08 Part D) that splits fixed
   endowments from actionable levers and ranks the latter by predicted at-risk reduction: math
   anxiety is the one lever with real reach (−5.1 pp), and even the all-lever bundle leaves a large
-  majority at risk — the structural floor, made explicit. See the two Key Results sections above.
+  majority at risk, the structural floor, made explicit. See the two Key Results sections above.
 
 ### Remaining
 - **Report & deliverables:** the **written paper** (`reports/paper/`, compiles to `main.pdf`)
