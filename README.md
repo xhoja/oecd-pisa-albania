@@ -1,4 +1,4 @@
-# Predicting Albanian Student Low-Proficiency Risk Using OECD PISA Data (2009–2022)
+# Predicting Albanian Student Low-Proficiency Risk Using OECD PISA Data (2009 to 2022)
 ### A Comparative Machine-Learning Framework
 
 A data-science project predicting which Albanian 15-year-olds are
@@ -106,18 +106,18 @@ weighted problem. MLP is fit unweighted (`MLPClassifier` takes no `sample_weight
 
 | Model | ROC-AUC (Nadeau-Bengio 95% CI) | PR-AUC | F1-macro | MCC |
 |---|---|---|---|---|
-| **CatBoost** | **0.731** (0.714–0.749) | 0.880 | 0.647 | 0.305 |
-| Logistic Regression | 0.727 (0.704–0.751) | 0.882 | 0.621 | 0.281 |
-| Gradient Boosting | 0.727 (0.711–0.743) | 0.878 | 0.609 | 0.283 |
-| LightGBM | 0.715 (0.700–0.730) | 0.872 | 0.638 | 0.282 |
-| SVM (RBF) | 0.712 (0.685–0.739) | 0.873 | 0.571 | 0.242 |
-| Random Forest | 0.710 (0.692–0.727) | 0.868 | 0.599 | 0.261 |
-| MLP (128-64) | 0.709 (0.684–0.735) | 0.867 | 0.580 | 0.251 |
-| Extra Trees | 0.707 (0.688–0.726) | 0.866 | 0.608 | 0.260 |
-| XGBoost | 0.698 (0.681–0.715) | 0.863 | 0.617 | 0.262 |
-| Naive Bayes | 0.682 (0.659–0.705) | 0.846 | 0.599 | 0.246 |
-| KNN | 0.664 (0.638–0.689) | 0.842 | 0.588 | 0.215 |
-| Decision Tree | 0.568 (0.548–0.589) | 0.780 | 0.567 | 0.135 |
+| **CatBoost** | **0.731** (0.714 to 0.749) | 0.880 | 0.647 | 0.305 |
+| Logistic Regression | 0.727 (0.704 to 0.751) | 0.882 | 0.621 | 0.281 |
+| Gradient Boosting | 0.727 (0.711 to 0.743) | 0.878 | 0.609 | 0.283 |
+| LightGBM | 0.715 (0.700 to 0.730) | 0.872 | 0.638 | 0.282 |
+| SVM (RBF) | 0.712 (0.685 to 0.739) | 0.873 | 0.571 | 0.242 |
+| Random Forest | 0.710 (0.692 to 0.727) | 0.868 | 0.599 | 0.261 |
+| MLP (128-64) | 0.709 (0.684 to 0.735) | 0.867 | 0.580 | 0.251 |
+| Extra Trees | 0.707 (0.688 to 0.726) | 0.866 | 0.608 | 0.260 |
+| XGBoost | 0.698 (0.681 to 0.715) | 0.863 | 0.617 | 0.262 |
+| Naive Bayes | 0.682 (0.659 to 0.705) | 0.846 | 0.599 | 0.246 |
+| KNN | 0.664 (0.638 to 0.689) | 0.842 | 0.588 | 0.215 |
+| Decision Tree | 0.568 (0.548 to 0.589) | 0.780 | 0.567 | 0.135 |
 
 In the student-only set the top three (CatBoost ≈ LR ≈ GBM) were a statistical tie, the
 finding that motivated adding school context.
@@ -179,13 +179,13 @@ AUC gain is small (≪ school context). Kept as an ablation, not folded into the
 
 **3. Operating point, threshold tuning + isotonic calibration.** The comparison scores
 F1/MCC at a fixed 0.5, but `class_weight='balanced'` recenters the scores. Tuning the
-threshold on out-of-fold train predictions lifts MCC ≈+0.02–0.03 and F1-macro ≈+0.03–0.05;
-weighted **isotonic calibration** cuts ECE ≈5–7× (CatBoost 0.147→0.027, LR 0.209→0.029) and
+threshold on out-of-fold train predictions lifts MCC ≈+0.02 to 0.03 and F1-macro ≈+0.03 to 0.05;
+weighted **isotonic calibration** cuts ECE ≈5 to 7× (CatBoost 0.147→0.027, LR 0.209→0.029) and
 improves Brier, directly strengthening the fairness/calibration story. AUC is unchanged (a
 ranking metric). `scripts/run_threshold_calibration.py` → `threshold_calibration_2022.csv`,
 figure `M1`.
 
-### Out-of-sample (train 2009–2018 → test 2022, weighted)
+### Out-of-sample (train 2009 to 2018 → test 2022, weighted)
 
 GBM & RF lead at **0.674** AUC, with LightGBM level at 0.673; CatBoost 0.665, Extra Trees
 0.663, XGBoost 0.639, LR 0.622.
@@ -261,7 +261,7 @@ Per-country school-context LightGBM (nine countries, 2022), weighted 5-fold CV
   crisis is **broad-based**, depressed across the whole SES distribution, not concentrated in
   the poor. *(This corrects an earlier narrative that misread the gradient plot as "steep";
   Albania's slope is in fact the flattest, a floor effect, even advantaged students score ≈369.)*
-- **Steep-but-high contrast.** Estonia/Finland have *steeper* gradients (≈38–40) yet far higher
+- **Steep-but-high contrast.** Estonia/Finland have *steeper* gradients (≈38 to 40) yet far higher
   levels; SES predicts more there only because there is more score range to predict.
 - **Drivers are shared, not unique.** A SHAP feature × country **rank matrix**
   (`comparative_shap_rank_matrix.csv`, figure `F1`) shows **math anxiety universal** (top-3 almost
@@ -282,12 +282,12 @@ Monte-Carlo (`src/forecast/scenarios.py`, notebook 10):
 
 | Scenario | 2026 median | 90% PI |
 |---|---|---|
-| Persistence (crisis holds) | **0.74** | 0.66–0.82 |
-| Partial reversion | 0.47 | 0.43–0.52 |
-| Pre-COVID recovery (trend resumes) | 0.21 | 0.18–0.24 |
-| *naive all-cycles line (discarded)* | *0.73* | *0.72–0.74* |
+| Persistence (crisis holds) | **0.74** | 0.66 to 0.82 |
+| Partial reversion | 0.47 | 0.43 to 0.52 |
+| Pre-COVID recovery (trend resumes) | 0.21 | 0.18 to 0.24 |
+| *naive all-cycles line (discarded)* | *0.73* | *0.72 to 0.74* |
 
-The honest message is the **width (≈21–74%)**, not a single number. Because the 2022 spike
+The honest message is the **width (≈21 to 74%)**, not a single number. Because the 2022 spike
 reflects durable disruptions (the notebook-03 covariate shift), the defensible zone is
 **partial-reversion (≈47%) to persistence (≈74%)**; the ≈21% recovery is an optimistic floor
 that assumes the pre-COVID trajectory resumes untouched. The naive line only *looks* confident
@@ -311,7 +311,7 @@ quake damage concentrated in the **Center** band (Durrës + Tirana). A differenc
 
 The naïve DiD **does not survive**: the pre-quake placebo rejects parallel trends (Center was
 already on a steeper improving trajectory), the urbanicity triple-difference is ≈0 with the wrong
-sign, and the effect is null once inference clusters on schools. At-risk jumps ≈30–40 pp in *every*
+sign, and the effect is null once inference clusters on schools. At-risk jumps ≈30 to 40 pp in *every*
 band, so the 2022 collapse is **national** (COVID + sample-coverage shock), not a localised Durrës
 signal. We report the null for transparency, it forecloses the "earthquake caused the crisis"
 over-claim and reinforces the structural-crisis reading. The public file cannot separate Durrës
@@ -327,8 +327,8 @@ and the **between-school ICC** (null multilevel model).
 
 | System | ICC | base → +composition AUC | lift | sig |
 |---|---|---|---|---|
-| Balkans (MKD/MNE/SRB/BGR) | .34–.56 | up to .79 → .86 | +.06 to +.08 | ✓ |
-| GDP-matched (COL/MEX) | .31–.45 | .75–.83 → .79–.86 | +.03 to +.04 | ✓ |
+| Balkans (MKD/MNE/SRB/BGR) | .34 to .56 | up to .79 → .86 | +.06 to +.08 | ✓ |
+| GDP-matched (COL/MEX) | .31 to .45 | .75 to .83 → .79 to .86 | +.03 to +.04 | ✓ |
 | Albania | .31 | .71 → .77 | +.059 | ✓ |
 | Estonia *(boundary)* | .21 | .73 → .75 | +.022 | n.s. (p=.09) |
 | Finland *(boundary)* | .10 | .78 → .79 | +.008 | weak |
@@ -426,12 +426,12 @@ significance test rather than being eyeballed from two marginal CIs.
   public/private divide is the widest of the three and has *grown* (0.15 in 2018 → 0.26 in 2022),
   though private schools are a small, self-selected ≈13% of students (a composition signal, not a
   like-for-like school effect).
-- **The 2018 → 2022 reversal is broad-based** (every cell jumped ≈28–37 pp) but stacked *on top of*
+- **The 2018 → 2022 reversal is broad-based** (every cell jumped ≈28 to 37 pp) but stacked *on top of*
   pre-existing rural disadvantage, so the rural bands ended highest.
 - **Policy read:** because the SES gradient is flat (comparative section above), income-targeted
   transfers alone miss most at-risk students, **geography is a sharper targeting axis than family
   SES.** The North, rural and public-school bands are where a fixed remediation budget buys the most
-  reach. Figures `GEO1`–`GEO3` (trajectory, region × urbanicity heatmap, 2018→2022 dumbbell).
+  reach. Figures `GEO1` to `GEO3` (trajectory, region × urbanicity heatmap, 2018→2022 dumbbell).
 
 ### From prediction to prescription, malleable-lever ranking
 
@@ -491,11 +491,11 @@ trajectory with design-based SEs:
 
 | Cycle | At-risk (math < L2) | SE | 95% CI | BRR |
 |---|---|---|---|---|
-| 2009 | 0.677 | 0.0076 | 0.663–0.692 | - (FWF) |
-| 2012 | 0.607 | 0.0051 | 0.597–0.617 | - (FWF) |
-| 2015 | 0.533 | 0.0108 | 0.512–0.554 | ✓ |
-| 2018 | 0.424 | 0.0088 | 0.407–0.441 | ✓ |
-| **2022** | **0.739** | **0.0041** | **0.731–0.747** | ✓ |
+| 2009 | 0.677 | 0.0076 | 0.663 to 0.692 | n/a (FWF) |
+| 2012 | 0.607 | 0.0051 | 0.597 to 0.617 | n/a (FWF) |
+| 2015 | 0.533 | 0.0108 | 0.512 to 0.554 | ✓ |
+| 2018 | 0.424 | 0.0088 | 0.407 to 0.441 | ✓ |
+| **2022** | **0.739** | **0.0041** | **0.731 to 0.747** | ✓ |
 
 > **Replicate-weight caveat:** the 80 replicate weights ship only on the SAV cycles
 > (2015/2018/2022). The FWF cycles (2009/2012) fall back to an imputation-only SE, flagged
@@ -730,15 +730,15 @@ items. Everything else (analysis, paper, dashboard) is complete.
 ### Done
 - **Phase 1, Infrastructure & data:** repo, configs, FWF parser, SPSS loader,
   harmonization, weights/PV handling, full pipeline. 5 cycles × 9 countries processed.
-- **Phase 2, EDA & statistics:** 8 publication figures, executed notebooks (01–02),
+- **Phase 2, EDA & statistics:** 8 publication figures, executed notebooks (01 to 02),
   covariate-shift analysis (AUC 0.98), weighted stats, effect sizes.
 - **Phase 3, Feature engineering:** SES composites, digital indices, interaction terms,
   country-normalized features, selection (VIF / correlation / missingness).
 - **Phase 4, Modeling:** 9-model weighted comparison (repeated stratified CV) with
   Nadeau-Bengio CIs and pairwise significance testing (corrected resampled t-test in CV,
   DeLong out-of-sample); weighted OOS 2022 experiment with Rubin's-rules per-PV evaluation
-  and train-only threshold tuning; SHAP global + importance. Notebooks 03–04.
-- **Rigor hardening (Phases 1–4):** test suite, dependency-free data contracts, BRR+Rubin
+  and train-only threshold tuning; SHAP global + importance. Notebooks 03 to 04.
+- **Rigor hardening (Phases 1 to 4):** test suite, dependency-free data contracts, BRR+Rubin
   design-based standard errors wired into the EDA notebooks, Nadeau-Bengio CIs and
   DeLong/corrected-resampled significance tests. Fixed a weighting bug (scaler-wrapped models
   were fit unweighted).
@@ -751,7 +751,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   (survey-weighted leave-one-out school-mean features) lifts every model ≈+0.05 AUC
   (CatBoost 0.73→**0.78**), fold-safe and significant, breaking the ceiling HPO could not, and
   flipping the podium so boosters beat LR. **Threshold tuning + isotonic calibration** lift
-  MCC/F1 and cut ECE ≈5–7×. `build_model_data(..., add_school_context=True)`; scripts
+  MCC/F1 and cut ECE ≈5 to 7×. `build_model_data(..., add_school_context=True)`; scripts
   `run_school_features_experiment[_foldsafe]`, `run_threshold_calibration`. SHAP (nb04) and
   the fairness audit (nb07) were then re-run on the school-augmented model.
 - **Phase 6, Explainability (local + PDP/ICE):** SHAP local case studies for one
@@ -769,7 +769,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   low-separability / flat-gradient (broad-based crisis); drivers (math anxiety, school
   composition) are shared with peers, not unique.
 - **Forecast, next cycle (2026):** scenario Monte-Carlo (`src/forecast/`, notebook 10)
-  propagating design-based SEs: plausible 2026 low-proficiency range ≈21–74%, defensible zone
+  propagating design-based SEs: plausible 2026 low-proficiency range ≈21 to 74%, defensible zone
   partial-reversion (≈47%) to persistence (≈74%). Honest about the five-cycle / structural-break
   limits.
 - **Phase 9, Stacking ensemble (negligible, worse where it counts):** a StackingClassifier of
@@ -790,7 +790,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
 - **Screener evaluation + multilevel model (robustness strengthening, notebook 06):**
   **Decision-curve analysis** (`src/models/decision_curve.py`, `scripts/run_decision_curve.py`,
   figure `G1`) reframes the ≈75%-prevalence problem around *net benefit*, the model beats
-  screen-everyone/screen-no-one over the selective threshold band **0.51–0.95**, and weighted
+  screen-everyone/screen-no-one over the selective threshold band **0.51 to 0.95**, and weighted
   isotonic **calibration** cuts ECE **≈0.10 → ≈0.01** (`G2`). A **random-intercept logistic**
   model (`src/models/multilevel.py`, `scripts/run_multilevel.py`, figure `H1`), the correct
   spec for PISA's nested design, **matches** the hand-crafted school-mean booster on identical
@@ -798,7 +798,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   ≈a third of risk variance is *between schools* and barely touched by student features. A
   **survey-weighted pseudo-likelihood** refit (PQL with within-cluster scaled weights, Schall /
   Rabe-Hesketh & Skrondal, `multilevel.fit_weighted_random_intercept`) gives design-consistent
-  fixed effects: odds ratios shift by ≤0.05 and the ICC stays in the **0.22–0.31** band, so the
+  fixed effects: odds ratios shift by ≤0.05 and the ICC stays in the **0.22 to 0.31** band, so the
   variance-partition story is robust to how sampling weights are handled.
 - **School-questionnaire linkage, ceiling is data, not features (notebook 06):** the ICC ≈ 0.31
   motivated linking the PISA 2022 **school questionnaire** (`CY08MSP_SCH_QQQ`: resources, staff
@@ -843,7 +843,7 @@ items. Everything else (analysis, paper, dashboard) is complete.
   the Key Results sections above.
 
 - **Notebook consolidation:** the 18 topic-installment notebooks were merged into **10 coherent
-  multi-Part notebooks** (01–10), built by `_build_notebooks.py`.
+  multi-Part notebooks** (01 to 10), built by `_build_notebooks.py`.
 
 - **Within-Albania geographic equity & malleable-lever ranking (Albania-native contributions):**
   two additions that turn the national story into something a Ministry can target. **(1)** A
@@ -863,4 +863,4 @@ items. Everything else (analysis, paper, dashboard) is complete.
 
 ---
 
-*Data: OECD PISA 2009–2022 Public Use Files, https://www.oecd.org/pisa/*
+*Data: OECD PISA 2009 to 2022 Public Use Files, https://www.oecd.org/pisa/*
