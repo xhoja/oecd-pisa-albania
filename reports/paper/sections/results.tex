@@ -192,6 +192,77 @@ the nine countries, a floor effect, not a steep advantage gap.}
 \label{fig:gradient}
 \end{figure}
 
+\subsection{The geography of the crisis: where \emph{inside} Albania it concentrates}
+A flat SES gradient tells a policymaker that family income is a weak targeting axis;
+it does not say what a better one is. Albania's public-use file carries no subnational
+region, but the sampling stratum labels every school by a geographic cell,
+\emph{region band} (North / Center / South) $\times$ \emph{urbanicity} (Urban / Rural)
+$\times$ \emph{sector} (Public / Private), which we decode to map the below-Level-2 rate
+\emph{within} the country across 2015, 2018 and 2022. Every rate is survey-weighted with a
+design-based standard error (replicate weights and plausible values by Rubin's rules),
+and each between-group \emph{gap} is estimated on the contrast itself so it carries a
+significance test rather than being read off two overlapping marginal intervals.
+
+The load is sharply uneven (Figure~\ref{fig:geo}). The North band is the highest in
+every cycle, and the rural cells carry the heaviest burden: in 2022 rural North (0.83)
+and rural Center (0.82) are the worst cells, while even urban Center, which contains the
+capital Tirana, is the \emph{lowest} cell at 0.69, still a majority at risk. The gaps are
+real under design-based inference: in 2022 the rural-minus-urban gap is $+9.9$ points
+($p\approx10^{-12}$), North minus South is $+7.0$ ($p\approx3\times10^{-10}$), and
+public minus private is $+25.5$ ($p<0.001$), the widest of the three and \emph{growing}
+(0.15 in 2018 to 0.26 in 2022), though private schools are a small, self-selected
+$\sim$13\% of students, so that gap is a composition signal rather than a like-for-like
+school effect. The 2018$\rightarrow$2022 reversal was broad-based, every cell rose
+$\sim$28--37 points, but it stacked on top of pre-existing rural disadvantage, so the
+rural bands ended highest. Because the SES gradient is flat, income-targeted transfers
+alone miss most at-risk students; \textbf{geography is a sharper targeting axis than
+family SES}, and the North, rural and public-school bands are where a fixed remediation
+budget reaches the most at-risk students.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{GEO_heatmap}
+\caption{At-risk rate by region band and urbanicity, Albania 2022 (survey-weighted;
+darker is higher). Rural North and rural Center carry the heaviest load; urban Center,
+which contains Tirana, is the lowest cell yet still a majority at risk.}
+\label{fig:geo}
+\end{figure}
+
+\subsection{From prediction to prescription: which levers can policy move?}
+Global SHAP ranks features by how much the model \emph{reads} them, but it mixes two
+kinds. \emph{Fixed endowments}, family SES, parental education, home possessions,
+immigrant status, gender and grade, describe \emph{who} is at risk but move under no
+short-run policy; \emph{malleable levers}, math anxiety, teacher support, belonging,
+grade-repetition exposure and ICT access, are the things a school system can actually
+change. We split the two and rank only the actionable levers by the reduction in the
+population predicted at-risk rate from a standardised half-SD nudge in the beneficial
+direction, with the direction discovered on the smooth mean predicted probability rather
+than the noisy thresholded count. Among the levers, \textbf{math anxiety is the one with
+real reach} (Figure~\ref{fig:levers}): a half-SD reduction cuts the predicted at-risk
+rate by $\sim$5.1 points, teacher support gives $\sim$1.0, and belonging, ICT and
+grade-repetition are essentially flat.
+
+The exercise also makes the structural floor explicit. Moving \emph{every} actionable
+lever half an SD at once takes the predicted at-risk rate from $\sim$0.72 to $\sim$0.66
+($-6.9$ points), and a hypothetical that lifts every fixed endowment by the same amount,
+which no short-run policy can deliver, buys only $\sim$5 points more. Both bundles leave a
+large majority at risk: the crisis is structural, not a tuning problem, the same
+conclusion the covariate shift, the flat gradient and the school-composition result reach
+from other directions. Levers and geography are complements: the anxiety lever is
+\emph{weaker where the crisis is deepest}, its reduction is far smaller in the rural band
+than the urban one, so anxiety-reduction programmes help most in urban schools while the
+rural and northern floor needs system-level investment. As with the policy simulations,
+these are model-associational contrasts, not causal effects, and are read as such.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{L1_lever_ranking}
+\caption{Actionable levers ranked by the reduction in the weighted predicted at-risk rate
+from a 0.5-SD nudge in the beneficial direction (Albania 2022). Math anxiety dominates;
+the remaining levers are near-flat.}
+\label{fig:levers}
+\end{figure}
+
 \subsection{A calibrated, fair-audited screener}
 Raw CatBoost probabilities are sharp but mis-calibrated (weighted ECE~$\approx$~0.12);
 out-of-fold isotonic calibration cuts this to $\approx$~0.01

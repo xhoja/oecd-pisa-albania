@@ -1724,6 +1724,53 @@ def nb_13_decision_support() -> list:
            "causal caveat matters. The blunt message for policy: no soft lever rescues a "
            "75%-prevalence crisis - the gap is structural and needs system-level change."),
 
+        md("## Part D - Malleable-lever ranking: of the things we can change, which matters?\n\n"
+           "SHAP ranks features by how much the model *reads* them, but it mixes fixed endowments "
+           "(SES, parental education, home possessions, immigrant status, gender, grade - a "
+           "screener reads them but no policy moves them short-run) with malleable levers (math "
+           "anxiety, teacher support, belonging, grade-repetition, ICT). Here we split the two and "
+           "rank only the **actionable** levers by the population at-risk reduction from a "
+           "standardized half-SD nudge in the beneficial direction, discovered on the smooth mean "
+           "predicted probability (`src/models/levers.py`, `scripts/run_levers.py`)."),
+        code(
+            "lev = pd.read_csv('../outputs/results/lever_ranking_2022.csv')\n"
+            "ceil = pd.read_csv('../outputs/results/lever_ceiling_2022.csv')\n"
+            "base = float(ceil['baseline_at_risk_rate'].iloc[0])\n"
+            "r = lev.sort_values('delta_at_risk_rate', ascending=True).copy()\n"
+            "r['reduction_pp'] = -r['delta_at_risk_rate']*100\n"
+            "fig, ax = plt.subplots(figsize=(8,4.2))\n"
+            "ax.barh(r['description'], r['reduction_pp'], color=PALETTE['blue'], edgecolor='white')\n"
+            "for y,v in enumerate(r['reduction_pp']):\n"
+            "    ax.annotate(f'{v:+.1f} pp', xy=(max(v,0.0),y), xytext=(6,0),\n"
+            "                textcoords='offset points', va='center', ha='left', fontsize=9)\n"
+            "ax.axvline(0, color='0.6', lw=1)\n"
+            "ax.set_xlim(min(r['reduction_pp'].min()-0.3,-0.5), r['reduction_pp'].max()+0.8)\n"
+            "ax.set_xlabel('Reduction in predicted at-risk rate (pp) from a 0.5-SD nudge')\n"
+            "ax.set_title(f'Actionable levers, ranked by reach (baseline {base*100:.0f}%)')\n"
+            "plt.tight_layout(); plt.show()\n"
+            "lev[['lever','description','direction','delta_at_risk_rate','matches_expected_sign']]"
+        ),
+        md("**Reading:** among the levers a school system can actually pull, **math anxiety "
+           "dominates** (a half-SD reduction cuts the predicted at-risk rate ~5 pp), with teacher "
+           "support a distant second (~1 pp) and belonging / ICT / grade-repetition essentially "
+           "flat. The ranking matches the counterfactual-recourse and multilevel evidence: anxiety "
+           "is the one soft lever with real reach."),
+        code(
+            "print(ceil.to_string(index=False))\n"
+            "geo = pd.read_csv('../outputs/results/lever_ranking_by_geography_2022.csv')\n"
+            "geo[geo.is_top][['group','n','lever','delta_at_risk_rate']]"
+        ),
+        md("**The structural floor, made explicit.** Moving *every* actionable lever half an SD at "
+           "once takes the predicted at-risk rate from ~72% to ~66% (~7 pp) - and a *hypothetical* "
+           "that lifts every fixed endowment by the same amount (which no short-run policy can "
+           "deliver) buys only ~5 pp more. Both bundles leave a large majority at risk: the crisis "
+           "is structural, not a tuning problem, the same conclusion the policy what-ifs, the "
+           "covariate shift and the flat SES gradient reach from other directions. The anxiety "
+           "lever is also **weaker where the crisis is deepest** - its reduction is far smaller in "
+           "the rural band than the urban one - so lever-based remediation and the geographic "
+           "targeting of notebook 02 Part C are complements: anxiety programmes help most in urban "
+           "schools, while the rural/North floor needs system-level investment."),
+
         md(
             "## Conclusions & Interpretation\n\n"
             "- **Conformal sets add an honest abstention signal.** ~60% confident singletons, ~40% "
@@ -1731,11 +1778,11 @@ def nb_13_decision_support() -> list:
             "- **Recourse exists for a minority, and it is mostly about anxiety.** The tool is "
             "useful for the students it *can* help, and its low hit-rate is itself a finding: most "
             "risk is not individually actionable through soft levers.\n"
-            "- **Policy simulation quantifies the ceiling on interventions.** Aggressive "
-            "population shifts buy ~12 pp; the structural core remains. Consistent with the "
-            "covariate-shift, floor-effect, and school-composition results elsewhere in the "
-            "project.\n"
-            "- **All three are model-associational, not causal.** They stress-test and communicate "
+            "- **Policy simulation and the lever ranking quantify the ceiling on interventions.** "
+            "Aggressive population shifts buy ~7-12 pp; math anxiety is the single highest-reach "
+            "actionable lever, but the structural core remains and is weakest to move where the "
+            "crisis is deepest.\n"
+            "- **All are model-associational, not causal.** They stress-test and communicate "
             "the fitted model; they are decision *support*, not effect estimates - read with the "
             "multilevel and school-questionnaire caveats."
         ),
@@ -2250,6 +2297,109 @@ INTRO_ROBUST = (
 )
 
 
+def nb_geographic() -> list:
+    return [
+        md(
+            "# Geographic equity - where inside Albania the crisis concentrates\n\n"
+            "The national at-risk rate hides *where* the crisis lives. Albania's sampling `STRATUM` "
+            "decodes into region band (North / Center / South) x urbanicity (Urban / Rural) x sector "
+            "(Public / Private), so we can map the below-Level-2 mathematics rate inside the country "
+            "and across 2015 / 2018 / 2022. Every rate is survey-weighted with a PISA design-based "
+            "standard error (BRR + Rubin over plausible values). Pre-computed by "
+            "`scripts/run_geographic_equity.py` (`src/geography/equity.py`)."
+        ),
+        code(HEADER),
+        code("from src.visualization.style import apply_publication_style, PALETTE, SEQUENTIAL_CMAP\n"
+             "apply_publication_style()\n"
+             "R = '../outputs/results/'\n"
+             "region = pd.read_csv(R+'geographic_region_by_cycle.csv')\n"
+             "urban  = pd.read_csv(R+'geographic_urbanicity_by_cycle.csv')\n"
+             "cell   = pd.read_csv(R+'geographic_cell_by_cycle.csv')\n"
+             "gaps   = pd.read_csv(R+'geographic_gaps.csv')"),
+
+        md("## 1. The trajectory is not uniform: region and urbanicity\n\n"
+           "Both panels show the same V shape - improvement to 2018, then the 2022 reversal - but "
+           "the *levels* separate sharply. The **North band is highest in every cycle**, and "
+           "**rural areas sit ~10-17 pp above urban** throughout. Error bars are design-based 95% "
+           "CIs."),
+        code("REG_C = {'North':PALETTE['vermilion'],'Center':PALETTE['blue'],'South':PALETTE['green']}\n"
+             "URB_C = {'Rural':PALETTE['orange'],'Urban':PALETTE['blue']}\n"
+             "fig,(a1,a2)=plt.subplots(1,2,figsize=(11,4.6),sharey=True)\n"
+             "for b in ['North','Center','South']:\n"
+             "    s=region[region.region==b].sort_values('CYCLE')\n"
+             "    a1.errorbar(s.CYCLE,s.at_risk,yerr=1.96*s.se,marker='o',capsize=3,lw=2,\n"
+             "                color=REG_C[b],label=b+(' (highest)' if b=='North' else ''))\n"
+             "for u in ['Rural','Urban']:\n"
+             "    s=urban[urban.urbanicity==u].sort_values('CYCLE')\n"
+             "    a2.errorbar(s.CYCLE,s.at_risk,yerr=1.96*s.se,marker='s',capsize=3,lw=2,\n"
+             "                color=URB_C[u],label=u)\n"
+             "for ax,t in [(a1,'By region band'),(a2,'By urbanicity')]:\n"
+             "    ax.set_xticks([2015,2018,2022]); ax.set_xlabel('PISA cycle')\n"
+             "    ax.axvspan(2018,2022,color='0.5',alpha=0.06); ax.set_ylim(0.3,0.9)\n"
+             "    ax.set_title(t); ax.legend(frameon=False)\n"
+             "a1.set_ylabel('Share below Level 2 (math)')\n"
+             "plt.tight_layout(); plt.show()"),
+
+        md("## 2. Where the crisis is worst: region x urbanicity, 2022\n\n"
+           "Crossing the two axes localises the load. Darker = higher at-risk share. **Rural North "
+           "(83%) and rural Center (82%)** are the heaviest cells; even *urban* Center - which "
+           "contains Tirana - sits at 69%, the lowest cell but still a majority at risk."),
+        code("m = (cell[cell.CYCLE==2022].pivot(index='urbanicity',columns='region',values='at_risk')\n"
+             "     .reindex(index=['Urban','Rural'],columns=['North','Center','South']))\n"
+             "fig,ax=plt.subplots(figsize=(6.4,3.4)); d=m.to_numpy(float)\n"
+             "im=ax.imshow(d,cmap=SEQUENTIAL_CMAP,vmin=0.5,vmax=0.9,aspect='auto')\n"
+             "ax.set_xticks(range(3),m.columns); ax.set_yticks(range(2),m.index)\n"
+             "ax.set_xlabel('Region band'); ax.set_ylabel('Urbanicity')\n"
+             "for i in range(2):\n"
+             "    for j in range(3):\n"
+             "        ax.text(j,i,f'{d[i,j]*100:.0f}%',ha='center',va='center',fontsize=12,\n"
+             "                fontweight='bold',color='white' if d[i,j]>0.72 else 'black')\n"
+             "fig.colorbar(im,ax=ax,fraction=0.046,pad=0.04).set_label('Share below Level 2')\n"
+             "ax.set_title('At-risk rate by cell, 2022'); plt.tight_layout(); plt.show()"),
+
+        md("## 3. Are the gaps real? Design-based significance\n\n"
+           "Two overlapping marginal CIs do not test a gap; we estimate each contrast directly and "
+           "attach a BRR + Rubin standard error to the *difference*. All three geographic gaps are "
+           "significant in 2022, and the **public-minus-private gap (~25 pp) is the largest of "
+           "all** - a structural divide larger than region or urbanicity."),
+        code("g = gaps.copy()\n"
+             "g['contrast']=g.level_hi+' - '+g.level_lo\n"
+             "show=g[['cycle','group_col','contrast','gap','se','p_value','n_hi','n_lo']]\n"
+             "show.round(4)"),
+        md("**Reading:** rural areas run ~10 pp above urban and the North ~7 pp above the South in "
+           "2022, both highly significant (p < 0.001). The public-vs-private gap is the widest and "
+           "has *grown* (0.15 in 2018 to 0.26 in 2022), though private schools are a small, "
+           "self-selected ~13% of students - a composition signal, not a like-for-like school "
+           "effect. Together these are the actionable geography: the crisis is worst where it is "
+           "rural, northern and public."),
+
+        md("## 4. The 2018 to 2022 reversal, cell by cell\n\n"
+           "The reversal was broad-based - every cell jumped ~28-37 pp - but it stacked *on top of* "
+           "pre-existing disadvantage, so the rural bands ended highest. The dumbbell orders cells "
+           "by their 2022 level; the number is the percentage-point jump from 2018."),
+        code("piv=(cell.pivot_table(index=['region','urbanicity'],columns='CYCLE',values='at_risk')\n"
+             "     .dropna(subset=[2018,2022]).copy())\n"
+             "piv['jump']=piv[2022]-piv[2018]; piv=piv.sort_values(2022)\n"
+             "labels=[f'{r} / {u}' for r,u in piv.index]; y=range(len(piv))\n"
+             "fig,ax=plt.subplots(figsize=(8,4.6))\n"
+             "for yi,(_,row) in zip(y,piv.iterrows()):\n"
+             "    ax.plot([row[2018],row[2022]],[yi,yi],color='0.6',lw=2,zorder=1)\n"
+             "    ax.annotate(f\"+{row['jump']*100:.0f}\",xy=(row[2022],yi),xytext=(6,0),\n"
+             "                textcoords='offset points',va='center',fontsize=9,color=PALETTE['vermilion'])\n"
+             "ax.scatter(piv[2018],list(y),s=70,color=PALETTE['sky_blue'],label='2018',zorder=2)\n"
+             "ax.scatter(piv[2022],list(y),s=70,color=PALETTE['vermilion'],label='2022',zorder=2)\n"
+             "ax.set_yticks(list(y),labels); ax.set_xlim(0.25,0.95)\n"
+             "ax.set_xlabel('Share below Level 2 (math)')\n"
+             "ax.legend(frameon=False,loc='lower right',title='PISA cycle')\n"
+             "plt.tight_layout(); plt.show()"),
+        md("**Policy read:** a national average of ~74% at-risk masks an 83% rural-North load and a "
+           "25 pp public-private divide. Because the flat SES gradient (Part A, notebook 05) means "
+           "income-targeted transfers alone miss most at-risk students, **geography is a sharper "
+           "targeting axis than family SES** - the North, rural and public-school bands are where a "
+           "fixed remediation budget buys the most reach."),
+    ]
+
+
 if __name__ == "__main__":
     import sys
     force = "--force" in sys.argv
@@ -2257,7 +2407,8 @@ if __name__ == "__main__":
     B(_with_formulas(nb_01_eda_albania(), "01"), NB_DIR / "01_eda_albania.ipynb", force)
     B(_assemble(INTRO_CRISIS, HEADER, ["02", "03"],
                 [("A", "Albania vs. peer countries", nb_02_comparative),
-                 ("B", "The 2022 covariate shift", nb_03_covariate_shift)]),
+                 ("B", "The 2022 covariate shift", nb_03_covariate_shift),
+                 ("C", "The geography of the collapse", nb_geographic)]),
       NB_DIR / "02_crisis_in_context.ipynb", force)
     B(_assemble(INTRO_MODELING, MODEL_HEADER, ["04"],
                 [("A", "Model comparison, out-of-sample & Rubin's rules", nb_04_modeling),

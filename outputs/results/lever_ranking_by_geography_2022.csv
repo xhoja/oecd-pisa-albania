@@ -1,0 +1,19 @@
+group,n,lever,description,delta_at_risk_rate,is_top
+Rural,1604,ANXMAT,math anxiety (reducible through pedagogy),-0.0153,True
+Rural,1604,TEACHSUP,teacher support,-0.0036,False
+Rural,1604,REPEAT,grade-repetition exposure (promotion policy),0.0,False
+Rural,1604,ICTSCH,ICT access at school,0.0001,False
+Rural,1604,ICTHOME,ICT access at home,0.0015,False
+Rural,1604,BELONG,sense of belonging at school,0.0038,False
+Urban,4525,ANXMAT,math anxiety (reducible through pedagogy),-0.0648,True
+Urban,4525,TEACHSUP,teacher support,-0.0122,False
+Urban,4525,REPEAT,grade-repetition exposure (promotion policy),0.0,False
+Urban,4525,ICTSCH,ICT access at school,0.0015,False
+Urban,4525,BELONG,sense of belonging at school,0.0058,False
+Urban,4525,ICTHOME,ICT access at home,0.0058,False
+North,1208,ANXMAT,math anxiety (reducible through pedagogy),-0.04,True
+North,1208,TEACHSUP,teacher support,-0.0054,False
+North,1208,REPEAT,grade-repetition exposure (promotion policy),0.0,False
+North,1208,ICTSCH,ICT access at school,0.0032,False
+North,1208,ICTHOME,ICT access at home,0.0044,False
+North,1208,BELONG,sense of belonging at school,0.0078,False

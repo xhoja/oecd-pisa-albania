@@ -1,0 +1,3 @@
+baseline_at_risk_rate,bundle,n_features,post_at_risk_rate,delta_at_risk_rate
+0.7242,all malleable levers,8,0.6553,-0.069
+0.7242,all fixed endowments (hypothetical),9,0.672,-0.0522

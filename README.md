@@ -26,7 +26,7 @@ analysis of Albania's dramatic 2022 regression.
 ![matplotlib](https://img.shields.io/badge/matplotlib-figures-11557C)
 ![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
 ![LaTeX](https://img.shields.io/badge/LaTeX-article%20report-008080?logo=latex&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-177%20passing-0A9EDC?logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-188%20passing-0A9EDC?logo=pytest&logoColor=white)
 
 | Area | Tools |
 |---|---|
@@ -35,7 +35,7 @@ analysis of Albania's dramatic 2022 regression.
 | **PISA methodology** | pyreadstat (SPSS `.sav`) + custom fixed-width parser; survey weights, plausible values with Rubin's rules, BRR (80 Fay replicates) |
 | **Explainability & fairness** | SHAP (TreeSHAP), partial dependence / ICE, weighted fairness metrics, conformal prediction, counterfactual recourse |
 | **Visualisation** | matplotlib, seaborn, Altair; colorblind-safe palette |
-| **Testing & quality** | pytest (177 tests on synthetic fixtures), structlog, ruff, mypy |
+| **Testing & quality** | pytest (188 tests on synthetic fixtures), structlog, ruff, mypy |
 | **Paper** | LaTeX `article` (single-column report: title page, table of contents, running headers), BibTeX |
 | **Interactive dashboard (UI)** | Streamlit (app), Altair (charts), fpdf2 (PDF report), joblib (model bundle) |
 
@@ -403,6 +403,65 @@ means the headline **understates** the crisis. Crucially, even the worst-case lo
 ~16 pp above Albania's 2018 rate (0.42) across every plausible coverage share — **the 2018→2022
 deterioration is robust to any coverage assumption**; only the level is uncertain, not the conclusion.
 
+### The geography of the crisis — where *inside* Albania it concentrates
+
+The national ~74% at-risk rate hides *where* the crisis lives. Albania's public file has no
+subnational `REGION`, but the sampling `STRATUM` decodes into **region band (North / Center / South)
+× urbanicity (Urban / Rural) × sector (Public / Private)** (`src/geography/equity.py`,
+`scripts/run_geographic_equity.py`, notebook 02 Part C). Every rate is survey-weighted with a PISA
+design-based SE (BRR + Rubin), and each *gap* is estimated on the contrast itself so it carries a
+significance test rather than being eyeballed from two marginal CIs.
+
+| 2022, share below Level 2 (math) | Urban | Rural |
+|---|---|---|
+| **North** | 0.79 | **0.83** |
+| **Center** (Tirana) | 0.69 | 0.82 |
+| **South** | 0.71 | 0.79 |
+
+- **The North is highest in every cycle** and the rural bands carry the heaviest load; rural North
+  (0.83) and rural Center (0.82) are the worst cells, while even urban Center — which contains the
+  capital — is the *lowest* cell at 0.69, still a majority at risk.
+- **The gaps are real under design-based SEs (2022):** Rural − Urban **+9.9 pp** (*p* ≈ 1e-12),
+  North − South **+7.0 pp** (*p* ≈ 3e-10), and **Public − Private +25.5 pp** (*p* < 0.001) — the
+  public/private divide is the widest of the three and has *grown* (0.15 in 2018 → 0.26 in 2022),
+  though private schools are a small, self-selected ~13% of students (a composition signal, not a
+  like-for-like school effect).
+- **The 2018 → 2022 reversal is broad-based** (every cell jumped ~28–37 pp) but stacked *on top of*
+  pre-existing rural disadvantage, so the rural bands ended highest.
+- **Policy read:** because the SES gradient is flat (comparative section above), income-targeted
+  transfers alone miss most at-risk students — **geography is a sharper targeting axis than family
+  SES.** The North, rural and public-school bands are where a fixed remediation budget buys the most
+  reach. Figures `GEO1`–`GEO3` (trajectory, region × urbanicity heatmap, 2018→2022 dumbbell).
+
+### From prediction to prescription — malleable-lever ranking
+
+SHAP ranks features by how much the model *reads* them, mixing **fixed endowments** (SES, parental
+education, home possessions, immigrant status, gender, grade — a screener reads them but no policy
+moves them short-run) with **malleable levers** (math anxiety, teacher support, belonging,
+grade-repetition, ICT). We split the two and rank only the *actionable* levers by the population
+predicted at-risk reduction from a standardized half-SD nudge in the beneficial direction — the
+direction discovered on the smooth mean predicted probability, not the noisy thresholded count
+(`src/models/levers.py`, `scripts/run_levers.py`, notebook 08 Part D).
+
+| Actionable lever (0.5-SD beneficial nudge) | Δ predicted at-risk |
+|---|---|
+| **Math anxiety** ↓ | **−5.1 pp** |
+| Teacher support ↑ | −1.0 pp |
+| Grade-repetition / ICT / belonging | ≈ 0 |
+
+- **Math anxiety is the one soft lever with real reach**, matching the counterfactual-recourse and
+  multilevel evidence; everything else is essentially flat.
+- **The structural floor, made explicit:** moving *every* actionable lever half an SD at once takes
+  the predicted at-risk rate ~0.72 → ~0.66 (−6.9 pp), and a *hypothetical* that lifts every fixed
+  endowment by the same amount (which no short-run policy can deliver) buys only ~5 pp more. Both
+  bundles leave a large majority at risk — the crisis is **structural, not a tuning problem**, the
+  same conclusion the policy what-ifs, the covariate shift and the flat SES gradient reach from
+  other directions.
+- **Levers and geography are complements:** the anxiety lever is *weaker where the crisis is
+  deepest* (its reduction is far smaller in the rural band than the urban one), so anxiety
+  programmes help most in urban schools while the rural / North floor needs system-level
+  investment. Figure `L1`. Model-associational, not causal (stated, not hidden).
+
 ---
 
 ## Data
@@ -456,9 +515,10 @@ OECD_PISA_Project/
 │   ├── models/           # registry, hpo (Optuna nested CV), optimize (search space),
 │   │                     #   evaluate (metrics, Nadeau-Bengio, DeLong), prepare,
 │   │                     #   experiment (Rubin's rules), train, _isolated_worker,
-│   │                     #   conformal, decision_curve, multilevel, policy
+│   │                     #   conformal, decision_curve, multilevel, policy, levers
 │   ├── explainability/   # SHAP analysis, partial dependence (PDP/ICE), counterfactuals
 │   ├── causal/           # earthquake DiD / triple-difference (design-based SE)
+│   ├── geography/        # within-Albania equity: region x urbanicity x sector at-risk (BRR+Rubin)
 │   ├── coverage/         # Manski partial-identification bounds (coverage robustness)
 │   ├── fairness/         # group-fairness metrics
 │   ├── forecast/         # scenario forecast (WLS trend + Monte-Carlo, BRR-aware)
@@ -480,10 +540,11 @@ OECD_PISA_Project/
 │                         #   run_conformal, run_counterfactuals, run_policy,
 │                         #   build_school_questionnaire, run_school_questionnaire_experiment,
 │                         #   run_school_means_transformer_check, replot_paper_figures,
+│                         #   run_geographic_equity (within-Albania map), run_levers (lever ranking),
 │                         #   export_dashboard_model
 ├── reports/              # paper/ (LaTeX article report → main.pdf; sections/, figures/),
 │                         #   dashboard/ (Streamlit risk-screener app.py), presentation/
-├── tests/                # 177 pytest unit tests (weights, impute, target, transformers,
+├── tests/                # 188 pytest unit tests (weights, impute, target, transformers,
 │                         #   validate, evaluate, engineer/school, forecast, statistics,
 │                         #   eda_viz, dashboard), no real data needed
 ├── outputs/              # figures/{eda,models,shap,fairness,comparative} + results/ (csv, json)
@@ -500,7 +561,7 @@ OECD_PISA_Project/
 pip install -e ".[dev]"     # runtime + pytest/ruff/mypy
 brew install libomp         # macOS: required by XGBoost/LightGBM/CatBoost
 
-# 2. Run the test suite (no data required, 177 tests on synthetic fixtures)
+# 2. Run the test suite (no data required, 188 tests on synthetic fixtures)
 pytest                      # or: pytest -q -o addopts=""  to skip coverage
 
 # 3. Place raw PISA files in data/raw/ (see Data table above)
@@ -595,7 +656,7 @@ choice below is implemented and unit-tested.
 
 ## Testing & Validation
 
-- **177 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
+- **188 unit tests** (`tests/`, `pytest`) run on synthetic fixtures, no PISA data required.
   They pin down the weighted statistics, Rubin's rules, the leakage-safe transformer, the
   BRR+PV variance, the Nadeau-Bengio / DeLong maths (e.g. identical predictors → DeLong
   *p* = 1; replicates ≡ base weight → BRR SE = 0), the weight-routing fix, the HPO plumbing,
@@ -783,6 +844,17 @@ items. Everything else (analysis, paper, dashboard) is complete.
 
 - **Notebook consolidation:** the 18 topic-installment notebooks were merged into **10 coherent
   multi-Part notebooks** (01–10), built by `_build_notebooks.py`.
+
+- **Within-Albania geographic equity & malleable-lever ranking (Albania-native contributions):**
+  two additions that turn the national story into something a Ministry can target. **(1)** A
+  design-based (BRR + Rubin) map of the below-Level-2 rate by **region band × urbanicity × sector**
+  across 2015/2018/2022 (`src/geography/equity.py`, notebook 02 Part C): the North and rural bands
+  carry the heaviest load in every cycle, and the Rural−Urban (+9.9 pp), North−South (+7.0 pp) and
+  Public−Private (+25.5 pp) gaps are all significant on the contrast itself. **(2)** A
+  **malleable-lever ranking** (`src/models/levers.py`, notebook 08 Part D) that splits fixed
+  endowments from actionable levers and ranks the latter by predicted at-risk reduction: math
+  anxiety is the one lever with real reach (−5.1 pp), and even the all-lever bundle leaves a large
+  majority at risk — the structural floor, made explicit. See the two Key Results sections above.
 
 ### Remaining
 - **Report & deliverables:** the **written paper** (`reports/paper/`, compiles to `main.pdf`)

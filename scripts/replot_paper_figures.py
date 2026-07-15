@@ -21,7 +21,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from src.visualization.style import (
-    apply_publication_style, save_figure, PALETTE, SEQUENTIAL_RANK_CMAP,
+    apply_publication_style, save_figure, PALETTE, SEQUENTIAL_CMAP, SEQUENTIAL_RANK_CMAP,
 )
 from src.visualization.model_plots import plot_cv_distribution
 from src.visualization.eda import plot_ses_logistic_curve
@@ -113,7 +113,45 @@ def main() -> None:
     save_figure(fig, str(FIG / "models" / "G2_calibration"))
     plt.close(fig)
 
-    print("Regenerated C4, D2, F1, E1, G2 with clean titles.")
+    # GEO  within-Albania region x urbanicity at-risk heatmap, 2022 (paper dir)
+    cell = pd.read_csv(RES / "geographic_cell_by_cycle.csv")
+    m = (cell[cell.CYCLE == 2022]
+         .pivot(index="urbanicity", columns="region", values="at_risk")
+         .reindex(index=["Urban", "Rural"], columns=["North", "Center", "South"]))
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
+    d = m.to_numpy(float)
+    im = ax.imshow(d, cmap=SEQUENTIAL_CMAP, vmin=0.5, vmax=0.9, aspect="auto")
+    ax.set_xticks(range(3)); ax.set_xticklabels(m.columns)
+    ax.set_yticks(range(2)); ax.set_yticklabels(m.index)
+    ax.set_xlabel("Region band"); ax.set_ylabel("Urbanicity")
+    for i in range(2):
+        for j in range(3):
+            ax.text(j, i, f"{d[i, j]*100:.0f}%", ha="center", va="center",
+                    fontsize=12, fontweight="bold",
+                    color="white" if d[i, j] > 0.72 else "black")
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).set_label("Share below Level 2")
+    ax.set_title("At-risk rate by region and urbanicity: Albania 2022")
+    fig.tight_layout()
+    save_figure(fig, str(PAPER_FIG / "GEO_heatmap"))
+    plt.close(fig)
+
+    # L1  malleable-lever ranking (paper dir)
+    lev = pd.read_csv(RES / "lever_ranking_2022.csv").sort_values("delta_at_risk_rate")
+    lev["reduction_pp"] = -lev["delta_at_risk_rate"] * 100
+    fig, ax = plt.subplots(figsize=(8, 4.2))
+    ax.barh(lev["description"], lev["reduction_pp"], color=PALETTE["blue"], edgecolor="white")
+    for y, v in enumerate(lev["reduction_pp"]):
+        ax.annotate(f"{v:+.1f} pp", xy=(max(v, 0.0), y), xytext=(6, 0),
+                    textcoords="offset points", va="center", ha="left", fontsize=9)
+    ax.axvline(0, color="0.6", lw=1)
+    ax.set_xlim(min(lev["reduction_pp"].min() - 0.3, -0.5), lev["reduction_pp"].max() + 0.8)
+    ax.set_xlabel("Reduction in predicted at-risk rate (pp) from a 0.5-SD nudge")
+    ax.set_title("Actionable levers, ranked by reach: Albania 2022")
+    fig.tight_layout()
+    save_figure(fig, str(PAPER_FIG / "L1_lever_ranking"))
+    plt.close(fig)
+
+    print("Regenerated C4, D2, F1, E1, G2, GEO_heatmap, L1 with clean titles.")
 
 
 if __name__ == "__main__":

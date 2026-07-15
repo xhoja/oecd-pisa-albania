@@ -1,0 +1,7 @@
+lever,cols,description,direction,delta_at_risk_rate,delta_mean_prob,matches_expected_sign
+ANXMAT,ANXMAT+SCH_MEAN_ANXMAT,math anxiety (reducible through pedagogy),↓,-0.0512,-0.0448,True
+TEACHSUP,TEACHSUP+SCH_MEAN_TEACHSUP,teacher support,↑,-0.0101,-0.022,True
+REPEAT,REPEAT,grade-repetition exposure (promotion policy),↓,0.0,0.0,True
+ICTSCH,ICTSCH,ICT access at school,↑,0.0011,-0.0005,True
+BELONG,BELONG,sense of belonging at school,↑,0.0046,-0.005,True
+ICTHOME,ICTHOME,ICT access at home,↑,0.0046,0.0043,True
