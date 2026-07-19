@@ -5,9 +5,9 @@
 PISA reports each student's proficiency as ten plausible values drawn from a
 posterior latent-trait distribution, and every published statistic is weighted by the
 final student weight, with sampling variance estimated by balanced repeated
-replication (BRR)~\cite{oecd2024pisa,oecd2009manual}. Rubin's rules combine the point
+replication (BRR)~\citep{oecd2024pisa,oecd2009manual}. Rubin's rules combine the point
 estimates and the between-imputation variance across the plausible
-values~\cite{rubin1987}. These are not optional refinements: using a single averaged
+values~\citep{rubin1987}. These are not optional refinements: using a single averaged
 score as a target understates uncertainty, and unweighted statistics do not estimate a
 population quantity. A large share of secondary PISA analysis nonetheless drops both
 conventions, which, as we argue below, is part of why the accuracy figures it reports
@@ -16,24 +16,24 @@ should be read with care. We follow the manual throughout.
 \paragraph{Machine learning on PISA background data.}
 Predicting achievement or at-risk status from PISA background questionnaires is by now
 a well-populated literature, and it converges on a consistent picture in which tree
-ensembles dominate. Masci, Johnes and Agasisti~\cite{masci2018student} analyse
+ensembles dominate. Masci, Johnes and Agasisti~\citeyearpar{masci2018student} analyse
 PISA~2015 across nine countries with a two-stage tree-based model and recover
 socioeconomic status, grade repetition and school climate as leading correlates, while
 stressing that much of the variation sits at the school rather than the student level.
-On the most recent cycle, Djekourmane et al.~\cite{djekourmane2026east} predict
+On the most recent cycle, Djekourmane et al.~\citeyearpar{djekourmane2026east} predict
 mathematics scores across six East Asian systems in PISA~2022 and find gradient
 boosting strongest: XGBoost reaches $R^2\approx0.57$ and a thresholded AUC near
 $0.81$, with LightGBM close behind, and, tellingly, the linear baselines trail badly on
 $R^2$ yet come within a few points on AUC. Erdo\u{g}an and
-Ta\c{s}tan~\cite{erdogan2024turkish} recover the same ordering on the Turkish PISA~2018
+Ta\c{s}tan~\citeyearpar{erdogan2024turkish} recover the same ordering on the Turkish PISA~2018
 subset, where a boosted regression tree edges out ridge, LASSO, bagging and random
 forests. For the post-pandemic window most relevant to us,
-Delprato~\cite{delprato2025latam} models low-performing students across ten Latin
+Delprato~\citeyearpar{delprato2025latam} models low-performing students across ten Latin
 American systems in PISA~2022 and uses SHAP attributions to rank their determinants,
 foregrounding interpretation over any single accuracy number. Throughout,
-XGBoost, LightGBM and CatBoost~\cite{chen2016xgboost,ke2017lightgbm,prokhorenkova2018catboost}
+XGBoost, LightGBM and CatBoost~\citep{chen2016xgboost,ke2017lightgbm,prokhorenkova2018catboost}
 are the recurring strong baselines on this tabular regime, and SHAP
-values~\cite{lundberg2017shap} the usual explanation layer.
+values~\citep{lundberg2017shap} the usual explanation layer.
 
 Two regularities in this work frame our own contribution. First, reported performance
 sits in a narrow band, roughly AUC $0.78$ to $0.84$, or accuracy in the high seventies,
@@ -41,7 +41,7 @@ largely irrespective of country, cycle, or the exact ensemble chosen. Second, th
 strong learners and the linear baselines are usually separated by a fraction of an AUC
 point, yet that gap is presented as a ranking rather than tested for significance, and
 even studies that expose it directly (linear models trailing on $R^2$ while nearly
-tying on AUC~\cite{djekourmane2026east}) stop short of asking whether the difference is
+tying on AUC; \citealp{djekourmane2026east}) stop short of asking whether the difference is
 real or what would move it. The literature reports where the accuracy lands but rarely
 diagnoses why it lands there.
 
@@ -67,7 +67,7 @@ has gone largely uninterrogated.
 \paragraph{Within-country geographic disparities.}
 Cross-national PISA work reports one figure per country, and the country-level literature
 on Albania documents an urban-rural achievement gap in broadly qualitative
-terms~\cite{worldbank_albania_education}: rural students trail urban ones, and the gap is
+terms~\citep{worldbank_albania_education}: rural students trail urban ones, and the gap is
 attributed to socioeconomic development. What is missing, for Albania and for its Balkan
 peers, is a \emph{design-based} decomposition of low-proficiency risk \emph{within} the
 country. The public-use file carries no subnational region variable, which is likely why
@@ -77,34 +77,34 @@ sector cell. To our knowledge, this paper is the first to recover those cells an
 the survey-weighted below-Level-2 rate for each, with design-based standard errors and a
 significance test on every between-group gap, turning a qualitatively known disparity into
 a quantified, targetable map. The multilevel literature above establishes that much PISA
-risk variance is between schools~\cite{masci2018student,goldstein2011multilevel}; we
+risk variance is between schools~\citep{masci2018student,goldstein2011multilevel}; we
 locate \emph{which} schools, geographically.
 
 \paragraph{Dataset shift.}
 When the input distribution changes between two populations, a classifier trained to
 tell them apart quantifies the change, and a high domain-classifier AUC is direct
-evidence of covariate shift~\cite{quinonero2009dataset}. We use this as the central
+evidence of covariate shift~\citep{quinonero2009dataset}. We use this as the central
 diagnostic for the 2018-to-2022 reversal rather than relying only on marginal score
 distributions, which cannot separate a merely lower-scoring cohort from one whose risk
 structure has moved.
 
 \paragraph{Calibration, decision curves, and fairness.}
 A screening probability must be calibrated to be actionable. Isotonic regression is a
-standard non-parametric post-hoc calibrator~\cite{zadrozny2002isotonic}, and
+standard non-parametric post-hoc calibrator~\citep{zadrozny2002isotonic}, and
 decision-curve analysis evaluates a screener by net benefit across operating thresholds
-rather than by accuracy at a single cut~\cite{vickers2006dca}, which matters when
+rather than by accuracy at a single cut~\citep{vickers2006dca}, which matters when
 prevalence is high. Group-fairness diagnostics such as demographic parity and equalized
-odds expose disparate error rates across protected groups~\cite{hardt2016equalized}. We
+odds expose disparate error rates across protected groups~\citep{hardt2016equalized}. We
 report all three, survey-weighted, a combination seldom applied together in the PISA
 setting.
 
 \paragraph{Nested design and honest comparison.}
 PISA students are nested in schools, so a random-intercept (multilevel) logistic model
 is the design-appropriate specification, and its intraclass correlation quantifies the
-between-school variance~\cite{goldstein2011multilevel}. Finally, because repeated
+between-school variance~\citep{goldstein2011multilevel}. Finally, because repeated
 cross-validation folds share training data, naive fold-score intervals are
 anti-conservative; we use the Nadeau--Bengio corrected-resampled
-variance~\cite{nadeau2003inference} and compare models with the corrected resampled
+variance~\citep{nadeau2003inference} and compare models with the corrected resampled
 $t$-test (in-sample) and the DeLong test on shared test
-predictions~\cite{delong1988}. This is the machinery that turns the field's informal
+predictions~\citep{delong1988}. This is the machinery that turns the field's informal
 ranking of near-tied models into a tested claim about which gaps are real.

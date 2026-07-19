@@ -14,9 +14,11 @@
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{caption}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage[round,authoryear]{natbib}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{lineno}
 \usepackage[hidelinks]{hyperref}
 
 \graphicspath{{figures/}}
@@ -45,6 +47,9 @@
 \captionsetup{font=small,labelfont=bf}
 \setlength{\parskip}{0.4em}
 \setlength{\parindent}{0pt}
+
+% Journal submission formatting: double line spacing + continuous line numbers.
+\doublespacing
 
 % Table of contents lists sections only, so it fits on one page.
 \setcounter{tocdepth}{1}
@@ -76,35 +81,51 @@ Metropolitan University of Tirana\\[2pt]
 \vspace{0.25cm}
 \begin{minipage}{0.86\linewidth}
 \small
+\textbf{Background.}
 Albania's share of 15-year-olds below PISA mathematics Level~2 rose from
-\atlow{42\%} in 2018 to \athigh{75\%} in 2022, the sharpest regression in the
-assessment. We ask whether machine learning on background questionnaire data can
-identify at-risk students, \emph{why} they are at risk, and whether the 2022
-collapse is merely a lower-scoring cohort or a change in the risk structure itself.
-Using all five Albanian PISA cycles (2009--2022; 27{,}042 students) and eight
-comparison countries (323{,}121 students), and applying the survey methodology PISA
-requires (final student weights on every estimate, plausible values combined by
-Rubin's rules, and balanced repeated replication for design-based standard errors),
-we report four findings. First, a domain classifier separates 2018 from 2022 Albanian
-students with AUC~0.98 on background features alone: the collapse is a \emph{structural
-covariate shift}, not just lower scores. Second, and this is our central methodological
-contribution, the accuracy ceiling that individual background variables hit (weighted
-cross-validated AUC~0.73, unmoved by hyperparameter tuning) is a \emph{feature} ceiling,
-not a data ceiling: adding survey-weighted \emph{school socioeconomic composition} lifts
-every model by $\sim$0.05 AUC to $\sim$0.78 and makes gradient boosters significantly
-outperform logistic regression. Third, the new $\sim$0.78 ceiling is then a genuine
-\emph{data} ceiling: a multilevel model (school ICC~$\approx$~0.31) and a direct
-school-questionnaire linkage (no significant gain, all $p>0.24$) converge on it, it
+\atlow{42\%} in 2018 to \athigh{75\%} in 2022, the sharpest single-cycle regression in
+the assessment. We ask whether machine learning on background-questionnaire data can
+identify at-risk students, why they are at risk, and whether the 2022 collapse is merely
+a lower-scoring cohort or a change in the risk structure itself.
+
+\textbf{Methods.}
+Using all five Albanian PISA cycles (2009--2022; 27{,}042 students) and eight comparison
+countries (323{,}121 students), we apply the survey methodology PISA requires: final
+student weights on every estimate, plausible values combined by Rubin's rules, and
+balanced repeated replication for design-based standard errors. We compare
+survey-weighted classifiers, add school socioeconomic composition features, cross-check a
+multilevel model and a direct school-questionnaire linkage, and audit calibration,
+fairness, coverage and a difference-in-differences.
+
+\textbf{Results.}
+A domain classifier separates 2018 from 2022 students with AUC~0.98 on background
+features alone, so the collapse is a structural covariate shift, not just lower scores.
+Individual background variables hit a ceiling (cross-validated AUC~0.73) that tuning does
+not move; adding school socioeconomic composition lifts every model to $\sim$0.78 and
+makes gradient boosters beat logistic regression, exposing a \emph{feature} ceiling. The
+new $\sim$0.78 plateau is then a genuine \emph{data} ceiling: a multilevel model (school
+ICC~$\approx$~0.31) and a school-questionnaire linkage (no gain) converge on it, it
 recurs across all nine systems with its size tracking each system's between-school ICC
-($r\approx0.80$), and richer within-test process data lifts AUC to $\sim$0.86 only
-through a signal endogenous to the score, so the deployable ceiling holds. Fourth, the
-crisis is \emph{broad-based}: Albania has the flattest SES gradient of the nine
-countries, its risk drivers (math anxiety, school composition) are shared with peers,
-and a difference-in-differences with a failed placebo shows the collapse is national
-rather than local to the 2019 earthquake. We release a calibrated, interpretable risk
-screener, framed as associational, not a policy lever; a naive threshold over-flags the
-poorest quintile (FPR gap~0.63), which group-specific thresholds close to~0.003 at a
-recall cost, and Manski bounds under 79\% coverage leave the crisis far above 2018.
+($r\approx0.80$), and richer within-test process data reaches $\sim$0.86 only through a
+signal endogenous to the score. The crisis is broad-based: Albania has the flattest
+socioeconomic gradient of the nine countries, shares its risk drivers with peers, and a
+difference-in-differences with a failed placebo shows the collapse is national, not local
+to the 2019 earthquake.
+
+\textbf{Conclusions.}
+The 2022 collapse is a structural break in the risk-generating process, not a weaker
+cohort. We release a calibrated, interpretable screener, framed as associational; a naive
+threshold over-flags the poorest quintile (false-positive-rate gap~0.63), which
+group-specific thresholds close to~0.003, and partial-identification bounds under 79\%
+coverage keep the crisis far above 2018.
+\end{minipage}
+
+\vspace{0.7cm}
+\begin{minipage}{0.86\linewidth}
+\small
+\textbf{Keywords:} PISA; educational data mining; low mathematics proficiency; covariate
+shift; survey-weighted machine learning; algorithmic fairness; conformal prediction;
+Albania
 \end{minipage}
 
 \vspace{0.9cm}
@@ -112,12 +133,14 @@ recall cost, and Manski bounds under 79\% coverage leave the crisis far above 20
 \end{titlepage}
 
 % =========================== CONTENTS ===========================
-\newpage
 \tableofcontents
 \thispagestyle{fancy}
+\listoffigures
+\listoftables
 
 % =========================== BODY ===========================
-\newpage
+% Continuous line numbering for the manuscript body (journal requirement).
+\linenumbers
 \input{sections/introduction}
 \input{sections/related}
 \input{sections/data}
@@ -127,7 +150,88 @@ recall cost, and Manski bounds under 79\% coverage leave the crisis far above 20
 \input{sections/discussion}
 \input{sections/conclusion}
 
-\bibliographystyle{plainnat}
+% =========================== BACK MATTER ===========================
+\section*{List of abbreviations}
+\addcontentsline{toc}{section}{List of abbreviations}
+\nolinenumbers
+\begingroup
+\small
+\begin{tabbing}
+\hspace*{2.6cm}\= \kill
+ANXMAT \> Mathematics anxiety index\\
+AUC \> Area under the receiver operating characteristic curve\\
+BELONG \> Sense of belonging (at school) index\\
+BRR \> Balanced repeated replication\\
+CI \> Confidence interval\\
+CV \> Cross-validation\\
+DiD \> Difference-in-differences\\
+ECE \> Expected calibration error\\
+ESCS \> (PISA index of) economic, social and cultural status\\
+FPR \> False-positive rate\\
+GBM \> Gradient boosting machine\\
+GDP \> Gross domestic product\\
+HISCED \> Highest parental education (in ISCED levels)\\
+HISEI \> Highest parental occupational status (ISEI)\\
+HOMEPOS \> Home possessions index\\
+ICC \> Intraclass correlation coefficient\\
+ICE \> Individual conditional expectation\\
+ICT \> Information and communication technology\\
+IMMIG \> Immigrant background\\
+ISCED \> International Standard Classification of Education\\
+ISEI \> International Socio-Economic Index of occupational status\\
+KNN \> $k$-nearest neighbours\\
+MCC \> Matthews correlation coefficient\\
+MLP \> Multilayer perceptron\\
+OECD \> Organisation for Economic Co-operation and Development\\
+PI \> Prediction interval\\
+PISA \> Programme for International Student Assessment\\
+PR-AUC \> Area under the precision--recall curve\\
+PV \> Plausible value\\
+RBF \> Radial basis function\\
+ROC \> Receiver operating characteristic\\
+SD \> Standard deviation\\
+SE \> Standard error\\
+SES \> Socioeconomic status\\
+SHAP \> SHapley Additive exPlanations\\
+SVM \> Support vector machine\\
+TPR \> True-positive rate\\
+\end{tabbing}
+\endgroup
+\linenumbers
+
+\section*{Declarations}
+\addcontentsline{toc}{section}{Declarations}
+
+\subsection*{Availability of data and materials}
+The PISA microdata analysed here are open data, publicly available from the OECD PISA
+database (\url{https://www.oecd.org/pisa/data/}). The raw student- and
+school-questionnaire files are not redistributed with this work; the full processing,
+modelling and analysis pipeline that regenerates every processed slice, table and figure
+is available in the project repository at
+\url{https://github.com/xhoja/oecd-pisa-albania}.
+
+\subsection*{Competing interests}
+The author declares that they have no competing interests.
+
+\subsection*{Funding}
+Not applicable.
+
+\subsection*{Authors' contributions}
+X.I.\ is the sole author and performed all roles: conceptualisation, data curation,
+methodology, software, formal analysis, interpretation, and writing of the manuscript.
+The author read and approved the final manuscript.
+
+\subsection*{Acknowledgements}
+The author thanks Professor Agresa Qosja for her supervision and guidance throughout this
+project, and the Metropolitan University of Tirana for institutional support. This work draws on the
+OECD PISA public-use files, and the author thanks the OECD for making these data openly
+available.
+
+\subsection*{Authors' information}
+Xhoi Ikonomi is an MSc student in Artificial Intelligence (Data Science profile) at the
+Metropolitan University of Tirana, Albania.
+
+\bibliographystyle{apalike}
 \bibliography{refs}
 
 \end{document}

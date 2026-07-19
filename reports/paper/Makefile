@@ -12,6 +12,7 @@ $(MAIN).pdf: $(MAIN).tex refs.bib sections/*.tex
 	bibtex $(MAIN)
 	pdflatex -interaction=nonstopmode -halt-on-error $(MAIN).tex
 	pdflatex -interaction=nonstopmode -halt-on-error $(MAIN).tex
+	pdflatex -interaction=nonstopmode -halt-on-error $(MAIN).tex
 
 clean:
 	rm -f $(MAIN).aux $(MAIN).bbl $(MAIN).blg $(MAIN).log $(MAIN).out \

@@ -17,7 +17,7 @@ catastrophic: models trained on 2009--2018 still transfer to 2022 at AUC~$\appro
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{B5_feature_drift}
-\caption{Standardised 2018$\rightarrow$2022 drift of Albanian background features.
+\caption[Standardised 2018$\rightarrow$2022 drift of Albanian background features]{Standardised 2018$\rightarrow$2022 drift of Albanian background features.
 Teacher support and home possessions move most; the domain classifier that
 separates the cohorts reaches AUC~0.98.}
 \label{fig:drift}
@@ -44,7 +44,7 @@ artefact of omitting kernel or neural learners.
 
 \begin{table}[t]
 \centering
-\caption{Albania 2022, weighted $5\times4$ CV, \emph{with} school context.
+\caption[Model comparison with school context, Albania 2022]{Albania 2022, weighted $5\times4$ CV, \emph{with} school context.
 $\Delta$AUC is the lift over the student-only baseline.}
 \label{tab:models}
 \begin{tabular}{lccccc}
@@ -70,7 +70,7 @@ Decision Tree       & 0.609 & $+0.041$ & 0.797 & 0.608 & 0.217 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{C4_model_comparison_auc}
-\caption{Weighted CV AUC with Nadeau--Bengio intervals. Boosters form a top band once
+\caption[Weighted cross-validated AUC by model, Albania 2022]{Weighted CV AUC with Nadeau--Bengio intervals. Boosters form a top band once
 school context is included; the interpretable logistic-regression baseline gains least
 because it cannot use the student $\times$ school interaction.}
 \label{fig:models}
@@ -107,7 +107,7 @@ structure rather than by the learner.
 
 \begin{table}[t]
 \centering
-\caption{Student-only vs.\ school-context AUC across the nine 2022 systems. The
+\caption[Student-only vs.\ school-context AUC across nine systems]{Student-only vs.\ school-context AUC across the nine 2022 systems. The
 composition lift is significant everywhere but Estonia and scales with the
 between-school ICC ($r\approx0.80$ between ICC and school-context AUC).}
 \label{tab:generalization}
@@ -159,7 +159,7 @@ proficiency, not the mechanism.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{D2_shap_global_bar}
-\caption{Global SHAP importance (school-context model). Four of the top seven drivers
+\caption[Global SHAP importance for the school-context model]{Global SHAP importance (school-context model). Four of the top seven drivers
 are school-level; math anxiety is the strongest individual factor.}
 \label{fig:shap}
 \end{figure}
@@ -167,7 +167,7 @@ are school-level; math anxiety is the strongest individual factor.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{F1_shap_rank_matrix}
-\caption{SHAP driver ranks by country. Math anxiety and school composition recur
+\caption[SHAP driver ranks by country]{SHAP driver ranks by country. Math anxiety and school composition recur
 across systems; Albania mirrors its peers in mechanism.}
 \label{fig:rankmatrix}
 \end{figure}
@@ -187,7 +187,7 @@ math-anxiety reduction, raising the floor across all schools) are required.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{G2_ses_gradient_2022}
-\caption{SES gradient of mathematics score, 2022. Albania's slope is the flattest of
+\caption[SES gradient of mathematics score across nine countries, 2022]{SES gradient of mathematics score, 2022. Albania's slope is the flattest of
 the nine countries, a floor effect, not a steep advantage gap.}
 \label{fig:gradient}
 \end{figure}
@@ -222,7 +222,7 @@ budget reaches the most at-risk students.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{GEO_heatmap}
-\caption{At-risk rate by region band and urbanicity, Albania 2022 (survey-weighted;
+\caption[At-risk rate by region band and urbanicity, Albania 2022]{At-risk rate by region band and urbanicity, Albania 2022 (survey-weighted;
 darker is higher). Rural North and rural Center carry the heaviest load; urban Center,
 which contains Tirana, is the lowest cell yet still a majority at risk.}
 \label{fig:geo}
@@ -261,7 +261,7 @@ these are model-associational contrasts, not causal effects, and are read as suc
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{L1_lever_ranking}
-\caption{Actionable levers ranked by the reduction in the weighted predicted at-risk rate
+\caption[Actionable levers ranked by predicted at-risk-rate reduction, Albania 2022]{Actionable levers ranked by the reduction in the weighted predicted at-risk rate
 from a 0.5-SD nudge in the beneficial direction (Albania 2022). Math anxiety dominates;
 the remaining levers are near-flat.}
 \label{fig:levers}
@@ -292,7 +292,7 @@ frame either as a tool to \emph{widen} support, never to ration it.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{calibration}
-\caption{Reliability curve before/after out-of-fold isotonic calibration; weighted
+\caption[Reliability curve before and after isotonic calibration]{Reliability curve before/after out-of-fold isotonic calibration; weighted
 ECE falls from $\approx$~0.12 to $\approx$~0.01.}
 \label{fig:calibration}
 \end{figure}
@@ -300,10 +300,41 @@ ECE falls from $\approx$~0.12 to $\approx$~0.01.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\linewidth,height=0.33\textheight,keepaspectratio]{E1_fairness_threshold_sweep}
-\caption{Weighted fairness gaps by decision threshold (gender shown). Gaps shift with
+\caption[Weighted fairness gaps by decision threshold]{Weighted fairness gaps by decision threshold (gender shown). Gaps shift with
 the operating point rather than vanishing, mitigation needs constraints, not a knob.}
 \label{fig:fairness}
 \end{figure}
+
+\subsection{Which students can the screener call? Conformal prediction sets}
+A calibrated probability answers \emph{how likely}, but not \emph{how sure}: at 75\%
+prevalence a middling score is a weak signal dressed as a precise number. Split
+(inductive) conformal prediction turns the calibrated CatBoost score into a
+\emph{prediction set} carrying a finite-sample coverage guarantee,
+$P\!\left(y\in\hat C(x)\right)\ge 1-\alpha$, that holds under exchangeability
+\emph{without} assuming the model is correct. On a stratified 60/20/20
+proper-train\,/\,calibration\,/\,test split we score each calibration student by the
+non-conformity $1-\hat p(y\mid x)$ of their true label, take the survey-weighted
+$\lceil(n{+}1)(1-\alpha)\rceil/n$ quantile of those scores, and admit into a test
+student's set every label whose probability clears the induced floor; the weights make
+the guarantee hold for the \emph{population}, not the unweighted sample. The read is
+operational: a \emph{singleton} set ($\{$at risk$\}$ or $\{$not at risk$\}$) is a
+confident call, and the \emph{both-labels} set is the model abstaining.
+
+At the 90\% coverage level ($\alpha=0.1$) the guarantee is met on held-out students
+(weighted coverage \textbf{0.925}, $n=1226$) and the cohort splits cleanly:
+\textbf{60.0\%} of students receive a confident singleton call and \textbf{40.0\%} land
+in the both-labels abstention set, with no empty sets. The trade between confidence and
+coverage behaves as it should: tightening to 95\% coverage drops the confident share to
+44.3\% (coverage 0.950), while loosening to 80\% raises it to 88.4\% (coverage 0.836).
+Class-conditional (Mondrian) calibration, which restores per-class coverage under the
+75/25 imbalance, holds coverage in both classes but at the price of more abstention
+(singleton share 47.9\% at the 90\% level). Beyond the point screener this draws an
+explicit \emph{competence boundary}: at a 90\% guarantee the tool confidently labels
+three in five students and, instead of bluffing on the rest, hands the remaining two in
+five, the students nearest the decision boundary, to human judgement, which is precisely
+where an automated low-proficiency flag is least defensible. The screener therefore
+reports not only a calibrated risk but an honest account of which students it should not
+be trusted to call alone.
 
 \subsection{Is the 75\% an artefact of coverage? Partial-identification bounds}
 Albania met only part of PISA's sampling standards in 2022, and its Coverage Index~3 is
