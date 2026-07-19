@@ -11,22 +11,23 @@ analysis of Albania's dramatic 2022 regression.
 
 ## Technology Stack
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![pandas](https://img.shields.io/badge/pandas-latest-150458?logo=pandas&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-latest-013243?logo=numpy&logoColor=white)
-![SciPy](https://img.shields.io/badge/SciPy-latest-8CAAE6?logo=scipy&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-latest-F7931E?logo=scikitlearn&logoColor=white)
-![statsmodels](https://img.shields.io/badge/statsmodels-latest-3B5998)
-![CatBoost](https://img.shields.io/badge/CatBoost-headline-FFCC00?logoColor=black)
-![LightGBM](https://img.shields.io/badge/LightGBM-boosters-9ACD32)
-![XGBoost](https://img.shields.io/badge/XGBoost-boosters-337AB7)
-![Optuna](https://img.shields.io/badge/Optuna-nested--CV%20HPO-8A2BE2)
-![SHAP](https://img.shields.io/badge/SHAP-explainability-FF6F61)
-![Altair](https://img.shields.io/badge/Altair-charts-1F77B4)
-![matplotlib](https://img.shields.io/badge/matplotlib-figures-11557C)
-![Streamlit](https://img.shields.io/badge/Streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
-![LaTeX](https://img.shields.io/badge/LaTeX-article%20report-008080?logo=latex&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-189%20passing-0A9EDC?logo=pytest&logoColor=white)
+<!-- Badges are static SVGs (assets/badges/); regenerate with scripts/generate_badges.py -->
+![Python](assets/badges/python.svg)
+![pandas](assets/badges/pandas.svg)
+![NumPy](assets/badges/numpy.svg)
+![SciPy](assets/badges/scipy.svg)
+![scikit-learn](assets/badges/scikit-learn.svg)
+![statsmodels](assets/badges/statsmodels.svg)
+![CatBoost](assets/badges/catboost.svg)
+![LightGBM](assets/badges/lightgbm.svg)
+![XGBoost](assets/badges/xgboost.svg)
+![Optuna](assets/badges/optuna.svg)
+![SHAP](assets/badges/shap.svg)
+![Altair](assets/badges/altair.svg)
+![matplotlib](assets/badges/matplotlib.svg)
+![Streamlit](assets/badges/streamlit.svg)
+![LaTeX](assets/badges/latex.svg)
+![pytest](assets/badges/pytest.svg)
 
 | Area | Tools |
 |---|---|
